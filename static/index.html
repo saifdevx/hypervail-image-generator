@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Image Agent</title>
+
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">✦</div>
+
+            <div>
+                <div class="brand-name">Image Agent</div>
+                <div class="brand-version">Creative Engine</div>
+            </div>
+        </div>
+
+        <nav class="nav">
+
+            <button class="nav-item active">
+                <span class="nav-icon">✦</span>
+                Generate
+            </button>
+
+            <button class="nav-item">
+                <span class="nav-icon">◫</span>
+                Profiles
+            </button>
+
+            <button class="nav-item">
+                <span class="nav-icon">◷</span>
+                History
+            </button>
+
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+
+        <div class="sidebar-status">
+
+            <span class="status-dot"></span>
+
+            <div>
+                <strong>Local Engine</strong>
+                <small>Backend connected</small>
+            </div>
+
+        </div>
+
+        <button class="nav-item">
+            <span class="nav-icon">⚙</span>
+            Settings
+        </button>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <!-- HEADER -->
+        <header class="topbar">
+
+            <div>
+                <p class="eyebrow">AI PRODUCT STUDIO</p>
+                <h1>Create Images</h1>
+
+                <p class="subtitle">
+                    Upload product references, select a generation profile,
+                    and let your image workflow run automatically.
+                </p>
+            </div>
+
+            <div class="topbar-badge">
+                <span class="status-dot"></span>
+                Ready
+            </div>
+
+        </header>
+
+
+        <div class="workspace">
+
+            <!-- LEFT / GENERATION -->
+            <section class="generator-panel">
+
+
+                <!-- PROFILE -->
+                <div class="section-card">
+
+                    <div class="section-header">
+
+                        <div>
+                            <span class="step-label">01</span>
+                            <h2>Generation Profile</h2>
+                        </div>
+
+                        <span class="optional-label">
+                            System Instruction
+                        </span>
+
+                    </div>
+
+
+                    <div class="profile-options">
+
+                        <label class="profile-card active-profile">
+
+                            <input
+                                type="radio"
+                                name="profile"
+                                value="hero"
+                                checked
+                            >
+
+                            <div class="profile-icon hero-icon">
+                                H
+                            </div>
+
+                            <div class="profile-text">
+                                <strong>Hero Images</strong>
+
+                                <span>
+                                    Clean eCommerce product photography
+                                </span>
+                            </div>
+
+                            <div class="profile-check">
+                                ✓
+                            </div>
+
+                        </label>
+
+
+                        <label class="profile-card">
+
+                            <input
+                                type="radio"
+                                name="profile"
+                                value="ugc"
+                            >
+
+                            <div class="profile-icon ugc-icon">
+                                U
+                            </div>
+
+                            <div class="profile-text">
+                                <strong>UGC Images</strong>
+
+                                <span>
+                                    Authentic salon & lifestyle scenes
+                                </span>
+                            </div>
+
+                            <div class="profile-check">
+                                ✓
+                            </div>
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+                <!-- IMAGES -->
+                <div class="section-card">
+
+                    <div class="section-header">
+
+                        <div>
+                            <span class="step-label">02</span>
+                            <h2>Reference Images</h2>
+                        </div>
+
+                        <span class="optional-label">
+                            Up to 4
+                        </span>
+
+                    </div>
+
+
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        multiple
+                        hidden
+                    >
+
+
+                    <div
+                        class="upload-zone"
+                        id="uploadZone"
+                    >
+
+                        <div class="upload-icon">
+                            ↑
+                        </div>
+
+                        <h3>Drop product images here</h3>
+
+                        <p>
+                            or click to browse
+                        </p>
+
+                        <span>
+                            PNG, JPG, WEBP
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        class="image-preview-grid"
+                        id="imagePreviewGrid"
+                    ></div>
+
+                </div>
+
+
+                <!-- DESCRIPTION -->
+                <div class="section-card">
+
+                    <div class="section-header">
+
+                        <div>
+                            <span class="step-label">03</span>
+                            <h2>Creative Direction</h2>
+                        </div>
+
+                        <span class="optional-label">
+                            Optional
+                        </span>
+
+                    </div>
+
+
+                    <textarea
+                        id="description"
+                        placeholder="Example: Use a premium dark background, add dramatic side lighting, include more close-up angles..."
+                    ></textarea>
+
+                    <div class="description-footer">
+
+                        <span>
+                            Add only what you want to change or emphasize.
+                        </span>
+
+                        <span id="characterCount">
+                            0 characters
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- OUTPUT OPTIONS -->
+                <div class="section-card">
+
+                    <div class="section-header">
+
+                        <div>
+                            <span class="step-label">04</span>
+                            <h2>Output Settings</h2>
+                        </div>
+
+                    </div>
+
+
+                    <label class="field-label">
+                        Number of images
+                    </label>
+
+
+                    <div class="count-selector">
+
+                        <button
+                            class="count-button selected"
+                            data-count="auto"
+                        >
+                            Auto
+                        </button>
+
+                        <button
+                            class="count-button"
+                            data-count="1"
+                        >
+                            1
+                        </button>
+
+                        <button
+                            class="count-button"
+                            data-count="4"
+                        >
+                            4
+                        </button>
+
+                        <button
+                            class="count-button"
+                            data-count="6"
+                        >
+                            6
+                        </button>
+
+                        <button
+                            class="count-button"
+                            data-count="8"
+                        >
+                            8
+                        </button>
+
+                    </div>
+
+
+                    <p class="setting-hint">
+                        Auto follows the selected system instruction.
+                    </p>
+
+                </div>
+
+
+                <!-- GENERATE -->
+                <button
+                    class="generate-button"
+                    id="generateButton"
+                >
+
+                    <span class="generate-icon">✦</span>
+
+                    Generate Images
+
+                    <span class="generate-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+            </section>
+
+
+            <!-- RIGHT / STATUS -->
+            <aside class="preview-panel">
+
+                <div class="preview-card">
+
+                    <div class="preview-header">
+
+                        <div>
+                            <p class="eyebrow">CURRENT JOB</p>
+                            <h2>Generation Preview</h2>
+                        </div>
+
+                    </div>
+
+
+                    <div class="preview-empty">
+
+                        <div class="preview-empty-icon">
+                            ✦
+                        </div>
+
+                        <h3>Ready to create</h3>
+
+                        <p>
+                            Your generated images will appear here once the
+                            generation engine is connected.
+                        </p>
+
+                    </div>
+
+
+                    <div class="job-summary">
+
+                        <div class="summary-row">
+                            <span>Profile</span>
+                            <strong id="summaryProfile">
+                                Hero Images
+                            </strong>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>References</span>
+                            <strong id="summaryImages">
+                                0
+                            </strong>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>Outputs</span>
+                            <strong id="summaryCount">
+                                Auto
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="tip-card">
+
+                    <div class="tip-icon">
+                        i
+                    </div>
+
+                    <div>
+                        <strong>Profile-driven generation</strong>
+
+                        <p>
+                            The selected profile will control how the AI
+                            analyzes references and creates image prompts.
+                        </p>
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<div
+    class="toast"
+    id="toast"
+>
+    UI ready — AI connection comes next.
+</div>
+
+</body>
+
+</html>
