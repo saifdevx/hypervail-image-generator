@@ -4,17 +4,17 @@ import re
 from app.database import get_connection
 
 
-# --------------------------------------------------
+# ============================================================
 # PATHS
-# --------------------------------------------------
+# ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROFILES_DIR = BASE_DIR / "profiles"
 
 
-# --------------------------------------------------
-# DEFAULT PROFILES
-# --------------------------------------------------
+# ============================================================
+# DEFAULT / BUILT-IN PROFILES
+# ============================================================
 
 DEFAULT_PROFILES = [
     {
@@ -26,15 +26,18 @@ DEFAULT_PROFILES = [
     {
         "name": "UGC Images",
         "slug": "ugc-images",
-        "description": "Authentic grooming salon and tabletop UGC prompt generation.",
+        "description": (
+            "Authentic grooming salon and tabletop UGC "
+            "prompt generation."
+        ),
         "filename": "ugc_images.txt",
     },
 ]
 
 
-# --------------------------------------------------
+# ============================================================
 # HELPERS
-# --------------------------------------------------
+# ============================================================
 
 def make_slug(value: str) -> str:
     value = value.strip().lower()
@@ -48,7 +51,11 @@ def make_slug(value: str) -> str:
     return value.strip("-")
 
 
-def make_unique_slug(connection, name: str) -> str:
+def make_unique_slug(
+    connection,
+    name: str
+) -> str:
+
     base_slug = make_slug(name)
 
     if not base_slug:
@@ -58,6 +65,7 @@ def make_unique_slug(connection, name: str) -> str:
     counter = 2
 
     while True:
+
         existing = connection.execute(
             """
             SELECT id
@@ -74,14 +82,16 @@ def make_unique_slug(connection, name: str) -> str:
         counter += 1
 
 
-# --------------------------------------------------
+# ============================================================
 # SEED DEFAULT PROFILES
-# --------------------------------------------------
+# ============================================================
 
 def seed_default_profiles():
+
     connection = get_connection()
 
     try:
+
         for profile in DEFAULT_PROFILES:
 
             file_path = (
@@ -90,11 +100,14 @@ def seed_default_profiles():
             )
 
             if not file_path.exists():
+
                 print(
-                    f"Profile seed skipped. "
+                    "Profile seed skipped. "
                     f"Missing file: {file_path}"
                 )
+
                 continue
+
 
             existing = connection.execute(
                 """
@@ -105,20 +118,26 @@ def seed_default_profiles():
                 (profile["slug"],)
             ).fetchone()
 
-            # Do not overwrite an existing profile.
+
+            # Never overwrite a profile that already exists.
             if existing:
                 continue
+
 
             instruction = file_path.read_text(
                 encoding="utf-8-sig"
             ).strip()
 
+
             if not instruction:
+
                 print(
-                    f"Profile seed skipped. "
+                    "Profile seed skipped. "
                     f"File is empty: {file_path}"
                 )
+
                 continue
+
 
             cursor = connection.execute(
                 """
@@ -136,7 +155,9 @@ def seed_default_profiles():
                 )
             )
 
+
             profile_id = cursor.lastrowid
+
 
             connection.execute(
                 """
@@ -154,27 +175,46 @@ def seed_default_profiles():
                 )
             )
 
+
             print(
-                f"Seeded profile: "
+                "Seeded profile: "
                 f"{profile['name']} v1"
             )
 
+
         connection.commit()
 
+
     finally:
+
         connection.close()
 
 
-# --------------------------------------------------
+# ============================================================
 # LIST PROFILES
-# --------------------------------------------------
+# ============================================================
 
-def list_profiles():
+def list_profiles(
+    include_inactive: bool = False
+):
+
     connection = get_connection()
 
     try:
+
+        if include_inactive:
+
+            where_clause = ""
+
+        else:
+
+            where_clause = (
+                "WHERE gp.is_active = 1"
+            )
+
+
         rows = connection.execute(
-            """
+            f"""
             SELECT
                 gp.id,
                 gp.name,
@@ -198,29 +238,39 @@ def list_profiles():
                     LIMIT 1
                 )
 
-            WHERE gp.is_active = 1
+            {where_clause}
 
-            ORDER BY gp.name ASC
+            ORDER BY
+                gp.is_active DESC,
+                gp.name COLLATE NOCASE ASC,
+                gp.id ASC
             """
         ).fetchall()
+
 
         return [
             dict(row)
             for row in rows
         ]
 
+
     finally:
+
         connection.close()
 
 
-# --------------------------------------------------
-# GET ONE PROFILE
-# --------------------------------------------------
+# ============================================================
+# GET LATEST PROFILE VERSION
+# ============================================================
 
-def get_profile(profile_id: int):
+def get_profile(
+    profile_id: int
+):
+
     connection = get_connection()
 
     try:
+
         row = connection.execute(
             """
             SELECT
@@ -252,31 +302,137 @@ def get_profile(profile_id: int):
             (profile_id,)
         ).fetchone()
 
+
         if row is None:
             return None
 
+
         return dict(row)
 
+
     finally:
+
         connection.close()
 
 
-# --------------------------------------------------
+# ============================================================
+# GET A SPECIFIC PROFILE VERSION
+# ============================================================
+
+def get_profile_version(
+    profile_id: int,
+    version_number: int
+):
+
+    connection = get_connection()
+
+    try:
+
+        row = connection.execute(
+            """
+            SELECT
+                gp.id,
+                gp.name,
+                gp.slug,
+                gp.description,
+                gp.is_active,
+                gp.created_at,
+                gp.updated_at,
+
+                pv.id AS version_id,
+                pv.version_number,
+                pv.system_instruction,
+                pv.created_at AS version_created_at
+
+            FROM generation_profiles gp
+
+            JOIN profile_versions pv
+                ON pv.profile_id = gp.id
+
+            WHERE
+                gp.id = ?
+                AND pv.version_number = ?
+            """,
+            (
+                profile_id,
+                version_number
+            )
+        ).fetchone()
+
+
+        if row is None:
+            return None
+
+
+        return dict(row)
+
+
+    finally:
+
+        connection.close()
+
+
+# ============================================================
+# LIST PROFILE VERSION HISTORY
+# ============================================================
+
+def list_profile_versions(
+    profile_id: int
+):
+
+    connection = get_connection()
+
+    try:
+
+        rows = connection.execute(
+            """
+            SELECT
+                id AS version_id,
+                version_number,
+                created_at,
+                LENGTH(system_instruction)
+                    AS character_count
+
+            FROM profile_versions
+
+            WHERE profile_id = ?
+
+            ORDER BY version_number DESC
+            """,
+            (profile_id,)
+        ).fetchall()
+
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+
+    finally:
+
+        connection.close()
+
+
+# ============================================================
 # CREATE PROFILE
-# --------------------------------------------------
+# ============================================================
 
 def create_profile(
     name: str,
     description: str,
     system_instruction: str
 ):
+
     connection = get_connection()
 
     try:
+
         slug = make_unique_slug(
             connection,
             name
         )
+
 
         cursor = connection.execute(
             """
@@ -294,7 +450,9 @@ def create_profile(
             )
         )
 
+
         profile_id = cursor.lastrowid
+
 
         connection.execute(
             """
@@ -312,36 +470,110 @@ def create_profile(
             )
         )
 
+
         connection.commit()
 
+
     finally:
+
         connection.close()
 
-    return get_profile(profile_id)
+
+    return get_profile(
+        profile_id
+    )
 
 
-# --------------------------------------------------
+# ============================================================
+# UPDATE PROFILE NAME / DESCRIPTION
+# ============================================================
+
+def update_profile_metadata(
+    profile_id: int,
+    name: str,
+    description: str
+):
+
+    connection = get_connection()
+
+    try:
+
+        existing = connection.execute(
+            """
+            SELECT id
+            FROM generation_profiles
+            WHERE
+                id = ?
+                AND is_active = 1
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if existing is None:
+            return None
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET
+                name = ?,
+                description = ?,
+                updated_at = CURRENT_TIMESTAMP
+
+            WHERE id = ?
+            """,
+            (
+                name.strip(),
+                description.strip(),
+                profile_id
+            )
+        )
+
+
+        connection.commit()
+
+
+    finally:
+
+        connection.close()
+
+
+    return get_profile(
+        profile_id
+    )
+
+
+# ============================================================
 # CREATE NEW PROFILE VERSION
-# --------------------------------------------------
+# ============================================================
 
 def create_profile_version(
     profile_id: int,
     system_instruction: str
 ):
+
     connection = get_connection()
 
     try:
+
         profile = connection.execute(
             """
             SELECT id
             FROM generation_profiles
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND is_active = 1
             """,
             (profile_id,)
         ).fetchone()
 
+
         if profile is None:
             return None
+
 
         version_row = connection.execute(
             """
@@ -358,9 +590,11 @@ def create_profile_version(
             (profile_id,)
         ).fetchone()
 
+
         next_version = (
             version_row["latest_version"] + 1
         )
+
 
         connection.execute(
             """
@@ -378,6 +612,7 @@ def create_profile_version(
             )
         )
 
+
         connection.execute(
             """
             UPDATE generation_profiles
@@ -389,9 +624,72 @@ def create_profile_version(
             (profile_id,)
         )
 
+
         connection.commit()
 
+
     finally:
+
         connection.close()
 
-    return get_profile(profile_id)
+
+    return get_profile(
+        profile_id
+    )
+
+
+# ============================================================
+# ARCHIVE / RESTORE PROFILE
+# ============================================================
+
+def set_profile_active(
+    profile_id: int,
+    is_active: bool
+):
+
+    connection = get_connection()
+
+    try:
+
+        existing = connection.execute(
+            """
+            SELECT id
+            FROM generation_profiles
+            WHERE id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if existing is None:
+            return None
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET
+                is_active = ?,
+                updated_at = CURRENT_TIMESTAMP
+
+            WHERE id = ?
+            """,
+            (
+                1 if is_active else 0,
+                profile_id
+            )
+        )
+
+
+        connection.commit()
+
+
+    finally:
+
+        connection.close()
+
+
+    return get_profile(
+        profile_id
+    )
