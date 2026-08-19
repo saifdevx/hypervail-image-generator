@@ -1,261 +1,172 @@
 /* =========================================================
-   DOM — NAVIGATION
+   DOM — NAV
 ========================================================= */
 
 const navGenerate =
-    document.getElementById(
-        "navGenerate"
-    );
+    document.getElementById("navGenerate");
 
 const navProfiles =
-    document.getElementById(
-        "navProfiles"
-    );
+    document.getElementById("navProfiles");
 
 const navHistory =
-    document.getElementById(
-        "navHistory"
-    );
+    document.getElementById("navHistory");
 
 const navSettings =
-    document.getElementById(
-        "navSettings"
-    );
-
+    document.getElementById("navSettings");
 
 const generateView =
-    document.getElementById(
-        "generateView"
-    );
+    document.getElementById("generateView");
 
 const profilesView =
-    document.getElementById(
-        "profilesView"
-    );
+    document.getElementById("profilesView");
 
 
 /* =========================================================
-   DOM — GENERATE VIEW
+   GENERATE DOM
 ========================================================= */
 
 const profileOptions =
-    document.getElementById(
-        "profileOptions"
-    );
-
-const uploadZone =
-    document.getElementById(
-        "uploadZone"
-    );
+    document.getElementById("profileOptions");
 
 const imageInput =
-    document.getElementById(
-        "imageInput"
-    );
+    document.getElementById("imageInput");
+
+const uploadZone =
+    document.getElementById("uploadZone");
 
 const imagePreviewGrid =
-    document.getElementById(
-        "imagePreviewGrid"
-    );
+    document.getElementById("imagePreviewGrid");
 
 const description =
-    document.getElementById(
-        "description"
-    );
+    document.getElementById("description");
 
 const characterCount =
-    document.getElementById(
-        "characterCount"
-    );
+    document.getElementById("characterCount");
 
 const summaryProfile =
-    document.getElementById(
-        "summaryProfile"
-    );
+    document.getElementById("summaryProfile");
 
 const summaryVersion =
-    document.getElementById(
-        "summaryVersion"
-    );
+    document.getElementById("summaryVersion");
 
 const summaryImages =
-    document.getElementById(
-        "summaryImages"
-    );
+    document.getElementById("summaryImages");
 
 const summaryCount =
-    document.getElementById(
-        "summaryCount"
-    );
+    document.getElementById("summaryCount");
 
 const generateButton =
-    document.getElementById(
-        "generateButton"
-    );
+    document.getElementById("generateButton");
 
 
 /* =========================================================
-   DOM — PROFILE MANAGER
+   PROFILE MANAGER DOM
 ========================================================= */
 
 const newProfileButton =
-    document.getElementById(
-        "newProfileButton"
-    );
+    document.getElementById("newProfileButton");
+
+const libraryCount =
+    document.getElementById("libraryCount");
 
 const profileSearch =
-    document.getElementById(
-        "profileSearch"
-    );
+    document.getElementById("profileSearch");
 
 const profileManagerList =
-    document.getElementById(
-        "profileManagerList"
-    );
+    document.getElementById("profileManagerList");
 
 const profileEditorEmpty =
-    document.getElementById(
-        "profileEditorEmpty"
-    );
+    document.getElementById("profileEditorEmpty");
 
 const profileEditorContent =
-    document.getElementById(
-        "profileEditorContent"
-    );
+    document.getElementById("profileEditorContent");
 
 const profileEditorTitle =
-    document.getElementById(
-        "profileEditorTitle"
-    );
+    document.getElementById("profileEditorTitle");
 
 const profileStateBadge =
-    document.getElementById(
-        "profileStateBadge"
-    );
+    document.getElementById("profileStateBadge");
 
-const editorVersionBadge =
-    document.getElementById(
-        "editorVersionBadge"
-    );
+const activeVersionBadge =
+    document.getElementById("activeVersionBadge");
+
+const latestVersionBadge =
+    document.getElementById("latestVersionBadge");
 
 const loadedVersionBadge =
-    document.getElementById(
-        "loadedVersionBadge"
-    );
+    document.getElementById("loadedVersionBadge");
 
 const loadedVersionNote =
-    document.getElementById(
-        "loadedVersionNote"
-    );
+    document.getElementById("loadedVersionNote");
 
 const profileNameInput =
-    document.getElementById(
-        "profileNameInput"
-    );
+    document.getElementById("profileNameInput");
 
 const profileDescriptionInput =
-    document.getElementById(
-        "profileDescriptionInput"
-    );
+    document.getElementById("profileDescriptionInput");
 
 const profileInstructionEditor =
-    document.getElementById(
-        "profileInstructionEditor"
-    );
+    document.getElementById("profileInstructionEditor");
 
 const instructionCharacterCount =
-    document.getElementById(
-        "instructionCharacterCount"
-    );
+    document.getElementById("instructionCharacterCount");
 
 const saveDetailsButton =
-    document.getElementById(
-        "saveDetailsButton"
-    );
+    document.getElementById("saveDetailsButton");
 
 const saveVersionButton =
-    document.getElementById(
-        "saveVersionButton"
-    );
+    document.getElementById("saveVersionButton");
 
 const archiveProfileButton =
-    document.getElementById(
-        "archiveProfileButton"
-    );
+    document.getElementById("archiveProfileButton");
 
 const restoreProfileButton =
-    document.getElementById(
-        "restoreProfileButton"
-    );
+    document.getElementById("restoreProfileButton");
+
+const deleteProfileButton =
+    document.getElementById("deleteProfileButton");
 
 const versionHistoryList =
-    document.getElementById(
-        "versionHistoryList"
-    );
+    document.getElementById("versionHistoryList");
 
 
 /* =========================================================
-   DOM — CREATE PROFILE MODAL
+   MODAL DOM
 ========================================================= */
 
 const newProfileModal =
-    document.getElementById(
-        "newProfileModal"
-    );
+    document.getElementById("newProfileModal");
 
 const modalCloseButton =
-    document.getElementById(
-        "modalCloseButton"
-    );
+    document.getElementById("modalCloseButton");
 
 const cancelCreateProfile =
-    document.getElementById(
-        "cancelCreateProfile"
-    );
+    document.getElementById("cancelCreateProfile");
 
 const newProfileForm =
-    document.getElementById(
-        "newProfileForm"
-    );
+    document.getElementById("newProfileForm");
 
 const newProfileName =
-    document.getElementById(
-        "newProfileName"
-    );
+    document.getElementById("newProfileName");
 
 const newProfileDescription =
-    document.getElementById(
-        "newProfileDescription"
-    );
+    document.getElementById("newProfileDescription");
 
 const newProfileInstruction =
-    document.getElementById(
-        "newProfileInstruction"
-    );
+    document.getElementById("newProfileInstruction");
 
 const newInstructionCharacterCount =
-    document.getElementById(
-        "newInstructionCharacterCount"
-    );
+    document.getElementById("newInstructionCharacterCount");
 
 const createProfileButton =
-    document.getElementById(
-        "createProfileButton"
-    );
-
-
-/* =========================================================
-   OTHER
-========================================================= */
+    document.getElementById("createProfileButton");
 
 const toast =
-    document.getElementById(
-        "toast"
-    );
+    document.getElementById("toast");
 
 
 /* =========================================================
-   APPLICATION STATE
+   STATE
 ========================================================= */
 
 let profiles = [];
@@ -272,38 +183,37 @@ let selectedCount = "auto";
 
 let editingProfileId = null;
 
+let editingProfileName = null;
+
 let loadedEditorVersionNumber = null;
 
 let toastTimer = null;
 
 
 /* =========================================================
-   NAVIGATION
+   VIEW NAVIGATION
 ========================================================= */
 
-function showView(
-    viewName
-) {
+function showView(view) {
 
     generateView.classList.toggle(
         "hidden-view",
-        viewName !== "generate"
+        view !== "generate"
     );
 
     profilesView.classList.toggle(
         "hidden-view",
-        viewName !== "profiles"
+        view !== "profiles"
     );
-
 
     navGenerate.classList.toggle(
         "active",
-        viewName === "generate"
+        view === "generate"
     );
 
     navProfiles.classList.toggle(
         "active",
-        viewName === "profiles"
+        view === "profiles"
     );
 
 }
@@ -311,13 +221,7 @@ function showView(
 
 navGenerate.addEventListener(
     "click",
-    () => {
-
-        showView(
-            "generate"
-        );
-
-    }
+    () => showView("generate")
 );
 
 
@@ -325,33 +229,22 @@ navProfiles.addEventListener(
     "click",
     async () => {
 
-        showView(
-            "profiles"
-        );
-
+        showView("profiles");
 
         await loadManagerProfiles();
 
+        const preferred =
+            editingProfileId
+            ??
+            selectedProfileId
+            ??
+            managerProfiles[0]?.id;
 
-        if (
-            editingProfileId === null
-        ) {
+        if (preferred) {
 
-            const preferredProfile =
-                selectedProfileId
-                ??
-                managerProfiles[0]?.id;
-
-
-            if (
-                preferredProfile
-            ) {
-
-                await openProfileEditor(
-                    preferredProfile
-                );
-
-            }
+            await openProfileEditor(
+                preferred
+            );
 
         }
 
@@ -364,7 +257,7 @@ navHistory.addEventListener(
     () => {
 
         showToast(
-            "History will be connected when generation jobs are added."
+            "History will be added after generation jobs are connected."
         );
 
     }
@@ -376,7 +269,7 @@ navSettings.addEventListener(
     () => {
 
         showToast(
-            "Settings will be added when we connect the AI providers."
+            "Provider settings will be added when we connect Gemini."
         );
 
     }
@@ -384,10 +277,10 @@ navSettings.addEventListener(
 
 
 /* =========================================================
-   API ERROR HELPER
+   API HELPER
 ========================================================= */
 
-async function getApiErrorMessage(
+async function apiError(
     response
 ) {
 
@@ -396,150 +289,91 @@ async function getApiErrorMessage(
         const data =
             await response.json();
 
-
         if (
             typeof data.detail === "string"
         ) {
-
             return data.detail;
-
-        }
-
-
-        if (
-            data.detail
-        ) {
-
-            return JSON.stringify(
-                data.detail
-            );
-
         }
 
     } catch {
-        // Ignore parsing failure.
+        // Ignore.
     }
 
-
     return (
-        `Request failed with status ${response.status}`
+        `Request failed (${response.status})`
     );
 
 }
 
 
 /* =========================================================
-   LOAD ACTIVE GENERATION PROFILES
+   ACTIVE GENERATION PROFILES
 ========================================================= */
 
 async function loadProfiles(
-    preferredProfileId = selectedProfileId
+    preferredId = selectedProfileId
 ) {
 
     profileOptions.innerHTML = `
-        <div class="profiles-loading">
-
-            <span class="loading-spinner"></span>
-
-            Loading generation profiles...
-
+        <div class="loading-state">
+            Loading profiles...
         </div>
     `;
-
 
     try {
 
         const response =
-            await fetch(
-                "/api/profiles"
-            );
-
+            await fetch("/api/profiles");
 
         if (!response.ok) {
-
             throw new Error(
-                await getApiErrorMessage(
-                    response
-                )
+                await apiError(response)
             );
-
         }
-
 
         const data =
             await response.json();
 
-
         profiles =
-            Array.isArray(
-                data.profiles
-            )
+            Array.isArray(data.profiles)
                 ? data.profiles
                 : [];
 
-
         renderGenerateProfiles(
-            preferredProfileId
+            preferredId
         );
-
 
     } catch (error) {
 
-        console.error(
-            error
-        );
-
+        console.error(error);
 
         profileOptions.innerHTML = `
-            <div class="profiles-error">
-                Could not load generation profiles.
+            <div class="loading-state">
+                Could not load profiles.
             </div>
         `;
-
-
-        selectedProfileId = null;
-
-        selectedProfileVersionId = null;
-
-
-        summaryProfile.textContent =
-            "Unavailable";
-
-        summaryVersion.textContent =
-            "—";
 
     }
 
 }
 
 
-/* =========================================================
-   RENDER GENERATE PROFILES
-========================================================= */
-
 function renderGenerateProfiles(
-    preferredProfileId
+    preferredId
 ) {
 
     profileOptions.innerHTML = "";
 
-
-    if (
-        profiles.length === 0
-    ) {
+    if (!profiles.length) {
 
         profileOptions.innerHTML = `
-            <div class="profiles-empty">
-                No active generation profiles.
-                Open Profiles to create or restore one.
+            <div class="loading-state">
+                No active profiles.
             </div>
         `;
 
-
         selectedProfileId = null;
-
         selectedProfileVersionId = null;
-
 
         summaryProfile.textContent =
             "No profile";
@@ -547,187 +381,129 @@ function renderGenerateProfiles(
         summaryVersion.textContent =
             "—";
 
-
         return;
 
     }
 
 
-    profiles.forEach(
-        profile => {
+    profiles.forEach(profile => {
 
-            profileOptions.appendChild(
-                createGenerateProfileCard(
-                    profile
-                )
-            );
-
-        }
-    );
-
-
-    let profileToSelect =
-        profiles.find(
-            profile =>
-                Number(profile.id)
-                ===
-                Number(preferredProfileId)
+        profileOptions.appendChild(
+            createGenerateProfileCard(
+                profile
+            )
         );
 
+    });
 
-    if (!profileToSelect) {
 
-        profileToSelect =
-            profiles[0];
+    let chosen =
+        profiles.find(
+            item =>
+                Number(item.id)
+                ===
+                Number(preferredId)
+        );
 
+    if (!chosen) {
+        chosen = profiles[0];
     }
 
-
-    selectProfile(
-        profileToSelect.id
+    selectGenerateProfile(
+        chosen.id
     );
 
 }
 
-
-/* =========================================================
-   GENERATE PROFILE CARD
-========================================================= */
 
 function createGenerateProfileCard(
     profile
 ) {
 
     const card =
-        document.createElement(
-            "label"
-        );
-
+        document.createElement("label");
 
     card.className =
         "profile-card";
 
-
     card.dataset.profileId =
-        String(
-            profile.id
-        );
+        profile.id;
 
 
     const radio =
-        document.createElement(
-            "input"
-        );
+        document.createElement("input");
 
-
-    radio.type =
-        "radio";
-
-    radio.name =
-        "profile";
-
-    radio.value =
-        String(
-            profile.id
-        );
+    radio.type = "radio";
+    radio.name = "profile";
 
 
     const icon =
-        document.createElement(
-            "div"
-        );
-
+        document.createElement("div");
 
     icon.className =
-        "profile-icon dynamic-profile-icon";
-
+        "profile-icon";
 
     icon.textContent =
-        getProfileInitials(
-            profile.name
-        );
+        initials(profile.name);
 
 
-    const profileText =
-        document.createElement(
-            "div"
-        );
+    const text =
+        document.createElement("div");
 
-
-    profileText.className =
+    text.className =
         "profile-text";
 
 
-    const name =
-        document.createElement(
-            "strong"
-        );
+    const title =
+        document.createElement("strong");
 
-
-    name.textContent =
+    title.textContent =
         profile.name;
 
 
-    const details =
-        document.createElement(
-            "span"
-        );
+    const detail =
+        document.createElement("span");
 
 
-    const version =
-        `v${profile.version_number}`;
+    const active =
+        profile.active_version_number;
+
+    const latest =
+        profile.latest_version_number;
 
 
-    if (
-        profile.description
-    ) {
+    if (active === latest) {
 
-        details.textContent =
-            `${version} · ${profile.description}`;
+        detail.textContent =
+            `Using v${active} · ${profile.description || "No description"}`;
 
     } else {
 
-        details.textContent =
-            version;
+        detail.textContent =
+            `Using v${active} · Latest v${latest} · ${profile.description || "No description"}`;
 
     }
 
 
     const check =
-        document.createElement(
-            "div"
-        );
-
+        document.createElement("div");
 
     check.className =
         "profile-check";
 
     check.textContent =
-        "✓";
+        "●";
 
 
-    profileText.appendChild(
-        name
+    text.append(
+        title,
+        detail
     );
 
-    profileText.appendChild(
-        details
-    );
-
-
-    card.appendChild(
-        radio
-    );
-
-    card.appendChild(
-        icon
-    );
-
-    card.appendChild(
-        profileText
-    );
-
-    card.appendChild(
+    card.append(
+        radio,
+        icon,
+        text,
         check
     );
 
@@ -736,24 +512,19 @@ function createGenerateProfileCard(
         "click",
         () => {
 
-            selectProfile(
+            selectGenerateProfile(
                 profile.id
             );
 
         }
     );
 
-
     return card;
 
 }
 
 
-/* =========================================================
-   SELECT GENERATION PROFILE
-========================================================= */
-
-function selectProfile(
+function selectGenerateProfile(
     profileId
 ) {
 
@@ -765,126 +536,57 @@ function selectProfile(
                 Number(profileId)
         );
 
-
     if (!profile) {
         return;
     }
 
 
     selectedProfileId =
-        Number(
-            profile.id
-        );
-
+        Number(profile.id);
 
     selectedProfileVersionId =
-        Number(
-            profile.version_id
-        );
+        Number(profile.active_version_id);
 
 
     document
         .querySelectorAll(
             ".profile-card"
         )
-        .forEach(
-            card => {
+        .forEach(card => {
 
-                const isSelected =
-                    Number(
-                        card.dataset.profileId
-                    )
-                    ===
-                    selectedProfileId;
+            const selected =
+                Number(
+                    card.dataset.profileId
+                )
+                ===
+                selectedProfileId;
 
+            card.classList.toggle(
+                "active-profile",
+                selected
+            );
 
-                card.classList.toggle(
-                    "active-profile",
-                    isSelected
-                );
+            const radio =
+                card.querySelector("input");
 
-
-                const radio =
-                    card.querySelector(
-                        'input[type="radio"]'
-                    );
-
-
-                if (radio) {
-
-                    radio.checked =
-                        isSelected;
-
-                }
-
+            if (radio) {
+                radio.checked = selected;
             }
-        );
+
+        });
 
 
     summaryProfile.textContent =
         profile.name;
 
-
     summaryVersion.textContent =
-        `v${profile.version_number}`;
+        `v${profile.active_version_number}`;
 
 }
 
 
 /* =========================================================
-   PROFILE INITIALS
-========================================================= */
-
-function getProfileInitials(
-    name
-) {
-
-    if (!name) {
-        return "?";
-    }
-
-
-    const words =
-        name
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-
-    if (
-        words.length === 0
-    ) {
-
-        return "?";
-
-    }
-
-
-    if (
-        words.length === 1
-    ) {
-
-        return words[0]
-            .slice(
-                0,
-                2
-            )
-            .toUpperCase();
-
-    }
-
-
-    return (
-        words[0][0]
-        +
-        words[1][0]
-    ).toUpperCase();
-
-}
-
-
-/* =========================================================
-   LOAD PROFILE MANAGER LIBRARY
+   MANAGER LIBRARY
 ========================================================= */
 
 async function loadManagerProfiles() {
@@ -896,42 +598,33 @@ async function loadManagerProfiles() {
                 "/api/profiles?include_archived=true"
             );
 
-
         if (!response.ok) {
 
             throw new Error(
-                await getApiErrorMessage(
-                    response
-                )
+                await apiError(response)
             );
 
         }
 
-
         const data =
             await response.json();
 
-
         managerProfiles =
-            Array.isArray(
-                data.profiles
-            )
+            Array.isArray(data.profiles)
                 ? data.profiles
                 : [];
 
+        libraryCount.textContent =
+            String(managerProfiles.length);
 
         renderManagerProfiles();
 
-
     } catch (error) {
 
-        console.error(
-            error
-        );
-
+        console.error(error);
 
         profileManagerList.innerHTML = `
-            <div class="manager-empty">
+            <div class="loading-state">
                 Could not load profiles.
             </div>
         `;
@@ -941,45 +634,37 @@ async function loadManagerProfiles() {
 }
 
 
-/* =========================================================
-   RENDER MANAGER PROFILE LIST
-========================================================= */
-
 function renderManagerProfiles() {
 
-    profileManagerList.innerHTML =
-        "";
+    profileManagerList.innerHTML = "";
 
-
-    const searchValue =
-        profileSearch.value
+    const query =
+        profileSearch
+            .value
             .trim()
             .toLowerCase();
 
 
-    const filteredProfiles =
+    const filtered =
         managerProfiles.filter(
             profile => {
 
-                const text = (
+                const text =
                     `${profile.name} ${profile.description || ""}`
-                ).toLowerCase();
-
+                        .toLowerCase();
 
                 return text.includes(
-                    searchValue
+                    query
                 );
 
             }
         );
 
 
-    if (
-        filteredProfiles.length === 0
-    ) {
+    if (!filtered.length) {
 
         profileManagerList.innerHTML = `
-            <div class="manager-empty">
+            <div class="loading-state">
                 No profiles found.
             </div>
         `;
@@ -989,166 +674,126 @@ function renderManagerProfiles() {
     }
 
 
-    filteredProfiles.forEach(
-        profile => {
+    filtered.forEach(profile => {
 
-            const button =
-                document.createElement(
-                    "button"
-                );
+        const button =
+            document.createElement("button");
 
+        button.type = "button";
 
-            button.type =
-                "button";
+        button.className =
+            "manager-profile-item";
 
 
-            button.className =
-                "manager-profile-item";
+        if (
+            Number(profile.id)
+            ===
+            Number(editingProfileId)
+        ) {
 
-
-            if (
-                Number(profile.id)
-                ===
-                Number(editingProfileId)
-            ) {
-
-                button.classList.add(
-                    "selected"
-                );
-
-            }
-
-
-            const titleRow =
-                document.createElement(
-                    "div"
-                );
-
-
-            titleRow.className =
-                "manager-profile-title-row";
-
-
-            const title =
-                document.createElement(
-                    "div"
-                );
-
-
-            title.className =
-                "manager-profile-title";
-
-
-            title.textContent =
-                profile.name;
-
-
-            const version =
-                document.createElement(
-                    "span"
-                );
-
-
-            version.className =
-                "manager-profile-version";
-
-
-            version.textContent =
-                `v${profile.version_number}`;
-
-
-            titleRow.appendChild(
-                title
-            );
-
-            titleRow.appendChild(
-                version
-            );
-
-
-            const descriptionElement =
-                document.createElement(
-                    "div"
-                );
-
-
-            descriptionElement.className =
-                "manager-profile-description";
-
-
-            descriptionElement.textContent =
-                profile.description
-                ||
-                "No description";
-
-
-            const status =
-                document.createElement(
-                    "span"
-                );
-
-
-            status.className =
-                "manager-profile-status";
-
-
-            if (
-                Number(profile.is_active)
-                === 1
-            ) {
-
-                status.textContent =
-                    "Active";
-
-            } else {
-
-                status.textContent =
-                    "Archived";
-
-                status.classList.add(
-                    "archived"
-                );
-
-            }
-
-
-            button.appendChild(
-                titleRow
-            );
-
-            button.appendChild(
-                descriptionElement
-            );
-
-            button.appendChild(
-                status
-            );
-
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    openProfileEditor(
-                        profile.id
-                    );
-
-                }
-            );
-
-
-            profileManagerList.appendChild(
-                button
+            button.classList.add(
+                "selected"
             );
 
         }
-    );
+
+
+        const titleRow =
+            document.createElement("div");
+
+        titleRow.className =
+            "manager-profile-title-row";
+
+
+        const title =
+            document.createElement("div");
+
+        title.className =
+            "manager-profile-title";
+
+        title.textContent =
+            profile.name;
+
+
+        const version =
+            document.createElement("span");
+
+        version.className =
+            "manager-profile-version";
+
+        version.textContent =
+            `v${profile.active_version_number}`;
+
+
+        titleRow.append(
+            title,
+            version
+        );
+
+
+        const description =
+            document.createElement("div");
+
+        description.className =
+            "manager-profile-description";
+
+        description.textContent =
+            profile.description
+            ||
+            "No description";
+
+
+        const status =
+            document.createElement("span");
+
+        status.className =
+            "manager-profile-status";
+
+
+        status.textContent =
+            Number(profile.is_active) === 1
+                ?
+                `ACTIVE · GENERATE v${profile.active_version_number}`
+                :
+                "ARCHIVED";
+
+
+        button.append(
+            titleRow,
+            description,
+            status
+        );
+
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                openProfileEditor(
+                    profile.id
+                );
+
+            }
+        );
+
+
+        profileManagerList.appendChild(
+            button
+        );
+
+    });
 
 }
 
 
+profileSearch.addEventListener(
+    "input",
+    renderManagerProfiles
+);
+
+
 /* =========================================================
-   OPEN PROFILE EDITOR
+   OPEN EDITOR
 ========================================================= */
 
 async function openProfileEditor(
@@ -1161,10 +806,7 @@ async function openProfileEditor(
         let url =
             `/api/profiles/${profileId}`;
 
-
-        if (
-            versionNumber !== null
-        ) {
+        if (versionNumber !== null) {
 
             url =
                 `/api/profiles/${profileId}/versions/${versionNumber}`;
@@ -1173,17 +815,12 @@ async function openProfileEditor(
 
 
         const response =
-            await fetch(
-                url
-            );
-
+            await fetch(url);
 
         if (!response.ok) {
 
             throw new Error(
-                await getApiErrorMessage(
-                    response
-                )
+                await apiError(response)
             );
 
         }
@@ -1194,40 +831,18 @@ async function openProfileEditor(
 
 
         editingProfileId =
-            Number(
-                profile.id
-            );
+            Number(profile.id);
 
+        editingProfileName =
+            profile.name;
 
         loadedEditorVersionNumber =
-            Number(
-                profile.version_number
-            );
-
-
-        const managerProfile =
-            managerProfiles.find(
-                item =>
-                    Number(item.id)
-                    ===
-                    editingProfileId
-            );
-
-
-        const latestVersion =
-            managerProfile
-                ?
-                Number(
-                    managerProfile.version_number
-                )
-                :
-                loadedEditorVersionNumber;
+            Number(profile.version_number);
 
 
         profileEditorEmpty.classList.add(
             "hidden-element"
         );
-
 
         profileEditorContent.classList.remove(
             "hidden-element"
@@ -1241,7 +856,6 @@ async function openProfileEditor(
         profileNameInput.value =
             profile.name;
 
-
         profileDescriptionInput.value =
             profile.description
             ||
@@ -1249,41 +863,40 @@ async function openProfileEditor(
 
 
         profileInstructionEditor.value =
-            profile.system_instruction;
+            profile.system_instruction
+            ||
+            "";
 
+
+        activeVersionBadge.textContent =
+            `v${profile.active_version_number}`;
+
+        latestVersionBadge.textContent =
+            `v${profile.latest_version_number}`;
 
         loadedVersionBadge.textContent =
-            `v${loadedEditorVersionNumber}`;
-
-
-        editorVersionBadge.textContent =
-            `Loaded v${loadedEditorVersionNumber} · Latest v${latestVersion}`;
+            `v${profile.version_number}`;
 
 
         if (
-            loadedEditorVersionNumber
-            <
-            latestVersion
+            Number(profile.version_number)
+            ===
+            Number(profile.active_version_number)
         ) {
 
             loadedVersionNote.textContent =
-                `You are viewing an older version (v${loadedEditorVersionNumber}). You can edit it and save the result as a new version.`;
+                `v${profile.version_number} is currently used by Generate.`;
 
         } else {
 
             loadedVersionNote.textContent =
-                "Latest system instruction loaded.";
+                `You are editing v${profile.version_number}. Generate currently uses v${profile.active_version_number}.`;
 
         }
 
 
-        updateInstructionCharacterCount();
-
-
         const active =
-            Number(
-                profile.is_active
-            )
+            Number(profile.is_active)
             ===
             1;
 
@@ -1291,21 +904,9 @@ async function openProfileEditor(
         profileStateBadge.textContent =
             active
                 ?
-                "Active"
+                "ACTIVE"
                 :
-                "Archived";
-
-
-        profileStateBadge.classList.toggle(
-            "active",
-            active
-        );
-
-
-        profileStateBadge.classList.toggle(
-            "archived",
-            !active
-        );
+                "ARCHIVED";
 
 
         archiveProfileButton.classList.toggle(
@@ -1313,17 +914,11 @@ async function openProfileEditor(
             !active
         );
 
-
         restoreProfileButton.classList.toggle(
             "hidden-element",
             active
         );
 
-
-        /*
-            Archived profiles remain viewable,
-            but must be restored before editing.
-        */
 
         profileNameInput.disabled =
             !active;
@@ -1341,8 +936,9 @@ async function openProfileEditor(
             !active;
 
 
-        renderManagerProfiles();
+        updateInstructionCount();
 
+        renderManagerProfiles();
 
         await loadVersionHistory(
             editingProfileId
@@ -1351,10 +947,7 @@ async function openProfileEditor(
 
     } catch (error) {
 
-        console.error(
-            error
-        );
-
+        console.error(error);
 
         showToast(
             error.message
@@ -1374,7 +967,7 @@ async function loadVersionHistory(
 ) {
 
     versionHistoryList.innerHTML = `
-        <div class="manager-loading">
+        <div class="loading-state">
             Loading versions...
         </div>
     `;
@@ -1387,13 +980,10 @@ async function loadVersionHistory(
                 `/api/profiles/${profileId}/versions`
             );
 
-
         if (!response.ok) {
 
             throw new Error(
-                await getApiErrorMessage(
-                    response
-                )
+                await apiError(response)
             );
 
         }
@@ -1402,11 +992,8 @@ async function loadVersionHistory(
         const data =
             await response.json();
 
-
         const versions =
-            Array.isArray(
-                data.versions
-            )
+            Array.isArray(data.versions)
                 ?
                 data.versions
                 :
@@ -1417,180 +1004,26 @@ async function loadVersionHistory(
             "";
 
 
-        if (
-            versions.length === 0
-        ) {
+        versions.forEach(version => {
 
-            versionHistoryList.innerHTML = `
-                <div class="manager-empty">
-                    No versions found.
-                </div>
-            `;
+            versionHistoryList.appendChild(
+                createVersionRow(
+                    profileId,
+                    version,
+                    versions.length
+                )
+            );
 
-            return;
-
-        }
-
-
-        versions.forEach(
-            version => {
-
-                const item =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                item.className =
-                    "version-history-item";
-
-
-                if (
-                    Number(
-                        version.version_number
-                    )
-                    ===
-                    Number(
-                        loadedEditorVersionNumber
-                    )
-                ) {
-
-                    item.classList.add(
-                        "loaded"
-                    );
-
-                }
-
-
-                const main =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                main.className =
-                    "version-history-main";
-
-
-                const title =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                title.className =
-                    "version-history-title";
-
-
-                title.textContent =
-                    `Version ${version.version_number}`;
-
-
-                const meta =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                meta.className =
-                    "version-history-meta";
-
-
-                meta.textContent =
-                    `${formatDatabaseDate(version.created_at)} · ${formatNumber(version.character_count)} characters`;
-
-
-                main.appendChild(
-                    title
-                );
-
-                main.appendChild(
-                    meta
-                );
-
-
-                const loadButton =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                loadButton.className =
-                    "version-load-button";
-
-
-                loadButton.type =
-                    "button";
-
-
-                loadButton.textContent =
-                    (
-                        Number(
-                            version.version_number
-                        )
-                        ===
-                        Number(
-                            loadedEditorVersionNumber
-                        )
-                    )
-                        ?
-                        "Loaded"
-                        :
-                        "Load";
-
-
-                loadButton.disabled =
-                    (
-                        Number(
-                            version.version_number
-                        )
-                        ===
-                        Number(
-                            loadedEditorVersionNumber
-                        )
-                    );
-
-
-                loadButton.addEventListener(
-                    "click",
-                    () => {
-
-                        openProfileEditor(
-                            profileId,
-                            version.version_number
-                        );
-
-                    }
-                );
-
-
-                item.appendChild(
-                    main
-                );
-
-                item.appendChild(
-                    loadButton
-                );
-
-
-                versionHistoryList.appendChild(
-                    item
-                );
-
-            }
-        );
+        });
 
 
     } catch (error) {
 
-        console.error(
-            error
-        );
-
+        console.error(error);
 
         versionHistoryList.innerHTML = `
-            <div class="manager-empty">
-                Could not load version history.
+            <div class="loading-state">
+                Could not load versions.
             </div>
         `;
 
@@ -1599,22 +1032,403 @@ async function loadVersionHistory(
 }
 
 
-/* =========================================================
-   PROFILE SEARCH
-========================================================= */
+function createVersionRow(
+    profileId,
+    version,
+    totalVersions
+) {
 
-profileSearch.addEventListener(
-    "input",
-    () => {
+    const row =
+        document.createElement("div");
 
-        renderManagerProfiles();
+    row.className =
+        "version-row";
+
+
+    const isGenerationVersion =
+        Number(
+            version.is_generation_version
+        )
+        ===
+        1;
+
+
+    if (isGenerationVersion) {
+
+        row.classList.add(
+            "generation-version"
+        );
 
     }
-);
+
+
+    const info =
+        document.createElement("div");
+
+    info.className =
+        "version-row-info";
+
+
+    const title =
+        document.createElement("strong");
+
+    title.textContent =
+        `Version ${version.version_number}`;
+
+
+    const meta =
+        document.createElement("div");
+
+    meta.className =
+        "version-row-meta";
+
+    meta.innerHTML = `
+        <span>${formatDate(version.created_at)}</span>
+        <span>${formatNumber(version.character_count)} characters</span>
+    `;
+
+
+    info.append(
+        title,
+        meta
+    );
+
+
+    if (isGenerationVersion) {
+
+        const activeLabel =
+            document.createElement("span");
+
+        activeLabel.className =
+            "version-active-label";
+
+        activeLabel.textContent =
+            "USED BY GENERATE";
+
+        info.appendChild(
+            activeLabel
+        );
+
+    }
+
+
+    const actions =
+        document.createElement("div");
+
+    actions.className =
+        "version-actions";
+
+
+    /* LOAD */
+
+    const loadButton =
+        document.createElement("button");
+
+    loadButton.className =
+        "version-action";
+
+    loadButton.type =
+        "button";
+
+
+    const isLoaded =
+        Number(
+            version.version_number
+        )
+        ===
+        Number(
+            loadedEditorVersionNumber
+        );
+
+
+    loadButton.textContent =
+        isLoaded
+            ?
+            "LOADED"
+            :
+            "LOAD";
+
+
+    loadButton.disabled =
+        isLoaded;
+
+
+    loadButton.addEventListener(
+        "click",
+        () => {
+
+            openProfileEditor(
+                profileId,
+                version.version_number
+            );
+
+        }
+    );
+
+
+    /* USE FOR GENERATE */
+
+    const useButton =
+        document.createElement("button");
+
+    useButton.className =
+        "version-action primary";
+
+    useButton.type =
+        "button";
+
+
+    useButton.textContent =
+        isGenerationVersion
+            ?
+            "IN GENERATE"
+            :
+            "USE FOR GENERATE";
+
+
+    useButton.disabled =
+        isGenerationVersion;
+
+
+    useButton.addEventListener(
+        "click",
+        async () => {
+
+            await activateVersion(
+                profileId,
+                version.version_number
+            );
+
+        }
+    );
+
+
+    /* DELETE */
+
+    const deleteButton =
+        document.createElement("button");
+
+    deleteButton.className =
+        "version-action delete";
+
+    deleteButton.type =
+        "button";
+
+    deleteButton.textContent =
+        "DELETE";
+
+
+    const usedByJobs =
+        Number(version.usage_count) > 0;
+
+
+    deleteButton.disabled =
+        isGenerationVersion
+        ||
+        totalVersions <= 1
+        ||
+        usedByJobs;
+
+
+    if (isGenerationVersion) {
+
+        deleteButton.title =
+            "Activate another version first.";
+
+    } else if (totalVersions <= 1) {
+
+        deleteButton.title =
+            "A profile must keep at least one version.";
+
+    } else if (usedByJobs) {
+
+        deleteButton.title =
+            "This version is used by generation history.";
+
+    }
+
+
+    deleteButton.addEventListener(
+        "click",
+        async () => {
+
+            await deleteVersion(
+                profileId,
+                version.version_number
+            );
+
+        }
+    );
+
+
+    actions.append(
+        loadButton,
+        useButton,
+        deleteButton
+    );
+
+
+    row.append(
+        info,
+        actions
+    );
+
+
+    return row;
+
+}
 
 
 /* =========================================================
-   SAVE PROFILE DETAILS
+   ACTIVATE VERSION
+========================================================= */
+
+async function activateVersion(
+    profileId,
+    versionNumber
+) {
+
+    const confirmed =
+        window.confirm(
+            `Use version ${versionNumber} for Generate?`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/profiles/${profileId}/versions/${versionNumber}/activate`,
+                {
+                    method: "POST"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                await apiError(response)
+            );
+
+        }
+
+
+        await response.json();
+
+
+        await loadProfiles(
+            profileId
+        );
+
+        await loadManagerProfiles();
+
+
+        // Load the version that has just
+        // been activated.
+        await openProfileEditor(
+            profileId,
+            versionNumber
+        );
+
+
+        showToast(
+            `Generate now uses version ${versionNumber}.`
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DELETE VERSION
+========================================================= */
+
+async function deleteVersion(
+    profileId,
+    versionNumber
+) {
+
+    const confirmed =
+        window.confirm(
+            `Delete version ${versionNumber} permanently?\n\nThis cannot be undone.`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/profiles/${profileId}/versions/${versionNumber}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                await apiError(response)
+            );
+
+        }
+
+
+        await response.json();
+
+
+        await loadProfiles(
+            profileId
+        );
+
+        await loadManagerProfiles();
+
+
+        // Return to active generation version.
+        await openProfileEditor(
+            profileId
+        );
+
+
+        showToast(
+            `Version ${versionNumber} deleted.`
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SAVE DETAILS
 ========================================================= */
 
 saveDetailsButton.addEventListener(
@@ -1627,7 +1441,9 @@ saveDetailsButton.addEventListener(
 
 
         const name =
-            profileNameInput.value.trim();
+            profileNameInput
+                .value
+                .trim();
 
 
         if (!name) {
@@ -1639,13 +1455,6 @@ saveDetailsButton.addEventListener(
             return;
 
         }
-
-
-        setButtonBusy(
-            saveDetailsButton,
-            true,
-            "Saving..."
-        );
 
 
         try {
@@ -1661,15 +1470,14 @@ saveDetailsButton.addEventListener(
                                 "application/json"
                         },
 
-                        body: JSON.stringify({
-                            name:
+                        body:
+                            JSON.stringify({
                                 name,
-
-                            description:
-                                profileDescriptionInput
-                                    .value
-                                    .trim()
-                        })
+                                description:
+                                    profileDescriptionInput
+                                        .value
+                                        .trim()
+                            })
                     }
                 );
 
@@ -1677,9 +1485,7 @@ saveDetailsButton.addEventListener(
             if (!response.ok) {
 
                 throw new Error(
-                    await getApiErrorMessage(
-                        response
-                    )
+                    await apiError(response)
                 );
 
             }
@@ -1692,9 +1498,7 @@ saveDetailsButton.addEventListener(
                 editingProfileId
             );
 
-
             await loadManagerProfiles();
-
 
             await openProfileEditor(
                 editingProfileId,
@@ -1709,22 +1513,10 @@ saveDetailsButton.addEventListener(
 
         } catch (error) {
 
-            console.error(
-                error
-            );
-
+            console.error(error);
 
             showToast(
                 error.message
-            );
-
-
-        } finally {
-
-            setButtonBusy(
-                saveDetailsButton,
-                false,
-                "Save Details"
             );
 
         }
@@ -1734,7 +1526,7 @@ saveDetailsButton.addEventListener(
 
 
 /* =========================================================
-   SAVE NEW SYSTEM INSTRUCTION VERSION
+   SAVE NEW VERSION
 ========================================================= */
 
 saveVersionButton.addEventListener(
@@ -1765,20 +1557,13 @@ saveVersionButton.addEventListener(
 
         const confirmed =
             window.confirm(
-                "Save this instruction as a new profile version?"
+                "Save this instruction as a new version?\n\nThe new version will automatically become the version used by Generate."
             );
 
 
         if (!confirmed) {
             return;
         }
-
-
-        setButtonBusy(
-            saveVersionButton,
-            true,
-            "Saving New Version..."
-        );
 
 
         try {
@@ -1794,10 +1579,11 @@ saveVersionButton.addEventListener(
                                 "application/json"
                         },
 
-                        body: JSON.stringify({
-                            system_instruction:
-                                instruction
-                        })
+                        body:
+                            JSON.stringify({
+                                system_instruction:
+                                    instruction
+                            })
                     }
                 );
 
@@ -1805,15 +1591,13 @@ saveVersionButton.addEventListener(
             if (!response.ok) {
 
                 throw new Error(
-                    await getApiErrorMessage(
-                        response
-                    )
+                    await apiError(response)
                 );
 
             }
 
 
-            const updatedProfile =
+            const updated =
                 await response.json();
 
 
@@ -1821,9 +1605,7 @@ saveVersionButton.addEventListener(
                 editingProfileId
             );
 
-
             await loadManagerProfiles();
-
 
             await openProfileEditor(
                 editingProfileId
@@ -1831,28 +1613,16 @@ saveVersionButton.addEventListener(
 
 
             showToast(
-                `Version ${updatedProfile.version_number} created successfully.`
+                `Version ${updated.version_number} created and activated.`
             );
 
 
         } catch (error) {
 
-            console.error(
-                error
-            );
-
+            console.error(error);
 
             showToast(
                 error.message
-            );
-
-
-        } finally {
-
-            setButtonBusy(
-                saveVersionButton,
-                false,
-                "Save as New Version"
             );
 
         }
@@ -1862,7 +1632,7 @@ saveVersionButton.addEventListener(
 
 
 /* =========================================================
-   ARCHIVE PROFILE
+   ARCHIVE
 ========================================================= */
 
 archiveProfileButton.addEventListener(
@@ -1876,7 +1646,7 @@ archiveProfileButton.addEventListener(
 
         const confirmed =
             window.confirm(
-                "Archive this profile? It will disappear from Generate, but its versions will remain saved."
+                `Archive "${editingProfileName}"?\n\nIt will disappear from Generate but remain saved.`
             );
 
 
@@ -1891,8 +1661,7 @@ archiveProfileButton.addEventListener(
                 await fetch(
                     `/api/profiles/${editingProfileId}`,
                     {
-                        method:
-                            "DELETE"
+                        method: "DELETE"
                     }
                 );
 
@@ -1900,9 +1669,7 @@ archiveProfileButton.addEventListener(
             if (!response.ok) {
 
                 throw new Error(
-                    await getApiErrorMessage(
-                        response
-                    )
+                    await apiError(response)
                 );
 
             }
@@ -1911,7 +1678,7 @@ archiveProfileButton.addEventListener(
             await response.json();
 
 
-            const archivedId =
+            const id =
                 editingProfileId;
 
 
@@ -1919,9 +1686,7 @@ archiveProfileButton.addEventListener(
 
             await loadManagerProfiles();
 
-            await openProfileEditor(
-                archivedId
-            );
+            await openProfileEditor(id);
 
 
             showToast(
@@ -1931,10 +1696,7 @@ archiveProfileButton.addEventListener(
 
         } catch (error) {
 
-            console.error(
-                error
-            );
-
+            console.error(error);
 
             showToast(
                 error.message
@@ -1947,7 +1709,7 @@ archiveProfileButton.addEventListener(
 
 
 /* =========================================================
-   RESTORE PROFILE
+   RESTORE
 ========================================================= */
 
 restoreProfileButton.addEventListener(
@@ -1965,8 +1727,7 @@ restoreProfileButton.addEventListener(
                 await fetch(
                     `/api/profiles/${editingProfileId}/restore`,
                     {
-                        method:
-                            "POST"
+                        method: "POST"
                     }
                 );
 
@@ -1974,9 +1735,7 @@ restoreProfileButton.addEventListener(
             if (!response.ok) {
 
                 throw new Error(
-                    await getApiErrorMessage(
-                        response
-                    )
+                    await apiError(response)
                 );
 
             }
@@ -1985,19 +1744,15 @@ restoreProfileButton.addEventListener(
             await response.json();
 
 
-            const restoredId =
+            const id =
                 editingProfileId;
 
 
-            await loadProfiles(
-                restoredId
-            );
+            await loadProfiles(id);
 
             await loadManagerProfiles();
 
-            await openProfileEditor(
-                restoredId
-            );
+            await openProfileEditor(id);
 
 
             showToast(
@@ -2007,10 +1762,7 @@ restoreProfileButton.addEventListener(
 
         } catch (error) {
 
-            console.error(
-                error
-            );
-
+            console.error(error);
 
             showToast(
                 error.message
@@ -2023,16 +1775,122 @@ restoreProfileButton.addEventListener(
 
 
 /* =========================================================
-   INSTRUCTION CHARACTER COUNT
+   PERMANENT DELETE PROFILE
 ========================================================= */
 
-function updateInstructionCharacterCount() {
+deleteProfileButton.addEventListener(
+    "click",
+    async () => {
+
+        if (!editingProfileId) {
+            return;
+        }
+
+
+        const typed =
+            window.prompt(
+                `Permanent deletion cannot be undone.\n\nType the profile name exactly to continue:\n\n${editingProfileName}`
+            );
+
+
+        if (
+            typed !== editingProfileName
+        ) {
+
+            if (typed !== null) {
+
+                showToast(
+                    "Profile name did not match. Nothing was deleted."
+                );
+
+            }
+
+            return;
+        }
+
+
+        const finalConfirm =
+            window.confirm(
+                `Delete "${editingProfileName}" permanently?`
+            );
+
+
+        if (!finalConfirm) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}/permanent`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    await apiError(response)
+                );
+
+            }
+
+
+            await response.json();
+
+
+            editingProfileId = null;
+            editingProfileName = null;
+            loadedEditorVersionNumber = null;
+
+
+            profileEditorContent.classList.add(
+                "hidden-element"
+            );
+
+            profileEditorEmpty.classList.remove(
+                "hidden-element"
+            );
+
+
+            await loadProfiles();
+
+            await loadManagerProfiles();
+
+
+            showToast(
+                "Profile permanently deleted."
+            );
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            showToast(
+                error.message
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INSTRUCTION COUNT
+========================================================= */
+
+function updateInstructionCount() {
 
     const length =
         profileInstructionEditor
             .value
             .length;
-
 
     instructionCharacterCount.textContent =
         `${formatNumber(length)} ${
@@ -2048,52 +1906,38 @@ function updateInstructionCharacterCount() {
 
 profileInstructionEditor.addEventListener(
     "input",
-    updateInstructionCharacterCount
+    updateInstructionCount
 );
 
 
 /* =========================================================
-   CREATE PROFILE MODAL
+   MODAL
 ========================================================= */
 
-function openCreateProfileModal() {
+function openModal() {
 
     newProfileForm.reset();
-
 
     newInstructionCharacterCount.textContent =
         "0 characters";
 
-
     newProfileModal.classList.add(
         "visible"
     );
-
 
     newProfileModal.setAttribute(
         "aria-hidden",
         "false"
     );
 
-
-    setTimeout(
-        () => {
-
-            newProfileName.focus();
-
-        },
-        50
-    );
-
 }
 
 
-function closeCreateProfileModal() {
+function closeModal() {
 
     newProfileModal.classList.remove(
         "visible"
     );
-
 
     newProfileModal.setAttribute(
         "aria-hidden",
@@ -2105,19 +1949,19 @@ function closeCreateProfileModal() {
 
 newProfileButton.addEventListener(
     "click",
-    openCreateProfileModal
+    openModal
 );
 
 
 modalCloseButton.addEventListener(
     "click",
-    closeCreateProfileModal
+    closeModal
 );
 
 
 cancelCreateProfile.addEventListener(
     "click",
-    closeCreateProfileModal
+    closeModal
 );
 
 
@@ -2131,27 +1975,7 @@ newProfileModal.addEventListener(
             newProfileModal
         ) {
 
-            closeCreateProfileModal();
-
-        }
-
-    }
-);
-
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key === "Escape"
-            &&
-            newProfileModal.classList.contains(
-                "visible"
-            )
-        ) {
-
-            closeCreateProfileModal();
+            closeModal();
 
         }
 
@@ -2168,15 +1992,8 @@ newProfileInstruction.addEventListener(
                 .value
                 .length;
 
-
         newInstructionCharacterCount.textContent =
-            `${formatNumber(length)} ${
-                length === 1
-                    ?
-                    "character"
-                    :
-                    "characters"
-            }`;
+            `${formatNumber(length)} characters`;
 
     }
 );
@@ -2198,40 +2015,21 @@ newProfileForm.addEventListener(
                 .value
                 .trim();
 
-
         const instruction =
             newProfileInstruction
                 .value
                 .trim();
 
 
-        if (!name) {
+        if (!name || !instruction) {
 
             showToast(
-                "Enter a profile name."
+                "Profile name and system instruction are required."
             );
 
             return;
 
         }
-
-
-        if (!instruction) {
-
-            showToast(
-                "Add a system instruction."
-            );
-
-            return;
-
-        }
-
-
-        setButtonBusy(
-            createProfileButton,
-            true,
-            "Creating..."
-        );
 
 
         try {
@@ -2240,8 +2038,7 @@ newProfileForm.addEventListener(
                 await fetch(
                     "/api/profiles",
                     {
-                        method:
-                            "POST",
+                        method: "POST",
 
                         headers: {
                             "Content-Type":
@@ -2250,14 +2047,11 @@ newProfileForm.addEventListener(
 
                         body:
                             JSON.stringify({
-                                name:
-                                    name,
-
+                                name,
                                 description:
                                     newProfileDescription
                                         .value
                                         .trim(),
-
                                 system_instruction:
                                     instruction
                             })
@@ -2268,57 +2062,41 @@ newProfileForm.addEventListener(
             if (!response.ok) {
 
                 throw new Error(
-                    await getApiErrorMessage(
-                        response
-                    )
+                    await apiError(response)
                 );
 
             }
 
 
-            const createdProfile =
+            const profile =
                 await response.json();
 
 
-            closeCreateProfileModal();
+            closeModal();
 
 
             await loadProfiles(
-                createdProfile.id
+                profile.id
             );
-
 
             await loadManagerProfiles();
 
-
             await openProfileEditor(
-                createdProfile.id
+                profile.id
             );
 
 
             showToast(
-                `${createdProfile.name} created as v1.`
+                `${profile.name} created.`
             );
 
 
         } catch (error) {
 
-            console.error(
-                error
-            );
-
+            console.error(error);
 
             showToast(
                 error.message
-            );
-
-
-        } finally {
-
-            setButtonBusy(
-                createProfileButton,
-                false,
-                "Create Profile"
             );
 
         }
@@ -2333,11 +2111,7 @@ newProfileForm.addEventListener(
 
 uploadZone.addEventListener(
     "click",
-    () => {
-
-        imageInput.click();
-
-    }
+    () => imageInput.click()
 );
 
 
@@ -2358,7 +2132,6 @@ uploadZone.addEventListener(
     event => {
 
         event.preventDefault();
-
 
         uploadZone.classList.add(
             "dragging"
@@ -2386,11 +2159,9 @@ uploadZone.addEventListener(
 
         event.preventDefault();
 
-
         uploadZone.classList.remove(
             "dragging"
         );
-
 
         addImages(
             event.dataTransfer.files
@@ -2400,38 +2171,19 @@ uploadZone.addEventListener(
 );
 
 
-function addImages(
-    files
-) {
+function addImages(files) {
 
-    const imageFiles =
-        Array.from(
-            files
-        ).filter(
-            file =>
-                file.type.startsWith(
-                    "image/"
-                )
-        );
+    const images =
+        Array.from(files)
+            .filter(
+                file =>
+                    file.type.startsWith(
+                        "image/"
+                    )
+            );
 
 
-    if (
-        imageFiles.length === 0
-    ) {
-
-        showToast(
-            "Please select image files."
-        );
-
-        return;
-
-    }
-
-
-    for (
-        const file
-        of imageFiles
-    ) {
+    for (const file of images) {
 
         if (
             selectedImages.length >= 4
@@ -2445,76 +2197,47 @@ function addImages(
 
         }
 
-
-        selectedImages.push(
-            file
-        );
+        selectedImages.push(file);
 
     }
 
 
     renderImages();
 
-
-    imageInput.value =
-        "";
+    imageInput.value = "";
 
 }
 
 
-/* =========================================================
-   RENDER REFERENCE IMAGES
-========================================================= */
-
 function renderImages() {
 
-    imagePreviewGrid.innerHTML =
-        "";
+    imagePreviewGrid.innerHTML = "";
 
 
     selectedImages.forEach(
-        (
-            file,
-            index
-        ) => {
+        (file, index) => {
 
             const preview =
-                document.createElement(
-                    "div"
-                );
-
+                document.createElement("div");
 
             preview.className =
                 "image-preview";
 
 
             const image =
-                document.createElement(
-                    "img"
-                );
+                document.createElement("img");
 
+            const url =
+                URL.createObjectURL(file);
 
-            const objectUrl =
-                URL.createObjectURL(
-                    file
-                );
-
-
-            image.src =
-                objectUrl;
-
-
-            image.alt =
-                `Reference ${index + 1}`;
+            image.src = url;
 
 
             image.addEventListener(
                 "load",
                 () => {
 
-                    URL.revokeObjectURL(
-                        objectUrl
-                    );
+                    URL.revokeObjectURL(url);
 
                 },
                 {
@@ -2524,32 +2247,22 @@ function renderImages() {
 
 
             const number =
-                document.createElement(
-                    "span"
-                );
-
+                document.createElement("span");
 
             number.className =
                 "image-number";
-
 
             number.textContent =
                 `Image ${index + 1}`;
 
 
             const remove =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
+            remove.type = "button";
 
             remove.className =
                 "remove-image";
-
-
-            remove.type =
-                "button";
-
 
             remove.textContent =
                 "×";
@@ -2557,16 +2270,12 @@ function renderImages() {
 
             remove.addEventListener(
                 "click",
-                event => {
-
-                    event.stopPropagation();
-
+                () => {
 
                     selectedImages.splice(
                         index,
                         1
                     );
-
 
                     renderImages();
 
@@ -2574,15 +2283,9 @@ function renderImages() {
             );
 
 
-            preview.appendChild(
-                image
-            );
-
-            preview.appendChild(
-                number
-            );
-
-            preview.appendChild(
+            preview.append(
+                image,
+                number,
                 remove
             );
 
@@ -2604,7 +2307,7 @@ function renderImages() {
 
 
 /* =========================================================
-   CREATIVE DIRECTION
+   DESCRIPTION
 ========================================================= */
 
 description.addEventListener(
@@ -2614,15 +2317,8 @@ description.addEventListener(
         const length =
             description.value.length;
 
-
         characterCount.textContent =
-            `${length} ${
-                length === 1
-                    ?
-                    "character"
-                    :
-                    "characters"
-            }`;
+            `${length} characters`;
 
     }
 );
@@ -2632,28 +2328,25 @@ description.addEventListener(
    OUTPUT COUNT
 ========================================================= */
 
-const countButtons =
-    document.querySelectorAll(
-        ".count-button"
-    );
-
-
-countButtons.forEach(
-    button => {
+document
+    .querySelectorAll(".count-button")
+    .forEach(button => {
 
         button.addEventListener(
             "click",
             () => {
 
-                countButtons.forEach(
-                    item => {
+                document
+                    .querySelectorAll(
+                        ".count-button"
+                    )
+                    .forEach(item => {
 
                         item.classList.remove(
                             "selected"
                         );
 
-                    }
-                );
+                    });
 
 
                 button.classList.add(
@@ -2675,12 +2368,11 @@ countButtons.forEach(
             }
         );
 
-    }
-);
+    });
 
 
 /* =========================================================
-   GENERATE BUTTON
+   GENERATE
 ========================================================= */
 
 generateButton.addEventListener(
@@ -2690,7 +2382,7 @@ generateButton.addEventListener(
         if (!selectedProfileId) {
 
             showToast(
-                "Select a generation profile first."
+                "Select a profile first."
             );
 
             return;
@@ -2698,12 +2390,10 @@ generateButton.addEventListener(
         }
 
 
-        if (
-            selectedImages.length === 0
-        ) {
+        if (!selectedImages.length) {
 
             showToast(
-                "Add at least one reference image first."
+                "Add at least one reference image."
             );
 
             return;
@@ -2712,7 +2402,7 @@ generateButton.addEventListener(
 
 
         console.log(
-            "Generation data ready:",
+            "Generation payload:",
             {
                 profileId:
                     selectedProfileId,
@@ -2724,7 +2414,9 @@ generateButton.addEventListener(
                     selectedCount,
 
                 description:
-                    description.value.trim(),
+                    description
+                        .value
+                        .trim(),
 
                 referenceCount:
                     selectedImages.length
@@ -2733,7 +2425,7 @@ generateButton.addEventListener(
 
 
         showToast(
-            "Profile workflow ready. AI generation connection comes next."
+            "Profile/version selection is working. AI connection comes after testing."
         );
 
     }
@@ -2741,61 +2433,66 @@ generateButton.addEventListener(
 
 
 /* =========================================================
-   GENERIC BUTTON BUSY STATE
+   HELPERS
 ========================================================= */
 
-function setButtonBusy(
-    button,
-    busy,
-    text
-) {
+function initials(name) {
 
-    button.disabled =
-        busy;
+    const words =
+        String(name || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
 
 
-    button.textContent =
-        text;
+    if (!words.length) {
+        return "?";
+    }
+
+    if (words.length === 1) {
+
+        return words[0]
+            .slice(0, 2)
+            .toUpperCase();
+
+    }
+
+    return (
+        words[0][0]
+        +
+        words[1][0]
+    ).toUpperCase();
 
 }
 
 
-/* =========================================================
-   DATE FORMATTING
-========================================================= */
+function formatNumber(value) {
 
-function formatDatabaseDate(
-    value
-) {
+    return Number(value || 0)
+        .toLocaleString();
+
+}
+
+
+function formatDate(value) {
 
     if (!value) {
         return "Unknown date";
     }
 
 
-    const normalized =
-        value.replace(
-            " ",
-            "T"
-        )
-        +
-        "Z";
-
-
     const date =
         new Date(
-            normalized
+            value.replace(" ", "T")
+            +
+            "Z"
         );
 
 
     if (
-        Number.isNaN(
-            date.getTime()
-        )
+        Number.isNaN(date.getTime())
     ) {
-
         return value;
-
     }
 
 
@@ -2804,39 +2501,7 @@ function formatDatabaseDate(
 }
 
 
-/* =========================================================
-   NUMBER FORMATTING
-========================================================= */
-
-function formatNumber(
-    value
-) {
-
-    const number =
-        Number(value);
-
-
-    if (
-        Number.isNaN(number)
-    ) {
-
-        return value;
-
-    }
-
-
-    return number.toLocaleString();
-
-}
-
-
-/* =========================================================
-   TOAST
-========================================================= */
-
-function showToast(
-    message
-) {
+function showToast(message) {
 
     clearTimeout(
         toastTimer
@@ -2868,22 +2533,14 @@ function showToast(
 
 
 /* =========================================================
-   APPLICATION STARTUP
+   START
 ========================================================= */
 
 async function startApplication() {
 
-    showView(
-        "generate"
-    );
-
+    showView("generate");
 
     await loadProfiles();
-
-
-    console.log(
-        "Image Agent 4C ready."
-    );
 
 }
 
