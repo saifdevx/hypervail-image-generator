@@ -13,22 +13,24 @@ PROFILES_DIR = BASE_DIR / "profiles"
 
 
 # ============================================================
-# DEFAULT / BUILT-IN PROFILES
+# DEFAULT PROFILES
 # ============================================================
 
 DEFAULT_PROFILES = [
     {
         "name": "Hero Images",
         "slug": "hero-images",
-        "description": "Clean eCommerce hero image prompt generation.",
+        "description": (
+            "Clean eCommerce hero image prompt generation."
+        ),
         "filename": "hero_images.txt",
     },
     {
         "name": "UGC Images",
         "slug": "ugc-images",
         "description": (
-            "Authentic grooming salon and tabletop UGC "
-            "prompt generation."
+            "Authentic grooming salon and tabletop "
+            "UGC prompt generation."
         ),
         "filename": "ugc_images.txt",
     },
@@ -39,7 +41,10 @@ DEFAULT_PROFILES = [
 # HELPERS
 # ============================================================
 
-def make_slug(value: str) -> str:
+def make_slug(
+    value: str
+):
+
     value = value.strip().lower()
 
     value = re.sub(
@@ -54,9 +59,11 @@ def make_slug(value: str) -> str:
 def make_unique_slug(
     connection,
     name: str
-) -> str:
+):
 
-    base_slug = make_slug(name)
+    base_slug = make_slug(
+        name
+    )
 
     if not base_slug:
         base_slug = "profile"
@@ -78,7 +85,10 @@ def make_unique_slug(
         if existing is None:
             return slug
 
-        slug = f"{base_slug}-{counter}"
+        slug = (
+            f"{base_slug}-{counter}"
+        )
+
         counter += 1
 
 
@@ -102,8 +112,8 @@ def seed_default_profiles():
             if not file_path.exists():
 
                 print(
-                    "Profile seed skipped. "
-                    f"Missing file: {file_path}"
+                    "Profile seed skipped: "
+                    f"{file_path}"
                 )
 
                 continue
@@ -112,14 +122,15 @@ def seed_default_profiles():
             existing = connection.execute(
                 """
                 SELECT id
+
                 FROM generation_profiles
+
                 WHERE slug = ?
                 """,
                 (profile["slug"],)
             ).fetchone()
 
 
-            # Never overwrite a profile that already exists.
             if existing:
                 continue
 
@@ -130,12 +141,6 @@ def seed_default_profiles():
 
 
             if not instruction:
-
-                print(
-                    "Profile seed skipped. "
-                    f"File is empty: {file_path}"
-                )
-
                 continue
 
 
@@ -146,6 +151,7 @@ def seed_default_profiles():
                     slug,
                     description
                 )
+
                 VALUES (?, ?, ?)
                 """,
                 (
@@ -156,16 +162,19 @@ def seed_default_profiles():
             )
 
 
-            profile_id = cursor.lastrowid
+            profile_id = (
+                cursor.lastrowid
+            )
 
 
-            connection.execute(
+            version_cursor = connection.execute(
                 """
                 INSERT INTO profile_versions (
                     profile_id,
                     version_number,
                     system_instruction
                 )
+
                 VALUES (?, ?, ?)
                 """,
                 (
@@ -176,8 +185,28 @@ def seed_default_profiles():
             )
 
 
+            version_id = (
+                version_cursor.lastrowid
+            )
+
+
+            connection.execute(
+                """
+                UPDATE generation_profiles
+
+                SET active_version_id = ?
+
+                WHERE id = ?
+                """,
+                (
+                    version_id,
+                    profile_id
+                )
+            )
+
+
             print(
-                "Seeded profile: "
+                f"Seeded profile: "
                 f"{profile['name']} v1"
             )
 
@@ -202,39 +231,64 @@ def list_profiles(
 
     try:
 
-        if include_inactive:
-
-            where_clause = ""
-
-        else:
-
-            where_clause = (
-                "WHERE gp.is_active = 1"
-            )
+        where_clause = (
+            ""
+            if include_inactive
+            else
+            "WHERE gp.is_active = 1"
+        )
 
 
         rows = connection.execute(
             f"""
             SELECT
+
                 gp.id,
                 gp.name,
                 gp.slug,
                 gp.description,
                 gp.is_active,
+                gp.active_version_id,
                 gp.created_at,
                 gp.updated_at,
 
-                pv.id AS version_id,
-                pv.version_number
+                active_v.version_number
+                    AS active_version_number,
+
+                latest_v.id
+                    AS latest_version_id,
+
+                latest_v.version_number
+                    AS latest_version_number,
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM profile_versions count_v
+
+                    WHERE
+                        count_v.profile_id = gp.id
+                )
+                    AS version_count
 
             FROM generation_profiles gp
 
-            JOIN profile_versions pv
-                ON pv.id = (
+            LEFT JOIN profile_versions active_v
+                ON active_v.id =
+                    gp.active_version_id
+
+            LEFT JOIN profile_versions latest_v
+                ON latest_v.id = (
+
                     SELECT id
+
                     FROM profile_versions
+
                     WHERE profile_id = gp.id
-                    ORDER BY version_number DESC
+
+                    ORDER BY
+                        version_number DESC
+
                     LIMIT 1
                 )
 
@@ -248,10 +302,29 @@ def list_profiles(
         ).fetchall()
 
 
-        return [
-            dict(row)
-            for row in rows
-        ]
+        profiles = []
+
+        for row in rows:
+
+            item = dict(row)
+
+            # Compatibility with the frontend:
+            # version_id/version_number always mean
+            # "currently used for Generate".
+            item["version_id"] = (
+                item["active_version_id"]
+            )
+
+            item["version_number"] = (
+                item["active_version_number"]
+            )
+
+            profiles.append(
+                item
+            )
+
+
+        return profiles
 
 
     finally:
@@ -260,7 +333,7 @@ def list_profiles(
 
 
 # ============================================================
-# GET LATEST PROFILE VERSION
+# GET PROFILE — ACTIVE GENERATION VERSION
 # ============================================================
 
 def get_profile(
@@ -274,26 +347,62 @@ def get_profile(
         row = connection.execute(
             """
             SELECT
+
                 gp.id,
                 gp.name,
                 gp.slug,
                 gp.description,
                 gp.is_active,
+                gp.active_version_id,
                 gp.created_at,
                 gp.updated_at,
 
-                pv.id AS version_id,
-                pv.version_number,
-                pv.system_instruction
+                active_v.id
+                    AS version_id,
+
+                active_v.version_number
+                    AS version_number,
+
+                active_v.system_instruction
+                    AS system_instruction,
+
+                active_v.version_number
+                    AS active_version_number,
+
+                latest_v.id
+                    AS latest_version_id,
+
+                latest_v.version_number
+                    AS latest_version_number,
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM profile_versions count_v
+
+                    WHERE
+                        count_v.profile_id = gp.id
+                )
+                    AS version_count
 
             FROM generation_profiles gp
 
-            JOIN profile_versions pv
-                ON pv.id = (
+            LEFT JOIN profile_versions active_v
+                ON active_v.id =
+                    gp.active_version_id
+
+            LEFT JOIN profile_versions latest_v
+                ON latest_v.id = (
+
                     SELECT id
+
                     FROM profile_versions
+
                     WHERE profile_id = gp.id
-                    ORDER BY version_number DESC
+
+                    ORDER BY
+                        version_number DESC
+
                     LIMIT 1
                 )
 
@@ -316,7 +425,7 @@ def get_profile(
 
 
 # ============================================================
-# GET A SPECIFIC PROFILE VERSION
+# SPECIFIC VERSION
 # ============================================================
 
 def get_profile_version(
@@ -331,23 +440,66 @@ def get_profile_version(
         row = connection.execute(
             """
             SELECT
+
                 gp.id,
                 gp.name,
                 gp.slug,
                 gp.description,
                 gp.is_active,
+                gp.active_version_id,
                 gp.created_at,
                 gp.updated_at,
 
-                pv.id AS version_id,
+                pv.id
+                    AS version_id,
+
                 pv.version_number,
+
                 pv.system_instruction,
-                pv.created_at AS version_created_at
+
+                pv.created_at
+                    AS version_created_at,
+
+                active_v.version_number
+                    AS active_version_number,
+
+                latest_v.id
+                    AS latest_version_id,
+
+                latest_v.version_number
+                    AS latest_version_number,
+
+                CASE
+                    WHEN pv.id =
+                        gp.active_version_id
+                    THEN 1
+                    ELSE 0
+                END
+                    AS is_generation_version
 
             FROM generation_profiles gp
 
             JOIN profile_versions pv
                 ON pv.profile_id = gp.id
+
+            LEFT JOIN profile_versions active_v
+                ON active_v.id =
+                    gp.active_version_id
+
+            LEFT JOIN profile_versions latest_v
+                ON latest_v.id = (
+
+                    SELECT id
+
+                    FROM profile_versions
+
+                    WHERE profile_id = gp.id
+
+                    ORDER BY
+                        version_number DESC
+
+                    LIMIT 1
+                )
 
             WHERE
                 gp.id = ?
@@ -373,7 +525,7 @@ def get_profile_version(
 
 
 # ============================================================
-# LIST PROFILE VERSION HISTORY
+# VERSION HISTORY
 # ============================================================
 
 def list_profile_versions(
@@ -387,17 +539,47 @@ def list_profile_versions(
         rows = connection.execute(
             """
             SELECT
-                id AS version_id,
-                version_number,
-                created_at,
-                LENGTH(system_instruction)
-                    AS character_count
 
-            FROM profile_versions
+                pv.id AS version_id,
 
-            WHERE profile_id = ?
+                pv.version_number,
 
-            ORDER BY version_number DESC
+                pv.created_at,
+
+                LENGTH(
+                    pv.system_instruction
+                )
+                    AS character_count,
+
+                CASE
+                    WHEN pv.id =
+                        gp.active_version_id
+                    THEN 1
+                    ELSE 0
+                END
+                    AS is_generation_version,
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM generation_jobs gj
+
+                    WHERE
+                        gj.profile_version_id =
+                        pv.id
+                )
+                    AS usage_count
+
+            FROM profile_versions pv
+
+            JOIN generation_profiles gp
+                ON gp.id =
+                    pv.profile_id
+
+            WHERE pv.profile_id = ?
+
+            ORDER BY
+                pv.version_number DESC
             """,
             (profile_id,)
         ).fetchall()
@@ -441,6 +623,7 @@ def create_profile(
                 slug,
                 description
             )
+
             VALUES (?, ?, ?)
             """,
             (
@@ -451,22 +634,45 @@ def create_profile(
         )
 
 
-        profile_id = cursor.lastrowid
+        profile_id = (
+            cursor.lastrowid
+        )
 
 
-        connection.execute(
+        version_cursor = connection.execute(
             """
             INSERT INTO profile_versions (
                 profile_id,
                 version_number,
                 system_instruction
             )
+
             VALUES (?, ?, ?)
             """,
             (
                 profile_id,
                 1,
                 system_instruction.strip()
+            )
+        )
+
+
+        version_id = (
+            version_cursor.lastrowid
+        )
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET active_version_id = ?
+
+            WHERE id = ?
+            """,
+            (
+                version_id,
+                profile_id
             )
         )
 
@@ -485,7 +691,7 @@ def create_profile(
 
 
 # ============================================================
-# UPDATE PROFILE NAME / DESCRIPTION
+# UPDATE PROFILE METADATA
 # ============================================================
 
 def update_profile_metadata(
@@ -501,7 +707,9 @@ def update_profile_metadata(
         existing = connection.execute(
             """
             SELECT id
+
             FROM generation_profiles
+
             WHERE
                 id = ?
                 AND is_active = 1
@@ -521,7 +729,8 @@ def update_profile_metadata(
             SET
                 name = ?,
                 description = ?,
-                updated_at = CURRENT_TIMESTAMP
+                updated_at =
+                    CURRENT_TIMESTAMP
 
             WHERE id = ?
             """,
@@ -547,7 +756,7 @@ def update_profile_metadata(
 
 
 # ============================================================
-# CREATE NEW PROFILE VERSION
+# CREATE NEW VERSION
 # ============================================================
 
 def create_profile_version(
@@ -562,7 +771,9 @@ def create_profile_version(
         profile = connection.execute(
             """
             SELECT id
+
             FROM generation_profiles
+
             WHERE
                 id = ?
                 AND is_active = 1
@@ -592,17 +803,20 @@ def create_profile_version(
 
 
         next_version = (
-            version_row["latest_version"] + 1
+            version_row["latest_version"]
+            +
+            1
         )
 
 
-        connection.execute(
+        version_cursor = connection.execute(
             """
             INSERT INTO profile_versions (
                 profile_id,
                 version_number,
                 system_instruction
             )
+
             VALUES (?, ?, ?)
             """,
             (
@@ -613,70 +827,26 @@ def create_profile_version(
         )
 
 
-        connection.execute(
-            """
-            UPDATE generation_profiles
-
-            SET updated_at = CURRENT_TIMESTAMP
-
-            WHERE id = ?
-            """,
-            (profile_id,)
+        new_version_id = (
+            version_cursor.lastrowid
         )
 
 
-        connection.commit()
-
-
-    finally:
-
-        connection.close()
-
-
-    return get_profile(
-        profile_id
-    )
-
-
-# ============================================================
-# ARCHIVE / RESTORE PROFILE
-# ============================================================
-
-def set_profile_active(
-    profile_id: int,
-    is_active: bool
-):
-
-    connection = get_connection()
-
-    try:
-
-        existing = connection.execute(
-            """
-            SELECT id
-            FROM generation_profiles
-            WHERE id = ?
-            """,
-            (profile_id,)
-        ).fetchone()
-
-
-        if existing is None:
-            return None
-
-
+        # New versions become the generation version
+        # automatically. You can later switch back.
         connection.execute(
             """
             UPDATE generation_profiles
 
             SET
-                is_active = ?,
-                updated_at = CURRENT_TIMESTAMP
+                active_version_id = ?,
+                updated_at =
+                    CURRENT_TIMESTAMP
 
             WHERE id = ?
             """,
             (
-                1 if is_active else 0,
+                new_version_id,
                 profile_id
             )
         )
@@ -693,3 +863,419 @@ def set_profile_active(
     return get_profile(
         profile_id
     )
+
+
+# ============================================================
+# USE VERSION FOR GENERATE
+# ============================================================
+
+def activate_profile_version(
+    profile_id: int,
+    version_number: int
+):
+
+    connection = get_connection()
+
+    try:
+
+        profile = connection.execute(
+            """
+            SELECT id
+
+            FROM generation_profiles
+
+            WHERE
+                id = ?
+                AND is_active = 1
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if profile is None:
+
+            return {
+                "status": "not_found"
+            }
+
+
+        version = connection.execute(
+            """
+            SELECT id
+
+            FROM profile_versions
+
+            WHERE
+                profile_id = ?
+                AND version_number = ?
+            """,
+            (
+                profile_id,
+                version_number
+            )
+        ).fetchone()
+
+
+        if version is None:
+
+            return {
+                "status": "version_not_found"
+            }
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET
+                active_version_id = ?,
+                updated_at =
+                    CURRENT_TIMESTAMP
+
+            WHERE id = ?
+            """,
+            (
+                version["id"],
+                profile_id
+            )
+        )
+
+
+        connection.commit()
+
+
+        return {
+            "status": "activated",
+            "profile": get_profile(
+                profile_id
+            )
+        }
+
+
+    finally:
+
+        connection.close()
+
+
+# ============================================================
+# DELETE VERSION
+# ============================================================
+
+def delete_profile_version(
+    profile_id: int,
+    version_number: int
+):
+
+    connection = get_connection()
+
+    try:
+
+        profile = connection.execute(
+            """
+            SELECT
+                id,
+                active_version_id
+
+            FROM generation_profiles
+
+            WHERE id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if profile is None:
+
+            return {
+                "status": "profile_not_found"
+            }
+
+
+        version = connection.execute(
+            """
+            SELECT
+                id,
+                version_number
+
+            FROM profile_versions
+
+            WHERE
+                profile_id = ?
+                AND version_number = ?
+            """,
+            (
+                profile_id,
+                version_number
+            )
+        ).fetchone()
+
+
+        if version is None:
+
+            return {
+                "status": "version_not_found"
+            }
+
+
+        count_row = connection.execute(
+            """
+            SELECT COUNT(*) AS total
+
+            FROM profile_versions
+
+            WHERE profile_id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if count_row["total"] <= 1:
+
+            return {
+                "status": "last_version"
+            }
+
+
+        if (
+            version["id"]
+            ==
+            profile["active_version_id"]
+        ):
+
+            return {
+                "status": "active_version"
+            }
+
+
+        usage_row = connection.execute(
+            """
+            SELECT COUNT(*) AS total
+
+            FROM generation_jobs
+
+            WHERE profile_version_id = ?
+            """,
+            (version["id"],)
+        ).fetchone()
+
+
+        if usage_row["total"] > 0:
+
+            return {
+                "status": "used_by_jobs",
+                "usage_count":
+                    usage_row["total"]
+            }
+
+
+        connection.execute(
+            """
+            DELETE FROM profile_versions
+
+            WHERE id = ?
+            """,
+            (version["id"],)
+        )
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET updated_at =
+                CURRENT_TIMESTAMP
+
+            WHERE id = ?
+            """,
+            (profile_id,)
+        )
+
+
+        connection.commit()
+
+
+        return {
+            "status": "deleted"
+        }
+
+
+    finally:
+
+        connection.close()
+
+
+# ============================================================
+# ARCHIVE / RESTORE
+# ============================================================
+
+def set_profile_active(
+    profile_id: int,
+    is_active: bool
+):
+
+    connection = get_connection()
+
+    try:
+
+        existing = connection.execute(
+            """
+            SELECT
+                id,
+                active_version_id
+
+            FROM generation_profiles
+
+            WHERE id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if existing is None:
+            return None
+
+
+        # If somehow an archived profile has no active
+        # version, restore its latest version.
+        active_version_id = (
+            existing["active_version_id"]
+        )
+
+
+        if (
+            is_active
+            and
+            active_version_id is None
+        ):
+
+            latest = connection.execute(
+                """
+                SELECT id
+
+                FROM profile_versions
+
+                WHERE profile_id = ?
+
+                ORDER BY
+                    version_number DESC
+
+                LIMIT 1
+                """,
+                (profile_id,)
+            ).fetchone()
+
+
+            if latest:
+
+                active_version_id = (
+                    latest["id"]
+                )
+
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+
+            SET
+                is_active = ?,
+                active_version_id = ?,
+                updated_at =
+                    CURRENT_TIMESTAMP
+
+            WHERE id = ?
+            """,
+            (
+                1 if is_active else 0,
+                active_version_id,
+                profile_id
+            )
+        )
+
+
+        connection.commit()
+
+
+    finally:
+
+        connection.close()
+
+
+    return get_profile(
+        profile_id
+    )
+
+
+# ============================================================
+# PERMANENT PROFILE DELETE
+# ============================================================
+
+def permanently_delete_profile(
+    profile_id: int
+):
+
+    connection = get_connection()
+
+    try:
+
+        profile = connection.execute(
+            """
+            SELECT id
+
+            FROM generation_profiles
+
+            WHERE id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        if profile is None:
+
+            return {
+                "status": "not_found"
+            }
+
+
+        jobs = connection.execute(
+            """
+            SELECT COUNT(*) AS total
+
+            FROM generation_jobs
+
+            WHERE profile_id = ?
+            """,
+            (profile_id,)
+        ).fetchone()
+
+
+        # Once generations exist we preserve their
+        # historical profile/version relationship.
+        if jobs["total"] > 0:
+
+            return {
+                "status": "used_by_jobs",
+                "usage_count": jobs["total"]
+            }
+
+
+        connection.execute(
+            """
+            DELETE FROM generation_profiles
+
+            WHERE id = ?
+            """,
+            (profile_id,)
+        )
+
+
+        connection.commit()
+
+
+        return {
+            "status": "deleted"
+        }
+
+
+    finally:
+
+        connection.close()

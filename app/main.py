@@ -20,7 +20,10 @@ from app.profile_store import (
     create_profile,
     update_profile_metadata,
     create_profile_version,
-    set_profile_active
+    activate_profile_version,
+    delete_profile_version,
+    set_profile_active,
+    permanently_delete_profile
 )
 
 
@@ -74,7 +77,7 @@ class ProfileVersionRequest(BaseModel):
 
 
 # ============================================================
-# APPLICATION LIFESPAN
+# LIFESPAN
 # ============================================================
 
 @asynccontextmanager
@@ -90,7 +93,7 @@ async def lifespan(
 
 
 # ============================================================
-# FASTAPI APPLICATION
+# APP
 # ============================================================
 
 app = FastAPI(
@@ -98,13 +101,13 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.4.1",
+    version="0.4.2",
     lifespan=lifespan,
 )
 
 
 # ============================================================
-# STATIC FILES
+# STATIC
 # ============================================================
 
 app.mount(
@@ -146,39 +149,28 @@ def health():
     }
 
 
-# ============================================================
-# DATABASE STATUS
-# ============================================================
-
-@app.get(
-    "/api/database/status"
-)
+@app.get("/api/database/status")
 def database_status():
 
     return get_database_status()
 
 
 # ============================================================
-# LIST PROFILES
+# PROFILES
 # ============================================================
 
-@app.get(
-    "/api/profiles"
-)
+@app.get("/api/profiles")
 def profiles_list(
     include_archived: bool = False
 ):
 
     return {
         "profiles": list_profiles(
-            include_inactive=include_archived
+            include_inactive=
+                include_archived
         )
     }
 
-
-# ============================================================
-# GET PROFILE
-# ============================================================
 
 @app.get(
     "/api/profiles/{profile_id}"
@@ -191,7 +183,6 @@ def profile_details(
         profile_id
     )
 
-
     if profile is None:
 
         raise HTTPException(
@@ -199,12 +190,81 @@ def profile_details(
             detail="Profile not found"
         )
 
+    return profile
+
+
+@app.post(
+    "/api/profiles",
+    status_code=201
+)
+def profile_create(
+    request: ProfileCreateRequest
+):
+
+    name = request.name.strip()
+
+    instruction = (
+        request.system_instruction.strip()
+    )
+
+    if not name:
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Profile name cannot be empty."
+            )
+        )
+
+    if not instruction:
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "System instruction cannot be empty."
+            )
+        )
+
+    return create_profile(
+        name=name,
+        description=(
+            request.description.strip()
+        ),
+        system_instruction=
+            instruction
+    )
+
+
+@app.patch(
+    "/api/profiles/{profile_id}"
+)
+def profile_update(
+    profile_id: int,
+    request: ProfileUpdateRequest
+):
+
+    profile = update_profile_metadata(
+        profile_id=profile_id,
+        name=request.name.strip(),
+        description=(
+            request.description.strip()
+        )
+    )
+
+    if profile is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Active profile not found."
+            )
+        )
 
     return profile
 
 
 # ============================================================
-# GET PROFILE VERSION HISTORY
+# VERSIONS
 # ============================================================
 
 @app.get(
@@ -218,7 +278,6 @@ def profile_versions(
         profile_id
     )
 
-
     if profile is None:
 
         raise HTTPException(
@@ -226,18 +285,22 @@ def profile_versions(
             detail="Profile not found"
         )
 
-
     return {
         "profile_id": profile_id,
-        "versions": list_profile_versions(
-            profile_id
-        )
+        "active_version_number":
+            profile[
+                "active_version_number"
+            ],
+        "latest_version_number":
+            profile[
+                "latest_version_number"
+            ],
+        "versions":
+            list_profile_versions(
+                profile_id
+            )
     }
 
-
-# ============================================================
-# GET SPECIFIC PROFILE VERSION
-# ============================================================
 
 @app.get(
     "/api/profiles/{profile_id}/versions/{version_number}"
@@ -252,116 +315,17 @@ def profile_version_details(
         version_number
     )
 
-
-    if profile is None:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Profile version not found"
-        )
-
-
-    return profile
-
-
-# ============================================================
-# CREATE PROFILE
-# ============================================================
-
-@app.post(
-    "/api/profiles",
-    status_code=201
-)
-def profile_create(
-    request: ProfileCreateRequest
-):
-
-    name = request.name.strip()
-
-    description = (
-        request.description.strip()
-    )
-
-    instruction = (
-        request.system_instruction.strip()
-    )
-
-
-    if not name:
-
-        raise HTTPException(
-            status_code=422,
-            detail="Profile name cannot be empty."
-        )
-
-
-    if not instruction:
-
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "System instruction cannot be empty."
-            )
-        )
-
-
-    return create_profile(
-        name=name,
-        description=description,
-        system_instruction=instruction
-    )
-
-
-# ============================================================
-# UPDATE PROFILE DETAILS
-# ============================================================
-
-@app.patch(
-    "/api/profiles/{profile_id}"
-)
-def profile_update(
-    profile_id: int,
-    request: ProfileUpdateRequest
-):
-
-    name = request.name.strip()
-
-    description = (
-        request.description.strip()
-    )
-
-
-    if not name:
-
-        raise HTTPException(
-            status_code=422,
-            detail="Profile name cannot be empty."
-        )
-
-
-    profile = update_profile_metadata(
-        profile_id=profile_id,
-        name=name,
-        description=description
-    )
-
-
     if profile is None:
 
         raise HTTPException(
             status_code=404,
             detail=(
-                "Active profile not found."
+                "Profile version not found"
             )
         )
 
-
     return profile
 
-
-# ============================================================
-# CREATE NEW PROFILE VERSION
-# ============================================================
 
 @app.post(
     "/api/profiles/{profile_id}/versions",
@@ -376,7 +340,6 @@ def profile_version_create(
         request.system_instruction.strip()
     )
 
-
     if not instruction:
 
         raise HTTPException(
@@ -386,12 +349,11 @@ def profile_version_create(
             )
         )
 
-
     profile = create_profile_version(
         profile_id=profile_id,
-        system_instruction=instruction
+        system_instruction=
+            instruction
     )
-
 
     if profile is None:
 
@@ -402,12 +364,115 @@ def profile_version_create(
             )
         )
 
-
     return profile
 
 
+@app.post(
+    "/api/profiles/{profile_id}/versions/{version_number}/activate"
+)
+def profile_version_activate(
+    profile_id: int,
+    version_number: int
+):
+
+    result = activate_profile_version(
+        profile_id,
+        version_number
+    )
+
+    if result["status"] == "not_found":
+
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Active profile not found."
+            )
+        )
+
+    if (
+        result["status"]
+        ==
+        "version_not_found"
+    ):
+
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Profile version not found."
+            )
+        )
+
+    return result
+
+
+@app.delete(
+    "/api/profiles/{profile_id}/versions/{version_number}"
+)
+def profile_version_delete(
+    profile_id: int,
+    version_number: int
+):
+
+    result = delete_profile_version(
+        profile_id,
+        version_number
+    )
+
+    status = result["status"]
+
+    if status == "profile_not_found":
+
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found."
+        )
+
+    if status == "version_not_found":
+
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Profile version not found."
+            )
+        )
+
+    if status == "last_version":
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "You cannot delete the only "
+                "remaining version."
+            )
+        )
+
+    if status == "active_version":
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This version is currently used "
+                "for Generate. Activate another "
+                "version before deleting it."
+            )
+        )
+
+    if status == "used_by_jobs":
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This version is already used "
+                "by generation history and "
+                "cannot be deleted."
+            )
+        )
+
+    return result
+
+
 # ============================================================
-# ARCHIVE PROFILE
+# ARCHIVE / RESTORE
 # ============================================================
 
 @app.delete(
@@ -418,10 +483,9 @@ def profile_archive(
 ):
 
     profile = set_profile_active(
-        profile_id=profile_id,
-        is_active=False
+        profile_id,
+        False
     )
-
 
     if profile is None:
 
@@ -430,16 +494,11 @@ def profile_archive(
             detail="Profile not found"
         )
 
-
     return {
         "status": "archived",
         "profile": profile
     }
 
-
-# ============================================================
-# RESTORE PROFILE
-# ============================================================
 
 @app.post(
     "/api/profiles/{profile_id}/restore"
@@ -449,10 +508,9 @@ def profile_restore(
 ):
 
     profile = set_profile_active(
-        profile_id=profile_id,
-        is_active=True
+        profile_id,
+        True
     )
-
 
     if profile is None:
 
@@ -461,8 +519,44 @@ def profile_restore(
             detail="Profile not found"
         )
 
-
     return {
         "status": "restored",
         "profile": profile
     }
+
+
+# ============================================================
+# PERMANENT DELETE
+# ============================================================
+
+@app.delete(
+    "/api/profiles/{profile_id}/permanent"
+)
+def profile_permanent_delete(
+    profile_id: int
+):
+
+    result = permanently_delete_profile(
+        profile_id
+    )
+
+    if result["status"] == "not_found":
+
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found."
+        )
+
+    if result["status"] == "used_by_jobs":
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This profile is used by "
+                "generation history. Archive "
+                "it instead of permanently "
+                "deleting it."
+            )
+        )
+
+    return result
