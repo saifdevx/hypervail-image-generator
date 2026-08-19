@@ -1,449 +1,1167 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Image Agent</title>
 
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/app.js" defer></script>
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+    <script
+        src="/static/app.js"
+        defer
+    ></script>
+
 </head>
+
 
 <body>
 
+
 <div class="app-shell">
 
-    <!-- SIDEBAR -->
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
     <aside class="sidebar">
 
+
         <div class="brand">
-            <div class="brand-icon">✦</div>
+
+            <div class="brand-icon">
+                ✦
+            </div>
 
             <div>
-                <div class="brand-name">Image Agent</div>
-                <div class="brand-version">Creative Engine</div>
+
+                <div class="brand-name">
+                    Image Agent
+                </div>
+
+                <div class="brand-version">
+                    Creative Engine
+                </div>
+
             </div>
+
         </div>
+
 
         <nav class="nav">
 
-            <button class="nav-item active">
-                <span class="nav-icon">✦</span>
+
+            <button
+                class="nav-item active"
+                id="navGenerate"
+                type="button"
+            >
+
+                <span class="nav-icon">
+                    ✦
+                </span>
+
                 Generate
+
             </button>
 
-            <button class="nav-item">
-                <span class="nav-icon">◫</span>
+
+            <button
+                class="nav-item"
+                id="navProfiles"
+                type="button"
+            >
+
+                <span class="nav-icon">
+                    ◫
+                </span>
+
                 Profiles
+
             </button>
 
-            <button class="nav-item">
-                <span class="nav-icon">◷</span>
+
+            <button
+                class="nav-item"
+                id="navHistory"
+                type="button"
+            >
+
+                <span class="nav-icon">
+                    ◷
+                </span>
+
                 History
+
             </button>
+
 
         </nav>
 
+
         <div class="sidebar-spacer"></div>
+
 
         <div class="sidebar-status">
 
             <span class="status-dot"></span>
 
             <div>
-                <strong>Local Engine</strong>
-                <small>Backend connected</small>
+
+                <strong>
+                    Local Engine
+                </strong>
+
+                <small>
+                    Backend connected
+                </small>
+
             </div>
 
         </div>
 
-        <button class="nav-item">
-            <span class="nav-icon">⚙</span>
+
+        <button
+            class="nav-item"
+            id="navSettings"
+            type="button"
+        >
+
+            <span class="nav-icon">
+                ⚙
+            </span>
+
             Settings
+
         </button>
+
 
     </aside>
 
 
-    <!-- MAIN CONTENT -->
+    <!-- =====================================================
+         MAIN CONTENT
+    ====================================================== -->
+
     <main class="main-content">
 
-        <!-- HEADER -->
-        <header class="topbar">
 
-            <div>
-                <p class="eyebrow">AI PRODUCT STUDIO</p>
-                <h1>Create Images</h1>
+        <!-- =================================================
+             GENERATE VIEW
+        ================================================== -->
 
-                <p class="subtitle">
-                    Upload product references, select a generation profile,
-                    and let your image workflow run automatically.
-                </p>
-            </div>
+        <section
+            class="app-view"
+            id="generateView"
+        >
 
-            <div class="topbar-badge">
-                <span class="status-dot"></span>
-                Ready
-            </div>
 
-        </header>
+            <header class="topbar">
 
 
-        <div class="workspace">
+                <div>
 
-            <!-- LEFT / GENERATION -->
-            <section class="generator-panel">
+                    <p class="eyebrow">
+                        AI PRODUCT STUDIO
+                    </p>
 
+                    <h1>
+                        Create Images
+                    </h1>
 
-                <!-- PROFILE -->
-                <div class="section-card">
-
-                    <div class="section-header">
-
-                        <div>
-                            <span class="step-label">01</span>
-                            <h2>Generation Profile</h2>
-                        </div>
-
-                        <span class="optional-label">
-                            System Instruction
-                        </span>
-
-                    </div>
-
-
-                    <div class="profile-options">
-
-                        <label class="profile-card active-profile">
-
-                            <input
-                                type="radio"
-                                name="profile"
-                                value="hero"
-                                checked
-                            >
-
-                            <div class="profile-icon hero-icon">
-                                H
-                            </div>
-
-                            <div class="profile-text">
-                                <strong>Hero Images</strong>
-
-                                <span>
-                                    Clean eCommerce product photography
-                                </span>
-                            </div>
-
-                            <div class="profile-check">
-                                ✓
-                            </div>
-
-                        </label>
-
-
-                        <label class="profile-card">
-
-                            <input
-                                type="radio"
-                                name="profile"
-                                value="ugc"
-                            >
-
-                            <div class="profile-icon ugc-icon">
-                                U
-                            </div>
-
-                            <div class="profile-text">
-                                <strong>UGC Images</strong>
-
-                                <span>
-                                    Authentic salon & lifestyle scenes
-                                </span>
-                            </div>
-
-                            <div class="profile-check">
-                                ✓
-                            </div>
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-
-                <!-- IMAGES -->
-                <div class="section-card">
-
-                    <div class="section-header">
-
-                        <div>
-                            <span class="step-label">02</span>
-                            <h2>Reference Images</h2>
-                        </div>
-
-                        <span class="optional-label">
-                            Up to 4
-                        </span>
-
-                    </div>
-
-
-                    <input
-                        type="file"
-                        id="imageInput"
-                        accept="image/*"
-                        multiple
-                        hidden
-                    >
-
-
-                    <div
-                        class="upload-zone"
-                        id="uploadZone"
-                    >
-
-                        <div class="upload-icon">
-                            ↑
-                        </div>
-
-                        <h3>Drop product images here</h3>
-
-                        <p>
-                            or click to browse
-                        </p>
-
-                        <span>
-                            PNG, JPG, WEBP
-                        </span>
-
-                    </div>
-
-
-                    <div
-                        class="image-preview-grid"
-                        id="imagePreviewGrid"
-                    ></div>
-
-                </div>
-
-
-                <!-- DESCRIPTION -->
-                <div class="section-card">
-
-                    <div class="section-header">
-
-                        <div>
-                            <span class="step-label">03</span>
-                            <h2>Creative Direction</h2>
-                        </div>
-
-                        <span class="optional-label">
-                            Optional
-                        </span>
-
-                    </div>
-
-
-                    <textarea
-                        id="description"
-                        placeholder="Example: Use a premium dark background, add dramatic side lighting, include more close-up angles..."
-                    ></textarea>
-
-                    <div class="description-footer">
-
-                        <span>
-                            Add only what you want to change or emphasize.
-                        </span>
-
-                        <span id="characterCount">
-                            0 characters
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <!-- OUTPUT OPTIONS -->
-                <div class="section-card">
-
-                    <div class="section-header">
-
-                        <div>
-                            <span class="step-label">04</span>
-                            <h2>Output Settings</h2>
-                        </div>
-
-                    </div>
-
-
-                    <label class="field-label">
-                        Number of images
-                    </label>
-
-
-                    <div class="count-selector">
-
-                        <button
-                            class="count-button selected"
-                            data-count="auto"
-                        >
-                            Auto
-                        </button>
-
-                        <button
-                            class="count-button"
-                            data-count="1"
-                        >
-                            1
-                        </button>
-
-                        <button
-                            class="count-button"
-                            data-count="4"
-                        >
-                            4
-                        </button>
-
-                        <button
-                            class="count-button"
-                            data-count="6"
-                        >
-                            6
-                        </button>
-
-                        <button
-                            class="count-button"
-                            data-count="8"
-                        >
-                            8
-                        </button>
-
-                    </div>
-
-
-                    <p class="setting-hint">
-                        Auto follows the selected system instruction.
+                    <p class="subtitle">
+                        Upload product references, select a generation
+                        profile, and let your image workflow run
+                        automatically.
                     </p>
 
                 </div>
 
 
-                <!-- GENERATE -->
+                <div class="topbar-badge">
+
+                    <span class="status-dot"></span>
+
+                    Ready
+
+                </div>
+
+
+            </header>
+
+
+            <div class="workspace">
+
+
+                <!-- LEFT -->
+
+                <section class="generator-panel">
+
+
+                    <!-- PROFILE -->
+
+                    <div class="section-card">
+
+
+                        <div class="section-header">
+
+                            <div>
+
+                                <span class="step-label">
+                                    01
+                                </span>
+
+                                <h2>
+                                    Generation Profile
+                                </h2>
+
+                            </div>
+
+
+                            <span class="optional-label">
+                                System Instruction
+                            </span>
+
+                        </div>
+
+
+                        <div
+                            class="profile-options"
+                            id="profileOptions"
+                        >
+
+                            <div class="profiles-loading">
+
+                                <span class="loading-spinner"></span>
+
+                                Loading generation profiles...
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- REFERENCES -->
+
+                    <div class="section-card">
+
+
+                        <div class="section-header">
+
+                            <div>
+
+                                <span class="step-label">
+                                    02
+                                </span>
+
+                                <h2>
+                                    Reference Images
+                                </h2>
+
+                            </div>
+
+
+                            <span class="optional-label">
+                                Up to 4
+                            </span>
+
+                        </div>
+
+
+                        <input
+                            type="file"
+                            id="imageInput"
+                            accept="image/png,image/jpeg,image/webp"
+                            multiple
+                            hidden
+                        >
+
+
+                        <div
+                            class="upload-zone"
+                            id="uploadZone"
+                        >
+
+                            <div class="upload-icon">
+                                ↑
+                            </div>
+
+                            <h3>
+                                Drop product images here
+                            </h3>
+
+                            <p>
+                                or click to browse
+                            </p>
+
+                            <span>
+                                PNG, JPG, WEBP
+                            </span>
+
+                        </div>
+
+
+                        <div
+                            class="image-preview-grid"
+                            id="imagePreviewGrid"
+                        ></div>
+
+
+                    </div>
+
+
+                    <!-- DESCRIPTION -->
+
+                    <div class="section-card">
+
+
+                        <div class="section-header">
+
+                            <div>
+
+                                <span class="step-label">
+                                    03
+                                </span>
+
+                                <h2>
+                                    Creative Direction
+                                </h2>
+
+                            </div>
+
+
+                            <span class="optional-label">
+                                Optional
+                            </span>
+
+                        </div>
+
+
+                        <textarea
+                            id="description"
+                            placeholder="Example: Use a premium dark background, add dramatic side lighting, include more close-up angles..."
+                        ></textarea>
+
+
+                        <div class="description-footer">
+
+                            <span>
+                                Add only what you want to change or emphasize.
+                            </span>
+
+                            <span id="characterCount">
+                                0 characters
+                            </span>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- OUTPUT -->
+
+                    <div class="section-card">
+
+
+                        <div class="section-header">
+
+                            <div>
+
+                                <span class="step-label">
+                                    04
+                                </span>
+
+                                <h2>
+                                    Output Settings
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+
+                        <label class="field-label">
+                            Number of images
+                        </label>
+
+
+                        <div class="count-selector">
+
+
+                            <button
+                                class="count-button selected"
+                                data-count="auto"
+                                type="button"
+                            >
+                                Auto
+                            </button>
+
+
+                            <button
+                                class="count-button"
+                                data-count="1"
+                                type="button"
+                            >
+                                1
+                            </button>
+
+
+                            <button
+                                class="count-button"
+                                data-count="4"
+                                type="button"
+                            >
+                                4
+                            </button>
+
+
+                            <button
+                                class="count-button"
+                                data-count="6"
+                                type="button"
+                            >
+                                6
+                            </button>
+
+
+                            <button
+                                class="count-button"
+                                data-count="8"
+                                type="button"
+                            >
+                                8
+                            </button>
+
+
+                        </div>
+
+
+                        <p class="setting-hint">
+                            Auto follows the selected system instruction.
+                        </p>
+
+
+                    </div>
+
+
+                    <button
+                        class="generate-button"
+                        id="generateButton"
+                        type="button"
+                    >
+
+                        <span class="generate-icon">
+                            ✦
+                        </span>
+
+                        <span>
+                            Generate Images
+                        </span>
+
+                        <span class="generate-arrow">
+                            →
+                        </span>
+
+                    </button>
+
+
+                </section>
+
+
+                <!-- RIGHT PREVIEW -->
+
+                <aside class="preview-panel">
+
+
+                    <div class="preview-card">
+
+
+                        <div class="preview-header">
+
+                            <div>
+
+                                <p class="eyebrow">
+                                    CURRENT JOB
+                                </p>
+
+                                <h2>
+                                    Generation Preview
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="preview-empty">
+
+                            <div class="preview-empty-icon">
+                                ✦
+                            </div>
+
+                            <h3>
+                                Ready to create
+                            </h3>
+
+                            <p>
+                                Your generated images will appear here
+                                once the generation engine is connected.
+                            </p>
+
+                        </div>
+
+
+                        <div class="job-summary">
+
+
+                            <div class="summary-row">
+
+                                <span>
+                                    Profile
+                                </span>
+
+                                <strong id="summaryProfile">
+                                    Loading...
+                                </strong>
+
+                            </div>
+
+
+                            <div class="summary-row">
+
+                                <span>
+                                    Version
+                                </span>
+
+                                <strong id="summaryVersion">
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="summary-row">
+
+                                <span>
+                                    References
+                                </span>
+
+                                <strong id="summaryImages">
+                                    0
+                                </strong>
+
+                            </div>
+
+
+                            <div class="summary-row">
+
+                                <span>
+                                    Outputs
+                                </span>
+
+                                <strong id="summaryCount">
+                                    Auto
+                                </strong>
+
+                            </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="tip-card">
+
+                        <div class="tip-icon">
+                            i
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Profile-driven generation
+                            </strong>
+
+                            <p>
+                                Your selected profile controls how
+                                references are analyzed and how image
+                                prompts are created.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                </aside>
+
+
+            </div>
+
+
+        </section>
+
+
+        <!-- =================================================
+             PROFILE MANAGER VIEW
+        ================================================== -->
+
+        <section
+            class="app-view hidden-view"
+            id="profilesView"
+        >
+
+
+            <header class="topbar profile-topbar">
+
+
+                <div>
+
+                    <p class="eyebrow">
+                        SYSTEM INSTRUCTIONS
+                    </p>
+
+                    <h1>
+                        Generation Profiles
+                    </h1>
+
+                    <p class="subtitle">
+                        Create, edit, version, archive and restore
+                        the system instructions that control your
+                        image-generation workflows.
+                    </p>
+
+                </div>
+
+
                 <button
-                    class="generate-button"
-                    id="generateButton"
+                    class="primary-small-button"
+                    id="newProfileButton"
+                    type="button"
                 >
-
-                    <span class="generate-icon">✦</span>
-
-                    Generate Images
-
-                    <span class="generate-arrow">
-                        →
-                    </span>
-
+                    + New Profile
                 </button>
 
 
-            </section>
+            </header>
 
 
-            <!-- RIGHT / STATUS -->
-            <aside class="preview-panel">
+            <div class="profiles-workspace">
 
-                <div class="preview-card">
 
-                    <div class="preview-header">
+                <!-- PROFILE LIBRARY -->
+
+                <aside class="profile-library-card">
+
+
+                    <div class="library-header">
 
                         <div>
-                            <p class="eyebrow">CURRENT JOB</p>
-                            <h2>Generation Preview</h2>
+
+                            <p class="eyebrow">
+                                LIBRARY
+                            </p>
+
+                            <h2>
+                                Your Profiles
+                            </h2>
+
                         </div>
 
                     </div>
 
 
-                    <div class="preview-empty">
+                    <div class="profile-search-wrapper">
 
-                        <div class="preview-empty-icon">
-                            ✦
+                        <span>
+                            ⌕
+                        </span>
+
+                        <input
+                            type="text"
+                            id="profileSearch"
+                            placeholder="Search profiles..."
+                        >
+
+                    </div>
+
+
+                    <div
+                        class="manager-profile-list"
+                        id="profileManagerList"
+                    >
+
+                        <div class="manager-loading">
+                            Loading profiles...
                         </div>
 
-                        <h3>Ready to create</h3>
+                    </div>
+
+
+                </aside>
+
+
+                <!-- PROFILE EDITOR -->
+
+                <section class="profile-editor-card">
+
+
+                    <!-- EMPTY -->
+
+                    <div
+                        class="editor-empty-state"
+                        id="profileEditorEmpty"
+                    >
+
+                        <div class="editor-empty-icon">
+                            ◫
+                        </div>
+
+                        <h2>
+                            Select a profile
+                        </h2>
 
                         <p>
-                            Your generated images will appear here once the
-                            generation engine is connected.
+                            Choose a profile from the library to
+                            view its instruction, edit details,
+                            or create a new version.
                         </p>
 
                     </div>
 
 
-                    <div class="job-summary">
+                    <!-- EDITOR -->
 
-                        <div class="summary-row">
-                            <span>Profile</span>
-                            <strong id="summaryProfile">
-                                Hero Images
-                            </strong>
+                    <div
+                        class="profile-editor-content hidden-element"
+                        id="profileEditorContent"
+                    >
+
+
+                        <div class="editor-heading">
+
+
+                            <div>
+
+                                <div class="editor-heading-line">
+
+                                    <h2 id="profileEditorTitle">
+                                        Profile
+                                    </h2>
+
+                                    <span
+                                        class="profile-state-badge active"
+                                        id="profileStateBadge"
+                                    >
+                                        Active
+                                    </span>
+
+                                </div>
+
+
+                                <p id="editorVersionBadge">
+                                    Latest version
+                                </p>
+
+                            </div>
+
+
+                            <div class="editor-top-actions">
+
+
+                                <button
+                                    class="danger-ghost-button"
+                                    id="archiveProfileButton"
+                                    type="button"
+                                >
+                                    Archive
+                                </button>
+
+
+                                <button
+                                    class="restore-button hidden-element"
+                                    id="restoreProfileButton"
+                                    type="button"
+                                >
+                                    Restore
+                                </button>
+
+
+                            </div>
+
+
                         </div>
 
-                        <div class="summary-row">
-                            <span>References</span>
-                            <strong id="summaryImages">
-                                0
-                            </strong>
+
+                        <div class="editor-divider"></div>
+
+
+                        <!-- DETAILS -->
+
+
+                        <div class="editor-section">
+
+
+                            <div class="editor-section-heading">
+
+                                <div>
+
+                                    <span class="editor-section-number">
+                                        01
+                                    </span>
+
+                                    <h3>
+                                        Profile Details
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+
+                            <label class="editor-label">
+                                Profile Name
+                            </label>
+
+
+                            <input
+                                class="editor-input"
+                                id="profileNameInput"
+                                type="text"
+                                maxlength="120"
+                                placeholder="Profile name"
+                            >
+
+
+                            <label class="editor-label">
+                                Description
+                            </label>
+
+
+                            <textarea
+                                class="editor-description"
+                                id="profileDescriptionInput"
+                                maxlength="500"
+                                placeholder="Short description..."
+                            ></textarea>
+
+
+                            <button
+                                class="secondary-button"
+                                id="saveDetailsButton"
+                                type="button"
+                            >
+                                Save Details
+                            </button>
+
+
                         </div>
 
-                        <div class="summary-row">
-                            <span>Outputs</span>
-                            <strong id="summaryCount">
-                                Auto
-                            </strong>
+
+                        <div class="editor-divider"></div>
+
+
+                        <!-- SYSTEM INSTRUCTION -->
+
+
+                        <div class="editor-section">
+
+
+                            <div class="editor-section-heading instruction-heading">
+
+
+                                <div>
+
+                                    <span class="editor-section-number">
+                                        02
+                                    </span>
+
+                                    <h3>
+                                        System Instruction
+                                    </h3>
+
+                                </div>
+
+
+                                <span
+                                    class="loaded-version-badge"
+                                    id="loadedVersionBadge"
+                                >
+                                    v1
+                                </span>
+
+
+                            </div>
+
+
+                            <p
+                                class="editor-help"
+                                id="loadedVersionNote"
+                            >
+                                Latest instruction loaded.
+                            </p>
+
+
+                            <textarea
+                                class="system-instruction-editor"
+                                id="profileInstructionEditor"
+                                spellcheck="false"
+                                placeholder="Paste your complete system instruction here..."
+                            ></textarea>
+
+
+                            <div class="instruction-footer">
+
+
+                                <span id="instructionCharacterCount">
+                                    0 characters
+                                </span>
+
+
+                                <span>
+                                    Saving creates a new version.
+                                </span>
+
+
+                            </div>
+
+
+                            <button
+                                class="version-save-button"
+                                id="saveVersionButton"
+                                type="button"
+                            >
+
+                                <span>
+                                    ✦
+                                </span>
+
+                                Save as New Version
+
+                            </button>
+
+
                         </div>
+
+
+                        <div class="editor-divider"></div>
+
+
+                        <!-- VERSION HISTORY -->
+
+
+                        <div class="editor-section">
+
+
+                            <div class="editor-section-heading">
+
+                                <div>
+
+                                    <span class="editor-section-number">
+                                        03
+                                    </span>
+
+                                    <h3>
+                                        Version History
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+
+                            <div
+                                class="version-history-list"
+                                id="versionHistoryList"
+                            >
+
+                                <div class="manager-loading">
+                                    Loading versions...
+                                </div>
+
+                            </div>
+
+
+                        </div>
+
 
                     </div>
 
-                </div>
+
+                </section>
 
 
-                <div class="tip-card">
+            </div>
 
-                    <div class="tip-icon">
-                        i
-                    </div>
 
-                    <div>
-                        <strong>Profile-driven generation</strong>
+        </section>
 
-                        <p>
-                            The selected profile will control how the AI
-                            analyzes references and creates image prompts.
-                        </p>
-                    </div>
-
-                </div>
-
-            </aside>
-
-        </div>
 
     </main>
 
+
 </div>
 
+
+<!-- =========================================================
+     NEW PROFILE MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="newProfileModal"
+    aria-hidden="true"
+>
+
+
+    <div class="modal-card">
+
+
+        <div class="modal-header">
+
+
+            <div>
+
+                <p class="eyebrow">
+                    NEW WORKFLOW
+                </p>
+
+                <h2>
+                    Create Generation Profile
+                </h2>
+
+            </div>
+
+
+            <button
+                class="modal-close-button"
+                id="modalCloseButton"
+                type="button"
+            >
+                ×
+            </button>
+
+
+        </div>
+
+
+        <form id="newProfileForm">
+
+
+            <label class="editor-label">
+                Profile Name
+            </label>
+
+
+            <input
+                class="editor-input"
+                id="newProfileName"
+                maxlength="120"
+                required
+                placeholder="Example: AdCat Images"
+            >
+
+
+            <label class="editor-label">
+                Description
+            </label>
+
+
+            <textarea
+                class="editor-description"
+                id="newProfileDescription"
+                maxlength="500"
+                placeholder="What does this profile generate?"
+            ></textarea>
+
+
+            <label class="editor-label">
+                System Instruction
+            </label>
+
+
+            <textarea
+                class="new-profile-instruction"
+                id="newProfileInstruction"
+                required
+                spellcheck="false"
+                placeholder="Paste the full system instruction here..."
+            ></textarea>
+
+
+            <div class="instruction-footer">
+
+                <span id="newInstructionCharacterCount">
+                    0 characters
+                </span>
+
+                <span>
+                    This becomes version 1.
+                </span>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+
+                <button
+                    class="secondary-button"
+                    id="cancelCreateProfile"
+                    type="button"
+                >
+                    Cancel
+                </button>
+
+
+                <button
+                    class="primary-small-button"
+                    id="createProfileButton"
+                    type="submit"
+                >
+                    Create Profile
+                </button>
+
+
+            </div>
+
+
+        </form>
+
+
+    </div>
+
+
+</div>
+
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
 
 <div
     class="toast"
     id="toast"
->
-    UI ready — AI connection comes next.
-</div>
+></div>
+
 
 </body>
 
