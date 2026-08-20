@@ -2,65 +2,38 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-
     <title>Image Agent</title>
-
     <link
         rel="stylesheet"
         href="/static/styles.css"
     >
-
     <script
         src="/static/app.js"
         defer
     ></script>
-
 </head>
-
 
 <body>
 
-
 <div class="app-shell">
-
-
-    <!-- =====================================================
-         SIDEBAR
-    ====================================================== -->
 
     <aside class="sidebar">
 
-
         <div class="brand">
-
-            <div class="brand-mark">
-                IA
-            </div>
+            <div class="brand-mark">IA</div>
 
             <div>
-
-                <strong>
-                    IMAGE AGENT
-                </strong>
-
-                <span>
-                    Product Studio
-                </span>
-
+                <strong>IMAGE AGENT</strong>
+                <span>Product Studio</span>
             </div>
-
         </div>
 
-
         <nav class="nav">
-
 
             <button
                 class="nav-item active"
@@ -70,7 +43,6 @@
                 Generate
             </button>
 
-
             <button
                 class="nav-item"
                 id="navProfiles"
@@ -78,7 +50,6 @@
             >
                 Profiles
             </button>
-
 
             <button
                 class="nav-item"
@@ -88,31 +59,20 @@
                 History
             </button>
 
-
         </nav>
 
-
         <div class="sidebar-spacer"></div>
-
 
         <div class="engine-status">
 
             <span class="status-dot"></span>
 
             <div>
-
-                <strong>
-                    LOCAL ENGINE
-                </strong>
-
-                <span>
-                    Online
-                </span>
-
+                <strong>LOCAL ENGINE</strong>
+                <span>Online</span>
             </div>
 
         </div>
-
 
         <button
             class="nav-item"
@@ -122,31 +82,21 @@
             Settings
         </button>
 
-
     </aside>
 
 
-    <!-- =====================================================
-         MAIN
-    ====================================================== -->
-
     <main class="main-content">
 
-
-        <!-- =================================================
-             GENERATE
-        ================================================== -->
+        <!-- GENERATE -->
 
         <section
             class="app-view"
             id="generateView"
         >
 
-
             <header class="page-header">
 
                 <div>
-
                     <span class="page-kicker">
                         GENERATION
                     </span>
@@ -160,9 +110,7 @@
                         add optional direction and run your
                         image pipeline.
                     </p>
-
                 </div>
-
 
                 <div class="header-status">
                     ENGINE ONLINE
@@ -173,88 +121,65 @@
 
             <div class="generate-layout">
 
-
                 <section class="generate-column">
-
-
-                    <!-- WORKFLOW -->
 
                     <section class="work-section">
 
                         <header class="work-section-header">
 
                             <div>
-
                                 <span class="section-number">
                                     01
                                 </span>
 
                                 <div>
-
-                                    <h2>
-                                        Workflow
-                                    </h2>
+                                    <h2>Workflow</h2>
 
                                     <p>
                                         Select the system instruction
                                         that controls this generation.
                                     </p>
-
                                 </div>
-
                             </div>
 
                         </header>
-
 
                         <div
                             class="profile-grid"
                             id="profileOptions"
                         >
-
                             <div class="loading-state">
                                 Loading profiles...
                             </div>
-
                         </div>
 
                     </section>
 
-
-                    <!-- REFERENCES -->
 
                     <section class="work-section">
 
                         <header class="work-section-header">
 
                             <div>
-
                                 <span class="section-number">
                                     02
                                 </span>
 
                                 <div>
-
-                                    <h2>
-                                        Reference images
-                                    </h2>
+                                    <h2>Reference images</h2>
 
                                     <p>
-                                        Images stay ordered from
+                                        Image order is preserved from
                                         Image 1 through Image 4.
                                     </p>
-
                                 </div>
-
                             </div>
 
-
                             <span class="section-meta">
-                                MAX 4
+                                MAX 4 · 20 MB EACH
                             </span>
 
                         </header>
-
 
                         <input
                             type="file"
@@ -264,12 +189,10 @@
                             hidden
                         >
 
-
                         <div
                             class="upload-zone"
                             id="uploadZone"
                         >
-
                             <strong>
                                 Drop images here
                             </strong>
@@ -281,47 +204,42 @@
                             <small>
                                 PNG · JPG · WEBP
                             </small>
-
                         </div>
-
 
                         <div
                             class="image-preview-grid"
                             id="imagePreviewGrid"
                         ></div>
 
+                        <div class="backend-note">
+                            Files stay in your browser until you
+                            click Generate. Step 5 saves them to
+                            the backend and database.
+                        </div>
+
                     </section>
 
-
-                    <!-- DIRECTION -->
 
                     <section class="work-section">
 
                         <header class="work-section-header">
 
                             <div>
-
                                 <span class="section-number">
                                     03
                                 </span>
 
                                 <div>
-
-                                    <h2>
-                                        Creative direction
-                                    </h2>
+                                    <h2>Creative direction</h2>
 
                                     <p>
-                                        Optional instructions added
-                                        on top of your selected profile.
+                                        Optional instructions added on
+                                        top of your selected profile.
                                     </p>
-
                                 </div>
-
                             </div>
 
                         </header>
-
 
                         <textarea
                             id="description"
@@ -329,54 +247,39 @@
                             placeholder="Example: More overhead angles, dark studio environment, product centered..."
                         ></textarea>
 
-
                         <div class="field-footer">
-
-                            <span>
-                                Optional
-                            </span>
+                            <span>Optional</span>
 
                             <span id="characterCount">
                                 0 characters
                             </span>
-
                         </div>
 
                     </section>
 
-
-                    <!-- OUTPUT -->
 
                     <section class="work-section">
 
                         <header class="work-section-header">
 
                             <div>
-
                                 <span class="section-number">
                                     04
                                 </span>
 
                                 <div>
-
-                                    <h2>
-                                        Output count
-                                    </h2>
+                                    <h2>Output count</h2>
 
                                     <p>
                                         Auto follows the rules inside
                                         your system instruction.
                                     </p>
-
                                 </div>
-
                             </div>
 
                         </header>
 
-
                         <div class="count-selector">
-
 
                             <button
                                 class="count-button selected"
@@ -386,7 +289,6 @@
                                 Auto
                             </button>
 
-
                             <button
                                 class="count-button"
                                 data-count="1"
@@ -394,7 +296,6 @@
                             >
                                 1
                             </button>
-
 
                             <button
                                 class="count-button"
@@ -404,7 +305,6 @@
                                 4
                             </button>
 
-
                             <button
                                 class="count-button"
                                 data-count="6"
@@ -413,7 +313,6 @@
                                 6
                             </button>
 
-
                             <button
                                 class="count-button"
                                 data-count="8"
@@ -421,7 +320,6 @@
                             >
                                 8
                             </button>
-
 
                         </div>
 
@@ -433,34 +331,32 @@
                         id="generateButton"
                         type="button"
                     >
-                        GENERATE IMAGES
-                        <span>→</span>
-                    </button>
+                        <span id="generateButtonLabel">
+                            GENERATE IMAGES
+                        </span>
 
+                        <span id="generateButtonArrow">
+                            →
+                        </span>
+                    </button>
 
                 </section>
 
 
-                <!-- JOB SUMMARY -->
-
                 <aside class="job-panel">
 
-
                     <div class="job-panel-title">
+                        <span>CURRENT JOB</span>
 
-                        <span>
-                            CURRENT JOB
-                        </span>
-
-                        <strong>
-                            Ready
+                        <strong id="jobPanelStatus">
+                            DRAFT
                         </strong>
-
                     </div>
 
-
-                    <div class="job-empty">
-
+                    <div
+                        class="job-empty"
+                        id="jobEmptyState"
+                    >
                         <span class="job-empty-mark">
                             IA
                         </span>
@@ -470,75 +366,91 @@
                         </h3>
 
                         <p>
-                            Generated images will appear
-                            here once the AI generation
-                            pipeline is connected.
+                            Step 5 will save your reference
+                            images and create a persistent
+                            backend job.
+                        </p>
+                    </div>
+
+                    <div
+                        class="job-saved hidden-element"
+                        id="jobSavedState"
+                    >
+
+                        <div class="job-saved-heading">
+                            <span>BACKEND JOB</span>
+
+                            <strong id="currentJobId">
+                                #—
+                            </strong>
+                        </div>
+
+                        <div
+                            class="stored-reference-grid"
+                            id="storedReferenceGrid"
+                        ></div>
+
+                        <p>
+                            These thumbnails are now loaded from
+                            the files saved by FastAPI, not from
+                            temporary browser previews.
                         </p>
 
                     </div>
 
-
                     <div class="job-details">
-
 
                         <div>
                             <span>PROFILE</span>
+
                             <strong id="summaryProfile">
                                 Loading...
                             </strong>
                         </div>
 
-
                         <div>
                             <span>USING VERSION</span>
+
                             <strong id="summaryVersion">
                                 —
                             </strong>
                         </div>
 
-
                         <div>
                             <span>REFERENCES</span>
+
                             <strong id="summaryImages">
                                 0
                             </strong>
                         </div>
 
-
                         <div>
                             <span>OUTPUTS</span>
+
                             <strong id="summaryCount">
                                 Auto
                             </strong>
                         </div>
 
-
                     </div>
-
 
                 </aside>
 
-
             </div>
-
 
         </section>
 
 
-        <!-- =================================================
-             PROFILE MANAGER
-        ================================================== -->
+        <!-- PROFILE MANAGER -->
 
         <section
             class="app-view hidden-view"
             id="profilesView"
         >
 
-
             <header class="page-header">
 
                 <div>
-
                     <span class="page-kicker">
                         SYSTEM INSTRUCTIONS
                     </span>
@@ -552,9 +464,7 @@
                         generation workflow and choose exactly
                         which version powers Generate.
                     </p>
-
                 </div>
-
 
                 <button
                     class="header-action"
@@ -569,24 +479,15 @@
 
             <div class="manager-layout">
 
-
-                <!-- LIBRARY -->
-
                 <aside class="profile-library">
 
-
                     <header>
-
-                        <span>
-                            PROFILE LIBRARY
-                        </span>
+                        <span>PROFILE LIBRARY</span>
 
                         <strong id="libraryCount">
                             —
                         </strong>
-
                     </header>
-
 
                     <div class="profile-search">
 
@@ -598,40 +499,29 @@
 
                     </div>
 
-
                     <div
                         class="manager-profile-list"
                         id="profileManagerList"
                     >
-
                         <div class="loading-state">
                             Loading profiles...
                         </div>
-
                     </div>
-
 
                 </aside>
 
 
-                <!-- EDITOR -->
-
                 <section class="profile-editor">
-
 
                     <div
                         class="editor-empty"
                         id="profileEditorEmpty"
                     >
-
-                        <span>
-                            SELECT A PROFILE
-                        </span>
+                        <span>SELECT A PROFILE</span>
 
                         <h2>
                             Open a workflow to edit it.
                         </h2>
-
                     </div>
 
 
@@ -640,11 +530,7 @@
                         id="profileEditorContent"
                     >
 
-
-                        <!-- EDITOR TITLE -->
-
                         <header class="editor-header">
-
 
                             <div>
 
@@ -662,7 +548,6 @@
                                     </span>
 
                                 </div>
-
 
                                 <div class="version-summary">
 
@@ -691,7 +576,6 @@
 
                             </div>
 
-
                             <button
                                 class="outline-button"
                                 id="archiveProfileButton"
@@ -699,7 +583,6 @@
                             >
                                 ARCHIVE
                             </button>
-
 
                             <button
                                 class="outline-button hidden-element"
@@ -709,41 +592,23 @@
                                 RESTORE
                             </button>
 
-
                         </header>
 
-
-                        <!-- DETAILS -->
 
                         <section class="editor-block">
 
                             <div class="editor-block-heading">
 
-                                <span>
-                                    01
-                                </span>
+                                <span>01</span>
 
                                 <div>
-
-                                    <h3>
-                                        Profile details
-                                    </h3>
-
-                                    <p>
-                                        Display information only.
-                                        This does not change the
-                                        system instruction.
-                                    </p>
-
+                                    <h3>Profile details</h3>
+                                    <p>Display information only.</p>
                                 </div>
 
                             </div>
 
-
-                            <label>
-                                PROFILE NAME
-                            </label>
-
+                            <label>PROFILE NAME</label>
 
                             <input
                                 id="profileNameInput"
@@ -751,18 +616,13 @@
                                 maxlength="120"
                             >
 
-
-                            <label>
-                                DESCRIPTION
-                            </label>
-
+                            <label>DESCRIPTION</label>
 
                             <textarea
                                 id="profileDescriptionInput"
                                 class="small-textarea"
                                 maxlength="500"
                             ></textarea>
-
 
                             <button
                                 class="black-button"
@@ -775,37 +635,27 @@
                         </section>
 
 
-                        <!-- SYSTEM -->
-
                         <section class="editor-block">
 
                             <div class="editor-block-heading">
 
-                                <span>
-                                    02
-                                </span>
+                                <span>02</span>
 
                                 <div>
-
-                                    <h3>
-                                        System instruction
-                                    </h3>
+                                    <h3>System instruction</h3>
 
                                     <p id="loadedVersionNote">
                                         Generation version loaded.
                                     </p>
-
                                 </div>
 
                             </div>
-
 
                             <textarea
                                 id="profileInstructionEditor"
                                 class="instruction-editor"
                                 spellcheck="false"
                             ></textarea>
-
 
                             <div class="field-footer dark-footer">
 
@@ -819,7 +669,6 @@
 
                             </div>
 
-
                             <button
                                 class="orange-button"
                                 id="saveVersionButton"
@@ -831,32 +680,22 @@
                         </section>
 
 
-                        <!-- VERSIONS -->
-
                         <section class="editor-block">
 
                             <div class="editor-block-heading">
 
-                                <span>
-                                    03
-                                </span>
+                                <span>03</span>
 
                                 <div>
-
-                                    <h3>
-                                        Version history
-                                    </h3>
+                                    <h3>Version history</h3>
 
                                     <p>
-                                        Loading and using are separate
-                                        actions. Choose exactly which
-                                        version powers Generate.
+                                        Loading and using are
+                                        separate actions.
                                     </p>
-
                                 </div>
 
                             </div>
-
 
                             <div
                                 class="version-history-list"
@@ -866,30 +705,21 @@
                         </section>
 
 
-                        <!-- DANGER -->
-
                         <section class="danger-zone">
 
-                            <span>
-                                DANGER ZONE
-                            </span>
+                            <span>DANGER ZONE</span>
 
                             <div>
 
                                 <div>
-
                                     <h3>
                                         Delete profile permanently
                                     </h3>
 
                                     <p>
-                                        Removes the profile and all
-                                        deletable versions. This cannot
-                                        be undone.
+                                        This cannot be undone.
                                     </p>
-
                                 </div>
-
 
                                 <button
                                     id="deleteProfileButton"
@@ -903,28 +733,18 @@
 
                         </section>
 
-
                     </div>
-
 
                 </section>
 
-
             </div>
-
 
         </section>
 
-
     </main>
-
 
 </div>
 
-
-<!-- =========================================================
-     NEW PROFILE MODAL
-========================================================= -->
 
 <div
     class="modal-overlay"
@@ -932,24 +752,15 @@
     aria-hidden="true"
 >
 
-
     <div class="modal-card">
-
 
         <header class="modal-header">
 
             <div>
+                <span>NEW WORKFLOW</span>
 
-                <span>
-                    NEW WORKFLOW
-                </span>
-
-                <h2>
-                    Create profile
-                </h2>
-
+                <h2>Create profile</h2>
             </div>
-
 
             <button
                 id="modalCloseButton"
@@ -960,14 +771,9 @@
 
         </header>
 
-
         <form id="newProfileForm">
 
-
-            <label>
-                PROFILE NAME
-            </label>
-
+            <label>PROFILE NAME</label>
 
             <input
                 class="modal-input"
@@ -977,11 +783,7 @@
                 placeholder="Example: AdCat Images"
             >
 
-
-            <label>
-                DESCRIPTION
-            </label>
-
+            <label>DESCRIPTION</label>
 
             <textarea
                 class="modal-small-textarea"
@@ -989,11 +791,7 @@
                 maxlength="500"
             ></textarea>
 
-
-            <label>
-                SYSTEM INSTRUCTION
-            </label>
-
+            <label>SYSTEM INSTRUCTION</label>
 
             <textarea
                 class="modal-instruction"
@@ -1001,7 +799,6 @@
                 required
                 spellcheck="false"
             ></textarea>
-
 
             <div class="modal-meta">
 
@@ -1015,9 +812,7 @@
 
             </div>
 
-
             <div class="modal-actions">
-
 
                 <button
                     class="modal-cancel"
@@ -1027,7 +822,6 @@
                     CANCEL
                 </button>
 
-
                 <button
                     class="modal-create"
                     id="createProfileButton"
@@ -1036,15 +830,11 @@
                     CREATE PROFILE
                 </button>
 
-
             </div>
-
 
         </form>
 
-
     </div>
-
 
 </div>
 
@@ -1054,7 +844,5 @@
     id="toast"
 ></div>
 
-
 </body>
-
 </html>
