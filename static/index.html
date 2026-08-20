@@ -87,7 +87,9 @@
 
     <main class="main-content">
 
-        <!-- GENERATE -->
+        <!-- =================================================
+             GENERATE
+        ================================================== -->
 
         <section
             class="app-view"
@@ -213,8 +215,8 @@
 
                         <div class="backend-note">
                             Files stay in your browser until you
-                            click Generate. Step 5 saves them to
-                            the backend and database.
+                            click Generate. Then FastAPI stores them
+                            as a persistent job.
                         </div>
 
                     </section>
@@ -366,9 +368,8 @@
                         </h3>
 
                         <p>
-                            Step 5 will save your reference
-                            images and create a persistent
-                            backend job.
+                            Saved jobs and backend references
+                            will appear here.
                         </p>
                     </div>
 
@@ -391,9 +392,8 @@
                         ></div>
 
                         <p>
-                            These thumbnails are now loaded from
-                            the files saved by FastAPI, not from
-                            temporary browser previews.
+                            These thumbnails are loaded from
+                            backend-saved files.
                         </p>
 
                     </div>
@@ -441,7 +441,9 @@
         </section>
 
 
-        <!-- PROFILE MANAGER -->
+        <!-- =================================================
+             PROFILE MANAGER
+        ================================================== -->
 
         <section
             class="app-view hidden-view"
@@ -741,6 +743,156 @@
 
         </section>
 
+
+        <!-- =================================================
+             SETTINGS
+        ================================================== -->
+
+        <section
+            class="app-view hidden-view"
+            id="settingsView"
+        >
+
+            <header class="page-header">
+
+                <div>
+                    <span class="page-kicker">
+                        PROVIDERS
+                    </span>
+
+                    <h1>
+                        Settings.
+                    </h1>
+
+                    <p>
+                        Provider credentials stay on the FastAPI
+                        server. The browser only receives safe
+                        configuration status.
+                    </p>
+                </div>
+
+            </header>
+
+
+            <div class="settings-layout">
+
+                <section class="settings-card">
+
+                    <header class="settings-card-header">
+
+                        <div>
+                            <span class="settings-provider-label">
+                                PROMPT PLANNER
+                            </span>
+
+                            <h2>Google Gemini</h2>
+                        </div>
+
+                        <span
+                            class="provider-status"
+                            id="geminiProviderStatus"
+                        >
+                            CHECKING
+                        </span>
+
+                    </header>
+
+
+                    <div class="settings-grid">
+
+                        <div class="settings-row">
+                            <span>MODEL</span>
+
+                            <strong id="geminiModel">
+                                —
+                            </strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>API KEY</span>
+
+                            <strong id="geminiKeyStatus">
+                                —
+                            </strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>KEY SOURCE</span>
+
+                            <strong id="geminiKeySource">
+                                —
+                            </strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>SDK</span>
+
+                            <strong id="geminiSdkVersion">
+                                —
+                            </strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>INTERACTION STORAGE</span>
+
+                            <strong id="geminiStorageMode">
+                                OFF
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        class="settings-test-button"
+                        id="testGeminiButton"
+                        type="button"
+                    >
+                        TEST GEMINI CONNECTION
+                    </button>
+
+
+                    <div
+                        class="connection-result"
+                        id="geminiTestResult"
+                    >
+                        No connection test has been run yet.
+                    </div>
+
+                </section>
+
+
+                <aside class="settings-guide">
+
+                    <span class="settings-provider-label">
+                        LOCAL DEVELOPMENT
+                    </span>
+
+                    <h2>
+                        Keep the key server-side.
+                    </h2>
+
+                    <p>
+                        Copy <strong>.env.example</strong> to
+                        <strong>.env</strong>, paste your Gemini
+                        API key there, then restart FastAPI.
+                    </p>
+
+                    <pre>GEMINI_API_KEY=your_key_here
+GEMINI_PROMPT_MODEL=gemini-3.6-flash</pre>
+
+                    <p>
+                        Never paste the real API key into
+                        <strong>index.html</strong>,
+                        <strong>app.js</strong>, or Git.
+                    </p>
+
+                </aside>
+
+            </div>
+
+        </section>
+
     </main>
 
 </div>
@@ -758,7 +910,6 @@
 
             <div>
                 <span>NEW WORKFLOW</span>
-
                 <h2>Create profile</h2>
             </div>
 

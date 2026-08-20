@@ -1,26 +1,17 @@
-# Virtual environment
-.venv/
-venv/
-
 # Python
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
 
-# Environment variables / secrets
+# Secrets
 .env
 
-# Database (later steps)
-data/app.db
+# Local application data
+data/*.db
+data/uploads/
+data/outputs/
 
-# Uploads & generated outputs (don't bloat the repo)
-data/uploads/*
-data/outputs/*
-!data/uploads/.gitkeep
-!data/outputs/.gitkeep
-
-# OS junk
+# OS / editor
 .DS_Store
 Thumbs.db
-
-# Editor
 .vscode/
