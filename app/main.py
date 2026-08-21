@@ -46,6 +46,7 @@ from app.normalizer_service import (
     ensure_step8_schema,
     normalize_job,
     get_structured_prompts,
+    get_prompt_packages,
 )
 
 
@@ -124,7 +125,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Image Agent",
     description="Custom AI product image generation agent",
-    version="0.8.0",
+    version="0.8.1",
     lifespan=lifespan,
 )
 
@@ -693,6 +694,31 @@ def job_prompts(job_id: int):
         raise HTTPException(
             status_code=404,
             detail="Job not found.",
+        )
+
+    return result
+
+
+@app.get("/api/jobs/{job_id}/packages")
+def job_prompt_packages(job_id: int):
+    result = get_prompt_packages(job_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    if result.get("status") in {
+        "structured_invalid",
+        "structured_stale",
+    }:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Structured prompts are stale or failed source verification. "
+                "Run normalization again before image generation."
+            ),
         )
 
     return result
