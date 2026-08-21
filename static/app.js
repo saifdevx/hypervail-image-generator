@@ -74,6 +74,21 @@ const currentJobId =
 const storedReferenceGrid =
     document.getElementById("storedReferenceGrid");
 
+const plannerResultSection =
+    document.getElementById("plannerResultSection");
+
+const plannerResultModel =
+    document.getElementById("plannerResultModel");
+
+const plannerRawOutput =
+    document.getElementById("plannerRawOutput");
+
+const copyPlannerOutputButton =
+    document.getElementById("copyPlannerOutputButton");
+
+const retryPlannerButton =
+    document.getElementById("retryPlannerButton");
+
 
 const newProfileButton =
     document.getElementById("newProfileButton");
@@ -2394,6 +2409,13 @@ async function prepareGenerationJob() {
         return;
     }
 
+    plannerResultSection.classList.add(
+        "hidden-element"
+    );
+
+    plannerRawOutput.textContent =
+        "";
+
     const formData =
         new FormData();
 
@@ -2428,7 +2450,8 @@ async function prepareGenerationJob() {
     );
 
     setGenerateBusy(
-        true
+        true,
+        "SAVING REFERENCES"
     );
 
     jobPanelStatus.textContent =
@@ -2462,8 +2485,8 @@ async function prepareGenerationJob() {
             job
         );
 
-        showToast(
-            `Job #${job.id} saved with ${job.reference_count} reference image${job.reference_count === 1 ? "" : "s"}.`
+        await runPromptPlanner(
+            job.id
         );
 
     } catch (error) {
@@ -2489,14 +2512,15 @@ async function prepareGenerationJob() {
 
 
 function setGenerateBusy(
-    busy
+    busy,
+    label = "SAVING REFERENCES"
 ) {
     generateButton.disabled =
         busy;
 
     if (busy) {
         generateButtonLabel.textContent =
-            "SAVING REFERENCES";
+            label;
 
         generateButtonArrow.textContent =
             "…";
@@ -2506,6 +2530,74 @@ function setGenerateBusy(
 
         generateButtonArrow.textContent =
             "→";
+    }
+}
+
+
+async function runPromptPlanner(
+    jobId
+) {
+    setGenerateBusy(
+        true,
+        "GENERATING PROMPTS"
+    );
+
+    retryPlannerButton.disabled =
+        true;
+
+    jobPanelStatus.textContent =
+        "PLANNING";
+
+    try {
+        const response =
+            await fetch(
+                `/api/jobs/${jobId}/plan`,
+                {
+                    method: "POST"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const job =
+            await response.json();
+
+        currentJob =
+            job;
+
+        renderPlannedJob(
+            job
+        );
+
+        showToast(
+            `Prompt plan ready for Job #${job.id}.`
+        );
+
+    } catch (error) {
+        console.error(error);
+
+        jobPanelStatus.textContent =
+            "PLANNER ERROR";
+
+        showToast(
+            error.message
+        );
+
+        return false;
+
+    } finally {
+        retryPlannerButton.disabled =
+            false;
+
+        setGenerateBusy(
+            false
+        );
     }
 }
 
@@ -2594,6 +2686,89 @@ function renderPreparedJob(
     );
 }
 
+
+function renderPlannedJob(
+    job
+) {
+    renderPreparedJob(
+        job
+    );
+
+    jobPanelStatus.textContent =
+        "PROMPTS READY";
+
+    plannerResultModel.textContent =
+        job.planner_model
+        ||
+        "Gemini";
+
+    plannerRawOutput.textContent =
+        job.planner_raw_output
+        ||
+        "";
+
+    plannerResultSection.classList.remove(
+        "hidden-element"
+    );
+
+    plannerResultSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+
+retryPlannerButton.addEventListener(
+    "click",
+    async () => {
+
+        if (!currentJob?.id) {
+            showToast(
+                "Create a job first."
+            );
+
+            return;
+        }
+
+        await runPromptPlanner(
+            currentJob.id
+        );
+    }
+);
+
+
+copyPlannerOutputButton.addEventListener(
+    "click",
+    async () => {
+
+        const text =
+            plannerRawOutput.textContent
+            ||
+            "";
+
+        if (!text.trim()) {
+            showToast(
+                "No planner output to copy."
+            );
+
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(
+                text
+            );
+
+            showToast(
+                "Prompt plan copied."
+            );
+        } catch {
+            showToast(
+                "Browser could not copy the prompt plan."
+            );
+        }
+    }
+);
 
 function markDraftChanged() {
     if (!currentJob) {
