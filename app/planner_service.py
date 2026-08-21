@@ -15,6 +15,10 @@ from app.job_store import (
     mark_job_planning_failed,
 )
 
+from app.normalizer_service import (
+    invalidate_structured_prompts,
+)
+
 
 def build_runtime_instruction(job: dict):
     creative_direction = (
@@ -135,6 +139,11 @@ def plan_job(job_id: int):
         }
 
     model = get_prompt_model()
+
+    # A new planner pass invalidates any old structured prompt package.
+    invalidate_structured_prompts(
+        job_id
+    )
 
     mark_job_planning(
         job_id,

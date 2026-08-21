@@ -386,6 +386,45 @@
 
                     </section>
 
+
+                    <section
+                        class="prompt-packages hidden-element"
+                        id="promptPackagesSection"
+                    >
+
+                        <header class="prompt-packages-header">
+
+                            <div>
+                                <span>06 · IMAGE INPUT PACKAGES</span>
+                                <h2>Source-verified prompts</h2>
+                                <p>
+                                    Positive prompt text is copied verbatim from
+                                    the Step 7 planner. Shared negatives are also
+                                    source-verified before being attached.
+                                </p>
+                            </div>
+
+                            <strong id="promptPackagesCount">
+                                —
+                            </strong>
+
+                        </header>
+
+                        <div
+                            class="shared-negative-box hidden-element"
+                            id="sharedNegativeBox"
+                        >
+                            <span>SHARED NEGATIVE · EXACT SOURCE TEXT</span>
+                            <p id="sharedNegativeText"></p>
+                        </div>
+
+                        <div
+                            class="prompt-package-grid"
+                            id="promptPackageGrid"
+                        ></div>
+
+                    </section>
+
                 </section>
 
 
@@ -1028,6 +1067,54 @@ GEMINI_PROMPT_MODEL=gemini-3.6-flash</pre>
             </div>
 
         </form>
+
+    </div>
+
+</div>
+
+
+<div
+    class="final-input-overlay"
+    id="finalInputModal"
+    aria-hidden="true"
+>
+
+    <div class="final-input-card">
+
+        <header class="final-input-header">
+
+            <div>
+                <span>STEP 9 PAYLOAD PREVIEW</span>
+                <h2 id="finalInputTitle">Final image input</h2>
+            </div>
+
+            <button
+                id="closeFinalInputModal"
+                type="button"
+            >
+                ×
+            </button>
+
+        </header>
+
+        <div class="final-input-verification">
+            <strong>SOURCE VERIFIED</strong>
+            <span id="finalInputStrategy">—</span>
+        </div>
+
+        <pre
+            class="final-input-preview"
+            id="finalInputPreview"
+        ></pre>
+
+        <div class="final-input-actions">
+            <button
+                id="copyFinalInputModalButton"
+                type="button"
+            >
+                COPY FINAL INPUT
+            </button>
+        </div>
 
     </div>
 

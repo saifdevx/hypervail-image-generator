@@ -1704,3 +1704,327 @@ textarea:disabled {
     font-size: 10px;
     line-height: 1.75;
 }
+
+/* =========================================================
+   STEP 8B — SOURCE-VERIFIED PROMPT PACKAGES
+========================================================= */
+
+.prompt-packages {
+    margin-top: 14px;
+    border-top: 7px solid var(--orange);
+    background: var(--black);
+    color: var(--white);
+}
+
+.prompt-packages-header {
+    min-height: 92px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    border-left:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-right:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-bottom:
+        1px solid rgba(246, 246, 246, 0.18);
+}
+
+.prompt-packages-header span {
+    display: block;
+    color: var(--orange);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+.prompt-packages-header h2 {
+    margin: 7px 0 0;
+    color: var(--white);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.prompt-packages-header p {
+    max-width: 650px;
+    margin: 8px 0 0;
+    color: rgba(246, 246, 246, 0.54);
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+.prompt-packages-header > strong {
+    padding: 7px 9px;
+    flex-shrink: 0;
+    background: var(--orange);
+    color: var(--black);
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.shared-negative-box {
+    padding: 16px 20px;
+    border-left:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-right:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-bottom:
+        1px solid rgba(246, 246, 246, 0.18);
+}
+
+.shared-negative-box span {
+    display: block;
+    color: var(--orange);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.shared-negative-box p {
+    margin: 9px 0 0;
+    color: var(--white);
+    font-size: 10px;
+    line-height: 1.65;
+}
+
+.prompt-package-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    background:
+        rgba(246, 246, 246, 0.18);
+    border-left:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-right:
+        1px solid rgba(246, 246, 246, 0.18);
+    border-bottom:
+        1px solid rgba(246, 246, 246, 0.18);
+}
+
+.prompt-package-card {
+    min-width: 0;
+    padding: 18px;
+    background: var(--black);
+}
+
+.prompt-package-card > header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.prompt-package-card > header span {
+    display: block;
+    color: var(--orange);
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.prompt-package-card h3 {
+    margin: 6px 0 0;
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.prompt-package-card > header > strong {
+    padding: 5px 6px;
+    flex-shrink: 0;
+    background: var(--white);
+    color: var(--black);
+    font-size: 6px;
+    font-weight: 900;
+}
+
+.prompt-package-text {
+    margin: 17px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: rgba(246, 246, 246, 0.72);
+    font-size: 9px;
+    line-height: 1.65;
+}
+
+.prompt-package-verification {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.prompt-package-verification span {
+    padding: 4px 6px;
+    border:
+        1px solid rgba(246, 246, 246, 0.24);
+    color: rgba(246, 246, 246, 0.68);
+    font-size: 6px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+}
+
+.prompt-package-actions {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.prompt-package-actions button {
+    min-height: 31px;
+    padding: 0 9px;
+    border:
+        1px solid rgba(246, 246, 246, 0.28);
+    background: var(--black);
+    color: var(--white);
+    font-size: 7px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.prompt-package-actions button:hover {
+    background: var(--white);
+    color: var(--black);
+}
+
+.prompt-package-actions button.primary {
+    background: var(--orange);
+    color: var(--black);
+    border-color: var(--orange);
+}
+
+.prompt-package-actions button.primary:hover {
+    background: var(--white);
+    border-color: var(--white);
+}
+
+/* =========================================================
+   STEP 8B — FINAL INPUT MODAL
+========================================================= */
+
+.final-input-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 350;
+}
+
+.final-input-overlay.visible {
+    display: flex;
+}
+
+.final-input-card {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    background: var(--white);
+    color: var(--black);
+}
+
+.final-input-header {
+    padding: 19px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    border-top: 7px solid var(--orange);
+    border-bottom:
+        1px solid rgba(0, 0, 0, 0.16);
+}
+
+.final-input-header span {
+    display: block;
+    color: var(--orange);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+.final-input-header h2 {
+    margin: 7px 0 0;
+    color: var(--black);
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.final-input-header button {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    background: var(--black);
+    color: var(--white);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.final-input-verification {
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    border-bottom:
+        1px solid rgba(0, 0, 0, 0.13);
+}
+
+.final-input-verification strong {
+    color: var(--orange);
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.final-input-verification span {
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 8px;
+    text-align: right;
+}
+
+.final-input-preview {
+    margin: 0;
+    padding: 22px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--black);
+    color: var(--white);
+    font-family:
+        "Cascadia Code",
+        "SFMono-Regular",
+        Consolas,
+        monospace;
+    font-size: 10px;
+    line-height: 1.75;
+}
+
+.final-input-actions {
+    padding: 13px 20px 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.final-input-actions button {
+    min-height: 40px;
+    padding: 0 14px;
+    background: var(--orange);
+    color: var(--black);
+    font-size: 8px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+@media
+(max-width: 920px) {
+    .prompt-package-grid {
+        grid-template-columns: 1fr;
+    }
+}

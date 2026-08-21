@@ -89,6 +89,39 @@ const copyPlannerOutputButton =
 const retryPlannerButton =
     document.getElementById("retryPlannerButton");
 
+const promptPackagesSection =
+    document.getElementById("promptPackagesSection");
+
+const promptPackagesCount =
+    document.getElementById("promptPackagesCount");
+
+const sharedNegativeBox =
+    document.getElementById("sharedNegativeBox");
+
+const sharedNegativeText =
+    document.getElementById("sharedNegativeText");
+
+const promptPackageGrid =
+    document.getElementById("promptPackageGrid");
+
+const finalInputModal =
+    document.getElementById("finalInputModal");
+
+const closeFinalInputModal =
+    document.getElementById("closeFinalInputModal");
+
+const finalInputTitle =
+    document.getElementById("finalInputTitle");
+
+const finalInputStrategy =
+    document.getElementById("finalInputStrategy");
+
+const finalInputPreview =
+    document.getElementById("finalInputPreview");
+
+const copyFinalInputModalButton =
+    document.getElementById("copyFinalInputModalButton");
+
 
 const newProfileButton =
     document.getElementById("newProfileButton");
@@ -223,6 +256,8 @@ let editingProfileId = null;
 let editingProfileName = null;
 let loadedEditorVersionNumber = null;
 let currentJob = null;
+let currentPromptPackages = [];
+let activeFinalPackage = null;
 let toastTimer = null;
 
 
@@ -2413,6 +2448,19 @@ async function prepareGenerationJob() {
         "hidden-element"
     );
 
+    promptPackagesSection.classList.add(
+        "hidden-element"
+    );
+
+    promptPackageGrid.innerHTML =
+        "";
+
+    sharedNegativeBox.classList.add(
+        "hidden-element"
+    );
+
+    currentPromptPackages = [];
+
     plannerRawOutput.textContent =
         "";
 
@@ -2575,8 +2623,17 @@ async function runPromptPlanner(
             job
         );
 
+        const normalized =
+            await runPromptNormalizer(
+                job.id
+            );
+
+        if (!normalized) {
+            return false;
+        }
+
         showToast(
-            `Prompt plan ready for Job #${job.id}.`
+            `Lossless prompt packages ready for Job #${job.id}.`
         );
 
     } catch (error) {
@@ -2695,7 +2752,7 @@ function renderPlannedJob(
     );
 
     jobPanelStatus.textContent =
-        "PROMPTS READY";
+        "RAW PLAN READY";
 
     plannerResultModel.textContent =
         job.planner_model
@@ -2718,6 +2775,425 @@ function renderPlannedJob(
 }
 
 
+async function runPromptNormalizer(
+    jobId
+) {
+    setGenerateBusy(
+        true,
+        "STRUCTURING PROMPTS"
+    );
+
+    jobPanelStatus.textContent =
+        "VERIFYING";
+
+    promptPackagesSection.classList.add(
+        "hidden-element"
+    );
+
+    promptPackageGrid.innerHTML =
+        "";
+
+    currentPromptPackages = [];
+
+    try {
+        const normalizeResponse =
+            await fetch(
+                `/api/jobs/${jobId}/normalize`,
+                {
+                    method: "POST"
+                }
+            );
+
+        if (!normalizeResponse.ok) {
+            throw new Error(
+                await apiError(
+                    normalizeResponse
+                )
+            );
+        }
+
+        await normalizeResponse.json();
+
+        const packageResponse =
+            await fetch(
+                `/api/jobs/${jobId}/packages`
+            );
+
+        if (!packageResponse.ok) {
+            throw new Error(
+                await apiError(
+                    packageResponse
+                )
+            );
+        }
+
+        const packages =
+            await packageResponse.json();
+
+        if (!packages.source_verified) {
+            throw new Error(
+                "Prompt package source verification failed."
+            );
+        }
+
+        if (!packages.package_count) {
+            throw new Error(
+                "No image-generation prompts were extracted."
+            );
+        }
+
+        renderPromptPackages(
+            packages
+        );
+
+        jobPanelStatus.textContent =
+            "PROMPTS READY";
+
+        return true;
+
+    } catch (error) {
+        console.error(error);
+
+        jobPanelStatus.textContent =
+            "STRUCTURE ERROR";
+
+        showToast(
+            error.message
+        );
+
+        return false;
+    }
+}
+
+
+function renderPromptPackages(
+    payload
+) {
+    currentPromptPackages =
+        payload.packages
+        ||
+        [];
+
+    promptPackagesCount.textContent =
+        `${payload.package_count} READY`;
+
+    promptPackageGrid.innerHTML =
+        "";
+
+    const sharedNegative =
+        payload.shared_negative
+        ||
+        "";
+
+    sharedNegativeText.textContent =
+        sharedNegative;
+
+    sharedNegativeBox.classList.toggle(
+        "hidden-element",
+        !sharedNegative
+    );
+
+    currentPromptPackages.forEach(
+        item => {
+            promptPackageGrid.appendChild(
+                createPromptPackageCard(
+                    item
+                )
+            );
+        }
+    );
+
+    promptPackagesSection.classList.remove(
+        "hidden-element"
+    );
+
+    promptPackagesSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+
+function createPromptPackageCard(
+    item
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "prompt-package-card";
+
+    const header =
+        document.createElement(
+            "header"
+        );
+
+    const heading =
+        document.createElement(
+            "div"
+        );
+
+    const number =
+        document.createElement(
+            "span"
+        );
+
+    number.textContent =
+        `PROMPT ${item.position}`;
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    heading.append(
+        number,
+        title
+    );
+
+    const badge =
+        document.createElement(
+            "strong"
+        );
+
+    badge.textContent =
+        "SOURCE VERIFIED";
+
+    header.append(
+        heading,
+        badge
+    );
+
+    const prompt =
+        document.createElement(
+            "p"
+        );
+
+    prompt.className =
+        "prompt-package-text";
+
+    prompt.textContent =
+        item.positive_prompt_text;
+
+    const verification =
+        document.createElement(
+            "div"
+        );
+
+    verification.className =
+        "prompt-package-verification";
+
+    verification.innerHTML = `
+        <span>POSITIVE · EXACT</span>
+        <span>${item.shared_negative_applied ? "SHARED NEGATIVE · EXACT" : "NO SHARED NEGATIVE"}</span>
+    `;
+
+    const actions =
+        document.createElement(
+            "div"
+        );
+
+    actions.className =
+        "prompt-package-actions";
+
+    const copyPrompt =
+        document.createElement(
+            "button"
+        );
+
+    copyPrompt.type =
+        "button";
+
+    copyPrompt.textContent =
+        "COPY ORIGINAL PROMPT";
+
+    copyPrompt.addEventListener(
+        "click",
+        async () => {
+            await copyText(
+                item.positive_prompt_text,
+                "Original prompt copied."
+            );
+        }
+    );
+
+    const viewFinal =
+        document.createElement(
+            "button"
+        );
+
+    viewFinal.type =
+        "button";
+
+    viewFinal.className =
+        "primary";
+
+    viewFinal.textContent =
+        "VIEW FINAL INPUT";
+
+    viewFinal.addEventListener(
+        "click",
+        () => {
+            openFinalInput(
+                item
+            );
+        }
+    );
+
+    const copyFinal =
+        document.createElement(
+            "button"
+        );
+
+    copyFinal.type =
+        "button";
+
+    copyFinal.textContent =
+        "COPY FINAL INPUT";
+
+    copyFinal.addEventListener(
+        "click",
+        async () => {
+            await copyText(
+                item.final_input,
+                "Final image input copied."
+            );
+        }
+    );
+
+    actions.append(
+        copyPrompt,
+        viewFinal,
+        copyFinal
+    );
+
+    card.append(
+        header,
+        prompt,
+        verification,
+        actions
+    );
+
+    return card;
+}
+
+
+function openFinalInput(
+    item
+) {
+    activeFinalPackage =
+        item;
+
+    finalInputTitle.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    finalInputStrategy.textContent =
+        item.final_input_strategy
+        ||
+        "positive_exact";
+
+    finalInputPreview.textContent =
+        item.final_input
+        ||
+        "";
+
+    finalInputModal.classList.add(
+        "visible"
+    );
+
+    finalInputModal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+}
+
+
+function closeFinalInput() {
+    finalInputModal.classList.remove(
+        "visible"
+    );
+
+    finalInputModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    activeFinalPackage =
+        null;
+}
+
+
+closeFinalInputModal.addEventListener(
+    "click",
+    closeFinalInput
+);
+
+
+finalInputModal.addEventListener(
+    "click",
+    event => {
+        if (
+            event.target
+            ===
+            finalInputModal
+        ) {
+            closeFinalInput();
+        }
+    }
+);
+
+
+copyFinalInputModalButton.addEventListener(
+    "click",
+    async () => {
+        if (!activeFinalPackage) {
+            return;
+        }
+
+        await copyText(
+            activeFinalPackage.final_input,
+            "Final image input copied."
+        );
+    }
+);
+
+
+async function copyText(
+    text,
+    successMessage
+) {
+    if (!text?.trim()) {
+        showToast(
+            "Nothing to copy."
+        );
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(
+            text
+        );
+
+        showToast(
+            successMessage
+        );
+    } catch {
+        showToast(
+            "Browser could not copy the text."
+        );
+    }
+}
+
+
 retryPlannerButton.addEventListener(
     "click",
     async () => {
@@ -2729,6 +3205,15 @@ retryPlannerButton.addEventListener(
 
             return;
         }
+
+        promptPackagesSection.classList.add(
+            "hidden-element"
+        );
+
+        promptPackageGrid.innerHTML =
+            "";
+
+        currentPromptPackages = [];
 
         await runPromptPlanner(
             currentJob.id
