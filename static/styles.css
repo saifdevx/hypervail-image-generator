@@ -1609,3 +1609,98 @@ textarea:disabled {
         align-items: flex-start;
     }
 }
+
+/* =========================================================
+   STEP 7 — PROMPT PLANNER RESULT
+========================================================= */
+
+.planner-result {
+    margin-top: 2px;
+    background: var(--white);
+    color: var(--black);
+    border-top: 7px solid var(--orange);
+}
+
+.planner-result-header {
+    min-height: 84px;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    border-bottom:
+        1px solid rgba(0, 0, 0, 0.14);
+}
+
+.planner-result-header span {
+    display: block;
+    color: var(--orange);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+.planner-result-header h2 {
+    margin: 7px 0 0;
+    color: var(--black);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.planner-result-header strong {
+    padding: 6px 8px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.planner-result-actions {
+    padding: 12px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    border-bottom:
+        1px solid rgba(0, 0, 0, 0.12);
+}
+
+.planner-result-actions button {
+    min-height: 34px;
+    padding: 0 11px;
+    border:
+        1px solid rgba(0, 0, 0, 0.28);
+    background: var(--white);
+    color: var(--black);
+    font-size: 8px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.planner-result-actions button:hover {
+    background: var(--black);
+    color: var(--white);
+}
+
+.planner-result-actions button:disabled {
+    opacity: 0.42;
+    cursor: wait;
+}
+
+.planner-output {
+    margin: 0;
+    padding: 22px;
+    max-height: 720px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--white);
+    color: var(--black);
+    font-family:
+        "Cascadia Code",
+        "SFMono-Regular",
+        Consolas,
+        monospace;
+    font-size: 10px;
+    line-height: 1.75;
+}

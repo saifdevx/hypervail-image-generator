@@ -45,6 +45,10 @@ from app.gemini_service import (
     test_gemini_connection
 )
 
+from app.planner_service import (
+    plan_job
+)
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
@@ -134,7 +138,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.6.0",
+    version="0.7.0",
     lifespan=lifespan,
 )
 
@@ -730,6 +734,51 @@ async def job_create(
         )
 
     return result["job"]
+
+
+@app.post(
+    "/api/jobs/{job_id}/plan"
+)
+def job_plan(
+    job_id: int
+):
+    result = plan_job(
+        job_id
+    )
+
+    if result["ok"]:
+        return result["job"]
+
+    code = result.get(
+        "code"
+    )
+
+    if code == "job_not_found":
+        raise HTTPException(
+            status_code=404,
+            detail=result["error"]
+        )
+
+    if code == "no_references":
+        raise HTTPException(
+            status_code=409,
+            detail=result["error"]
+        )
+
+    if code == "gemini_not_configured":
+        raise HTTPException(
+            status_code=503,
+            detail=result["error"]
+        )
+
+    raise HTTPException(
+        status_code=502,
+        detail=(
+            result.get("error")
+            or
+            "Gemini prompt planning failed."
+        )
+    )
 
 
 @app.get(
