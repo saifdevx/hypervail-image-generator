@@ -976,30 +976,150 @@
 
 
         <!-- =================================================
-             HISTORY PLACEHOLDER
+             HISTORY / CREATIVE LIBRARY
         ================================================== -->
 
         <section
             class="app-view hidden-view"
             id="historyView"
         >
-            <header class="page-header">
+
+            <header class="page-header history-page-header">
+
                 <div>
-                    <span class="page-kicker">LIBRARY</span>
+                    <span class="page-kicker">
+                        CREATIVE LIBRARY
+                    </span>
+
                     <h1>History.</h1>
+
                     <p>
-                        Step 12 will turn this into the searchable
-                        project/job library.
+                        Reopen past jobs, find winning outputs,
+                        download finished sets, or duplicate a job
+                        back into Create for a new variation.
                     </p>
                 </div>
+
+                <div class="history-header-stat">
+                    <span>VISIBLE JOBS</span>
+                    <strong id="historyCountLabel">—</strong>
+                </div>
+
             </header>
 
-            <div class="history-placeholder">
-                <strong>History is the next major data view.</strong>
-                <span>
-                    Your current jobs are already stored safely in SQLite.
-                </span>
+
+            <div class="history-shell">
+
+                <section class="history-filter-bar">
+
+                    <label class="history-search-field">
+                        <span>SEARCH</span>
+
+                        <input
+                            id="historySearchInput"
+                            type="search"
+                            placeholder="Job #, workflow, creative direction…"
+                        >
+                    </label>
+
+
+                    <label>
+                        <span>WORKFLOW</span>
+
+                        <select id="historyProfileFilter">
+                            <option value="">
+                                All workflows
+                            </option>
+                        </select>
+                    </label>
+
+
+                    <label>
+                        <span>STATUS</span>
+
+                        <select id="historyStatusFilter">
+                            <option value="">
+                                All statuses
+                            </option>
+                        </select>
+                    </label>
+
+
+                    <label>
+                        <span>PLANNER</span>
+
+                        <select id="historyPlannerFilter">
+                            <option value="">
+                                Any planner
+                            </option>
+                        </select>
+                    </label>
+
+
+                    <label>
+                        <span>IMAGE ENGINE</span>
+
+                        <select id="historyImageProviderFilter">
+                            <option value="">
+                                Any image provider
+                            </option>
+                        </select>
+                    </label>
+
+
+                    <label class="history-favorite-filter">
+                        <input
+                            id="historyFavoritesOnly"
+                            type="checkbox"
+                        >
+
+                        <span class="history-favorite-toggle">
+                            ★ Favorites
+                        </span>
+                    </label>
+
+
+                    <button
+                        class="history-clear-button"
+                        id="historyClearFiltersButton"
+                        type="button"
+                    >
+                        Clear
+                    </button>
+
+                </section>
+
+
+                <section
+                    class="history-grid"
+                    id="historyGrid"
+                >
+                    <div class="history-loading-state">
+                        Loading creative history…
+                    </div>
+                </section>
+
+
+                <div
+                    class="history-empty-state hidden-element"
+                    id="historyEmptyState"
+                >
+                    <span>NO MATCHES</span>
+                    <h2>No jobs match these filters.</h2>
+                    <p>
+                        Clear the filters or create another image set.
+                    </p>
+
+                    <button
+                        id="historyEmptyCreateButton"
+                        type="button"
+                    >
+                        Create new job
+                    </button>
+                </div>
+
             </div>
+
         </section>
 
 
@@ -1575,6 +1695,168 @@ GEMINI_API_KEY=...</pre>
                 >
                 <figcaption id="compareTitleB"></figcaption>
             </figure>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- =========================================================
+     HISTORY JOB DETAIL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="historyDetailModal"
+    aria-hidden="true"
+>
+    <div class="history-detail-card">
+
+        <header class="history-detail-header">
+
+            <div>
+                <span id="historyDetailKicker">
+                    JOB #—
+                </span>
+
+                <h2 id="historyDetailTitle">
+                    Job
+                </h2>
+
+                <p id="historyDetailMeta">
+                    —
+                </p>
+            </div>
+
+            <div class="history-detail-header-actions">
+
+                <button
+                    class="history-job-favorite"
+                    id="historyDetailFavoriteButton"
+                    type="button"
+                    title="Favorite this job"
+                >
+                    ☆
+                </button>
+
+                <button
+                    class="history-close-button"
+                    id="closeHistoryDetailModal"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <div class="history-detail-toolbar">
+
+            <button
+                id="historyDuplicateButton"
+                type="button"
+            >
+                Duplicate in Create
+            </button>
+
+            <a
+                id="historyDownloadAllButton"
+                href="#"
+            >
+                Download all
+            </a>
+
+        </div>
+
+
+        <div class="history-detail-content">
+
+            <section class="history-detail-summary">
+
+                <div>
+                    <span>WORKFLOW</span>
+                    <strong id="historyDetailWorkflow">—</strong>
+                </div>
+
+                <div>
+                    <span>PLANNER</span>
+                    <strong id="historyDetailPlanner">—</strong>
+                </div>
+
+                <div>
+                    <span>IMAGE ENGINE</span>
+                    <strong id="historyDetailImageEngine">—</strong>
+                </div>
+
+                <div>
+                    <span>OUTPUTS</span>
+                    <strong id="historyDetailOutputs">—</strong>
+                </div>
+
+            </section>
+
+
+            <section class="history-detail-section">
+
+                <header>
+                    <span>REFERENCES</span>
+                    <strong id="historyDetailReferenceCount">0</strong>
+                </header>
+
+                <div
+                    class="history-reference-grid"
+                    id="historyDetailReferences"
+                ></div>
+
+            </section>
+
+
+            <section class="history-detail-section">
+
+                <header>
+                    <span>CREATIVE DIRECTION</span>
+                </header>
+
+                <p
+                    class="history-direction-copy"
+                    id="historyDetailDirection"
+                >
+                    No additional direction.
+                </p>
+
+            </section>
+
+
+            <section class="history-detail-section">
+
+                <header>
+                    <span>GENERATED OUTPUTS</span>
+                    <strong id="historyDetailImageCount">0</strong>
+                </header>
+
+                <div
+                    class="history-output-grid"
+                    id="historyDetailImages"
+                ></div>
+
+            </section>
+
+
+            <details class="history-prompt-details">
+
+                <summary>
+                    Source-verified prompts
+                </summary>
+
+                <div
+                    class="history-prompt-list"
+                    id="historyDetailPrompts"
+                ></div>
+
+            </details>
 
         </div>
 
