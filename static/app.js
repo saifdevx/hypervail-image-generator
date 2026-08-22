@@ -104,6 +104,36 @@ const sharedNegativeText =
 const promptPackageGrid =
     document.getElementById("promptPackageGrid");
 
+const autoGenerateImages =
+    document.getElementById("autoGenerateImages");
+
+const generateAllImagesButton =
+    document.getElementById("generateAllImagesButton");
+
+const imageBatchSection =
+    document.getElementById("imageBatchSection");
+
+const imageBatchCount =
+    document.getElementById("imageBatchCount");
+
+const imageBatchProgressBar =
+    document.getElementById("imageBatchProgressBar");
+
+const imageBatchProgressText =
+    document.getElementById("imageBatchProgressText");
+
+const imageBatchFailureText =
+    document.getElementById("imageBatchFailureText");
+
+const imageBatchGrid =
+    document.getElementById("imageBatchGrid");
+
+const retryIncompleteImagesButton =
+    document.getElementById("retryIncompleteImagesButton");
+
+const refreshImageBatchButton =
+    document.getElementById("refreshImageBatchButton");
+
 const finalInputModal =
     document.getElementById("finalInputModal");
 
@@ -258,6 +288,8 @@ let loadedEditorVersionNumber = null;
 let currentJob = null;
 let currentPromptPackages = [];
 let activeFinalPackage = null;
+let imageBatchPollTimer = null;
+let imageBatchRequestRunning = false;
 let toastTimer = null;
 
 
@@ -2461,6 +2493,24 @@ async function prepareGenerationJob() {
 
     currentPromptPackages = [];
 
+    stopImageBatchPolling();
+
+    imageBatchSection.classList.add(
+        "hidden-element"
+    );
+
+    imageBatchGrid.innerHTML =
+        "";
+
+    imageBatchProgressBar.style.width =
+        "0%";
+
+    imageBatchProgressText.textContent =
+        "Waiting";
+
+    imageBatchFailureText.textContent =
+        "";
+
     plannerRawOutput.textContent =
         "";
 
@@ -2632,9 +2682,24 @@ async function runPromptPlanner(
             return false;
         }
 
-        showToast(
-            `Lossless prompt packages ready for Job #${job.id}.`
-        );
+        if (
+            autoGenerateImages
+            &&
+            autoGenerateImages.checked
+        ) {
+            const batchFinished =
+                await runImageBatch(
+                    job.id
+                );
+
+            if (!batchFinished) {
+                return false;
+            }
+        } else {
+            showToast(
+                `Lossless prompt packages ready for Job #${job.id}.`
+            );
+        }
 
     } catch (error) {
         console.error(error);
@@ -2912,6 +2977,544 @@ function renderPromptPackages(
         block: "start"
     });
 }
+
+
+async function refreshImageBatch(
+    jobId
+) {
+    try {
+        const response =
+            await fetch(
+                `/api/jobs/${jobId}/image-batch`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const payload =
+            await response.json();
+
+        renderImageBatch(
+            payload
+        );
+
+        return payload;
+
+    } catch (error) {
+        console.error(
+            error
+        );
+
+        return null;
+    }
+}
+
+
+function renderImageBatch(
+    payload
+) {
+    imageBatchSection.classList.remove(
+        "hidden-element"
+    );
+
+    const total =
+        Number(
+            payload.total_prompts
+            || 0
+        );
+
+    const complete =
+        Number(
+            payload.complete_count
+            || 0
+        );
+
+    const failed =
+        Number(
+            payload.failed_count
+            || 0
+        );
+
+    const active =
+        Number(
+            payload.generating_count
+            || 0
+        )
+        +
+        Number(
+            payload.queued_count
+            || 0
+        );
+
+    const percent =
+        total
+            ?
+            Math.round(
+                (complete / total)
+                * 100
+            )
+            :
+            0;
+
+    imageBatchCount.textContent =
+        `${complete}/${total} COMPLETE`;
+
+    imageBatchProgressBar.style.width =
+        `${percent}%`;
+
+    if (payload.status === "complete") {
+        imageBatchProgressText.textContent =
+            "All images complete";
+    } else if (active > 0) {
+        imageBatchProgressText.textContent =
+            `${active} generating · ${complete} complete`;
+    } else if (failed > 0) {
+        imageBatchProgressText.textContent =
+            `${complete} complete · ${failed} failed`;
+    } else {
+        imageBatchProgressText.textContent =
+            `${complete} complete · waiting`;
+    }
+
+    imageBatchFailureText.textContent =
+        failed
+            ?
+            `${failed} FAILED`
+            :
+            "";
+
+    imageBatchGrid.innerHTML =
+        "";
+
+    (
+        payload.items
+        ||
+        []
+    ).forEach(
+        item => {
+            imageBatchGrid.appendChild(
+                createImageBatchCard(
+                    item
+                )
+            );
+        }
+    );
+
+    retryIncompleteImagesButton.disabled =
+        imageBatchRequestRunning
+        ||
+        (
+            total > 0
+            && complete === total
+        );
+}
+
+
+function createImageBatchCard(
+    item
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        `image-batch-card status-${item.status}`;
+
+    const header =
+        document.createElement(
+            "header"
+        );
+
+    const number =
+        document.createElement(
+            "span"
+        );
+
+    number.textContent =
+        `PROMPT ${item.position}`;
+
+    const status =
+        document.createElement(
+            "strong"
+        );
+
+    status.textContent =
+        String(
+            item.status
+            ||
+            "pending"
+        ).toUpperCase();
+
+    header.append(
+        number,
+        status
+    );
+
+    const media =
+        document.createElement(
+            "div"
+        );
+
+    media.className =
+        "image-batch-media";
+
+    if (
+        item.status === "complete"
+        &&
+        item.image?.file_url
+    ) {
+        const image =
+            document.createElement(
+                "img"
+            );
+
+        image.src =
+            item.image.file_url;
+
+        image.alt =
+            item.title
+            ||
+            `Generated image ${item.position}`;
+
+        image.loading =
+            "lazy";
+
+        image.addEventListener(
+            "click",
+            () => {
+                window.open(
+                    item.image.file_url,
+                    "_blank"
+                );
+            }
+        );
+
+        media.appendChild(
+            image
+        );
+
+    } else {
+        const placeholder =
+            document.createElement(
+                "div"
+            );
+
+        placeholder.className =
+            "image-batch-placeholder";
+
+        if (item.status === "generating") {
+            placeholder.textContent =
+                "GENERATING…";
+        } else if (item.status === "queued") {
+            placeholder.textContent =
+                "QUEUED";
+        } else if (item.status === "failed") {
+            placeholder.textContent =
+                "FAILED";
+        } else {
+            placeholder.textContent =
+                "WAITING";
+        }
+
+        media.appendChild(
+            placeholder
+        );
+    }
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    card.append(
+        header,
+        media,
+        title
+    );
+
+    if (
+        item.status === "failed"
+        &&
+        item.image?.error_message
+    ) {
+        const error =
+            document.createElement(
+                "p"
+            );
+
+        error.className =
+            "image-batch-error";
+
+        error.textContent =
+            item.image.error_message;
+
+        card.appendChild(
+            error
+        );
+    }
+
+    return card;
+}
+
+
+function stopImageBatchPolling() {
+    if (imageBatchPollTimer) {
+        clearInterval(
+            imageBatchPollTimer
+        );
+
+        imageBatchPollTimer =
+            null;
+    }
+}
+
+
+function startImageBatchPolling(
+    jobId
+) {
+    stopImageBatchPolling();
+
+    imageBatchPollTimer =
+        setInterval(
+            async () => {
+                const payload =
+                    await refreshImageBatch(
+                        jobId
+                    );
+
+                if (
+                    !imageBatchRequestRunning
+                    &&
+                    payload
+                    &&
+                    [
+                        "complete",
+                        "partial_failed",
+                        "failed"
+                    ].includes(
+                        payload.status
+                    )
+                ) {
+                    stopImageBatchPolling();
+                }
+            },
+            1500
+        );
+}
+
+
+async function runImageBatch(
+    jobId
+) {
+    if (imageBatchRequestRunning) {
+        showToast(
+            "Image generation is already running."
+        );
+
+        return false;
+    }
+
+    imageBatchRequestRunning =
+        true;
+
+    imageBatchSection.classList.remove(
+        "hidden-element"
+    );
+
+    generateAllImagesButton.disabled =
+        true;
+
+    retryIncompleteImagesButton.disabled =
+        true;
+
+    retryPlannerButton.disabled =
+        true;
+
+    setGenerateBusy(
+        true,
+        "GENERATING IMAGES"
+    );
+
+    jobPanelStatus.textContent =
+        "IMAGES GENERATING";
+
+    await refreshImageBatch(
+        jobId
+    );
+
+    startImageBatchPolling(
+        jobId
+    );
+
+    try {
+        const response =
+            await fetch(
+                `/api/jobs/${jobId}/generate-all-images`,
+                {
+                    method: "POST"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        const finalStatus =
+            await refreshImageBatch(
+                jobId
+            );
+
+        if (!finalStatus) {
+            throw new Error(
+                "Could not read final image-generation status."
+            );
+        }
+
+        if (finalStatus.status === "complete") {
+            jobPanelStatus.textContent =
+                "IMAGES READY";
+
+            showToast(
+                `All ${finalStatus.complete_count} images are ready.`
+            );
+
+            return true;
+        }
+
+        if (finalStatus.status === "partial_failed") {
+            jobPanelStatus.textContent =
+                "PARTIAL RESULT";
+
+            showToast(
+                `${finalStatus.complete_count} images completed; ${finalStatus.failed_count} failed. Retry will skip completed images.`
+            );
+
+            return true;
+        }
+
+        jobPanelStatus.textContent =
+            "IMAGE ERROR";
+
+        showToast(
+            "Image batch finished without a successful image."
+        );
+
+        return false;
+
+    } catch (error) {
+        console.error(
+            error
+        );
+
+        jobPanelStatus.textContent =
+            "IMAGE ERROR";
+
+        showToast(
+            error.message
+        );
+
+        await refreshImageBatch(
+            jobId
+        );
+
+        return false;
+
+    } finally {
+        imageBatchRequestRunning =
+            false;
+
+        stopImageBatchPolling();
+
+        generateAllImagesButton.disabled =
+            false;
+
+        retryPlannerButton.disabled =
+            false;
+
+        setGenerateBusy(
+            false
+        );
+
+        const finalPayload =
+            await refreshImageBatch(
+                jobId
+            );
+
+        retryIncompleteImagesButton.disabled =
+            Boolean(
+                finalPayload
+                &&
+                finalPayload.total_prompts > 0
+                &&
+                finalPayload.complete_count
+                    ===
+                    finalPayload.total_prompts
+            );
+    }
+}
+
+
+generateAllImagesButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob?.id) {
+            showToast(
+                "Create and structure a job first."
+            );
+
+            return;
+        }
+
+        await runImageBatch(
+            currentJob.id
+        );
+    }
+);
+
+
+retryIncompleteImagesButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob?.id) {
+            return;
+        }
+
+        await runImageBatch(
+            currentJob.id
+        );
+    }
+);
+
+
+refreshImageBatchButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob?.id) {
+            return;
+        }
+
+        await refreshImageBatch(
+            currentJob.id
+        );
+    }
+);
 
 
 function createPromptPackageCard(

@@ -52,7 +52,9 @@ from app.normalizer_service import (
 from app.image_service import (
     get_image_provider_status,
     generate_prompt_image,
+    generate_all_prompt_images,
     get_job_images,
+    get_image_batch_status,
     get_generated_image_file,
 )
 
@@ -148,7 +150,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.9.0",
+    version="0.10.0",
     lifespan=lifespan,
 )
 
@@ -1029,6 +1031,74 @@ def prompt_generate_image(
             "Image generation failed.",
         ),
     )
+
+
+@app.post(
+    "/api/jobs/{job_id}/generate-all-images"
+)
+def job_generate_all_images(
+    job_id: int,
+    regenerate_completed: bool = False,
+):
+    result = generate_all_prompt_images(
+        job_id=job_id,
+        regenerate_completed=regenerate_completed,
+    )
+
+    if result.get("code"):
+        code = result.get("code")
+
+        if code == "job_not_found":
+            status_code = 404
+        elif code in {
+            "package_invalid",
+            "no_references",
+            "batch_in_progress",
+        }:
+            status_code = 409
+        elif code == "gemini_not_configured":
+            status_code = 503
+        else:
+            status_code = 502
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=result.get(
+                "error",
+                "Batch image generation failed.",
+            ),
+        )
+
+    return result
+
+
+@app.get(
+    "/api/jobs/{job_id}/image-batch"
+)
+def job_image_batch_status(
+    job_id: int,
+):
+    job = get_job(
+        job_id
+    )
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    result = get_image_batch_status(
+        job_id
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return result
 
 
 @app.get(
