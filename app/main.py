@@ -8,7 +8,7 @@ from fastapi import (
     File,
     Form,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -47,6 +47,8 @@ from app.openai_image_service import (
 )
 from app.planner_service import (
     plan_job,
+    get_planner_status,
+    test_selected_planner,
 )
 from app.normalizer_service import (
     normalize_job,
@@ -60,6 +62,16 @@ from app.image_service import (
     get_job_images,
     get_image_batch_status,
     get_generated_image_file,
+)
+from app.settings_store import (
+    ensure_settings_schema,
+    get_runtime_settings,
+    update_runtime_settings,
+    get_settings_catalog,
+)
+from app.results_service import (
+    build_job_zip,
+    get_download_name,
 )
 
 
@@ -96,6 +108,33 @@ class ProfileVersionRequest(BaseModel):
     system_instruction: str = Field(
         min_length=1,
     )
+
+
+class RegenerateImageRequest(BaseModel):
+    extra_direction: str = Field(
+        default="",
+        max_length=2000,
+    )
+
+
+class SettingsUpdateRequest(BaseModel):
+    planner_provider: str | None = None
+    gemini_planner_model: str | None = None
+    openai_planner_model: str | None = None
+    openai_planner_reasoning: str | None = None
+
+    image_provider: str | None = None
+    openai_image_model: str | None = None
+    openai_image_quality: str | None = None
+    openai_image_size: str | None = None
+    openai_image_output_format: str | None = None
+
+    gemini_image_model: str | None = None
+    gemini_image_size: str | None = None
+    gemini_image_aspect_ratio: str | None = None
+
+    batch_concurrency: int | None = None
+    auto_generate_images: bool | None = None
 
 
 def normalize_requested_count(
@@ -145,6 +184,7 @@ async def lifespan(
     app: FastAPI,
 ):
     init_database()
+    ensure_settings_schema()
     seed_default_profiles()
     yield
 
@@ -154,7 +194,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.10.1",
+    version="0.11.0",
     lifespan=lifespan,
 )
 
@@ -195,6 +235,95 @@ def health():
 )
 def database_status():
     return get_database_status()
+
+
+# ============================================================
+# APPLICATION SETTINGS
+# ============================================================
+
+@app.get(
+    "/api/settings"
+)
+def application_settings():
+    return {
+        "settings":
+            get_runtime_settings(),
+        "catalog":
+            get_settings_catalog(),
+        "planner":
+            get_planner_status(),
+        "image":
+            get_image_provider_status(),
+    }
+
+
+@app.patch(
+    "/api/settings"
+)
+def application_settings_update(
+    request: SettingsUpdateRequest,
+):
+    values = {
+        key: value
+        for key, value
+        in request.model_dump().items()
+        if value is not None
+    }
+
+    try:
+        settings = (
+            update_runtime_settings(
+                values
+            )
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(
+                error
+            ),
+        )
+
+    return {
+        "settings":
+            settings,
+        "planner":
+            get_planner_status(),
+        "image":
+            get_image_provider_status(),
+    }
+
+
+@app.get(
+    "/api/providers/planner/status"
+)
+def planner_provider_status():
+    return get_planner_status()
+
+
+@app.post(
+    "/api/providers/planner/test"
+)
+def planner_provider_test():
+    result = (
+        test_selected_planner()
+    )
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Planner connection test failed."
+            ),
+        )
+
+    return result
 
 
 # ============================================================
@@ -371,6 +500,47 @@ def profile_update(
                 request
                 .description
                 .strip(),
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Active profile not found."
+            ),
+        )
+
+    return profile
+
+
+@app.post(
+    "/api/profiles/{profile_id}/instruction"
+)
+def profile_instruction_save(
+    profile_id: int,
+    request: ProfileVersionRequest,
+):
+    instruction = (
+        request
+        .system_instruction
+        .strip()
+    )
+
+    if not instruction:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "System instruction cannot be empty."
+            ),
+        )
+
+    profile = (
+        create_profile_version(
+            profile_id=
+                profile_id,
+            system_instruction=
+                instruction,
         )
     )
 
@@ -1070,6 +1240,54 @@ def prompt_generate_image(
 
 
 @app.post(
+    "/api/jobs/{job_id}"
+    "/prompts/{prompt_id}/regenerate-image"
+)
+def prompt_regenerate_image(
+    job_id: int,
+    prompt_id: int,
+    request: RegenerateImageRequest,
+):
+    result = (
+        generate_prompt_image(
+            job_id,
+            prompt_id,
+            extra_direction=
+                request
+                .extra_direction
+                .strip(),
+        )
+    )
+
+    if result["ok"]:
+        return result
+
+    code = result.get(
+        "code"
+    )
+
+    if code == "job_not_found":
+        status_code = 404
+    elif code in {
+        "package_invalid",
+        "no_references",
+    }:
+        status_code = 409
+    elif code == "provider_not_configured":
+        status_code = 503
+    else:
+        status_code = 502
+
+    raise HTTPException(
+        status_code=status_code,
+        detail=result.get(
+            "error",
+            "Image regeneration failed.",
+        ),
+    )
+
+
+@app.post(
     "/api/jobs/{job_id}/generate-all-images"
 )
 def job_generate_all_images(
@@ -1155,6 +1373,86 @@ def job_generated_images(
 
     return get_job_images(
         job_id
+    )
+
+
+@app.get(
+    "/api/images/{image_id}/download",
+    include_in_schema=False,
+)
+def generated_image_download(
+    image_id: int,
+):
+    image = (
+        get_generated_image_file(
+            image_id
+        )
+    )
+
+    if image is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Generated image not found."
+            ),
+        )
+
+    filename = (
+        get_download_name(
+            image_id
+        )
+        or
+        f"image-{image_id}.jpg"
+    )
+
+    return FileResponse(
+        path=str(
+            image["path"]
+        ),
+        media_type=
+            image[
+                "media_type"
+            ],
+        filename=
+            filename,
+    )
+
+
+@app.get(
+    "/api/jobs/{job_id}/download.zip",
+    include_in_schema=False,
+)
+def job_download_zip(
+    job_id: int,
+):
+    archive = (
+        build_job_zip(
+            job_id
+        )
+    )
+
+    if archive is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No downloadable job results found."
+            ),
+        )
+
+    return Response(
+        content=
+            archive[
+                "bytes"
+            ],
+        media_type=
+            "application/zip",
+        headers={
+            "Content-Disposition":
+                (
+                    "attachment; filename="
+                    f"\"{archive['filename']}\""
+                )
+        },
     )
 
 

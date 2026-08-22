@@ -7,7 +7,7 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <title>Image Agent</title>
+    <title>Image Agent Studio</title>
     <link
         rel="stylesheet"
         href="/static/styles.css"
@@ -29,18 +29,18 @@
 
             <div>
                 <strong>IMAGE AGENT</strong>
-                <span>Product Studio</span>
+                <span>Creative Studio</span>
             </div>
         </div>
 
         <nav class="nav">
-
             <button
                 class="nav-item active"
                 id="navGenerate"
                 type="button"
             >
-                Generate
+                <span>01</span>
+                Create
             </button>
 
             <button
@@ -48,6 +48,7 @@
                 id="navProfiles"
                 type="button"
             >
+                <span>02</span>
                 Profiles
             </button>
 
@@ -56,22 +57,19 @@
                 id="navHistory"
                 type="button"
             >
+                <span>03</span>
                 History
             </button>
-
         </nav>
 
         <div class="sidebar-spacer"></div>
 
         <div class="engine-status">
-
-            <span class="status-dot"></span>
-
+            <i></i>
             <div>
                 <strong>LOCAL ENGINE</strong>
-                <span>Online</span>
+                <span>FastAPI online</span>
             </div>
-
         </div>
 
         <button
@@ -79,6 +77,7 @@
             id="navSettings"
             type="button"
         >
+            <span>04</span>
             Settings
         </button>
 
@@ -88,7 +87,7 @@
     <main class="main-content">
 
         <!-- =================================================
-             GENERATE
+             CREATE
         ================================================== -->
 
         <section
@@ -96,11 +95,10 @@
             id="generateView"
         >
 
-            <header class="page-header">
-
+            <header class="page-header create-header">
                 <div>
                     <span class="page-kicker">
-                        GENERATION
+                        CREATIVE PRODUCTION
                     </span>
 
                     <h1>
@@ -108,80 +106,105 @@
                     </h1>
 
                     <p>
-                        Choose a workflow, upload references,
-                        add optional direction and run your
-                        image pipeline.
+                        Add references, choose a workflow, then let
+                        your planner and image provider handle the rest.
                     </p>
                 </div>
 
                 <div class="header-status">
-                    ENGINE ONLINE
+                    <i></i>
+                    READY
                 </div>
-
             </header>
 
 
-            <div class="generate-layout">
+            <div class="create-shell">
 
-                <section class="generate-column">
+                <section class="create-panel">
 
-                    <section class="work-section">
+                    <!-- PROVIDER SUMMARY -->
 
-                        <header class="work-section-header">
+                    <div class="provider-strip">
+
+                        <div class="provider-strip-item">
+                            <span>PLANNER</span>
+                            <strong id="createPlannerSummary">
+                                Loading…
+                            </strong>
+                        </div>
+
+                        <div class="provider-strip-item">
+                            <span>IMAGE ENGINE</span>
+                            <strong id="createImageSummary">
+                                Loading…
+                            </strong>
+                        </div>
+
+                        <div class="provider-strip-item">
+                            <span>ESTIMATE</span>
+                            <strong id="createCostEstimate">
+                                —
+                            </strong>
+                        </div>
+
+                        <button
+                            class="provider-strip-action"
+                            id="openSettingsFromCreate"
+                            type="button"
+                        >
+                            Adjust
+                        </button>
+
+                    </div>
+
+
+                    <!-- WORKFLOW -->
+
+                    <section class="studio-section">
+
+                        <div class="studio-section-heading">
+                            <span>01</span>
 
                             <div>
-                                <span class="section-number">
-                                    01
-                                </span>
-
-                                <div>
-                                    <h2>Workflow</h2>
-
-                                    <p>
-                                        Select the system instruction
-                                        that controls this generation.
-                                    </p>
-                                </div>
+                                <h2>Workflow</h2>
+                                <p>
+                                    The selected profile supplies the
+                                    current system instruction.
+                                </p>
                             </div>
-
-                        </header>
+                        </div>
 
                         <div
                             class="profile-grid"
                             id="profileOptions"
                         >
                             <div class="loading-state">
-                                Loading profiles...
+                                Loading profiles…
                             </div>
                         </div>
 
                     </section>
 
 
-                    <section class="work-section">
+                    <!-- REFERENCES -->
 
-                        <header class="work-section-header">
+                    <section class="studio-section">
 
-                            <div>
-                                <span class="section-number">
-                                    02
-                                </span>
+                        <div class="studio-section-heading split-heading">
+                            <div class="heading-left">
+                                <span>02</span>
 
                                 <div>
-                                    <h2>Reference images</h2>
-
+                                    <h2>Product references</h2>
                                     <p>
-                                        Image order is preserved from
-                                        Image 1 through Image 4.
+                                        Drag cards to reorder. Image 1 is
+                                        treated as the primary reference.
                                     </p>
                                 </div>
                             </div>
 
-                            <span class="section-meta">
-                                MAX 4 · 20 MB EACH
-                            </span>
-
-                        </header>
+                            <small>MAX 4 · 20 MB EACH</small>
+                        </div>
 
                         <input
                             type="file"
@@ -191,154 +214,140 @@
                             hidden
                         >
 
-                        <div
-                            class="upload-zone"
-                            id="uploadZone"
+                        <input
+                            type="file"
+                            id="replaceImageInput"
+                            accept="image/png,image/jpeg,image/webp"
+                            hidden
                         >
-                            <strong>
-                                Drop images here
-                            </strong>
-
-                            <span>
-                                or click to browse
-                            </span>
-
-                            <small>
-                                PNG · JPG · WEBP
-                            </small>
-                        </div>
 
                         <div
-                            class="image-preview-grid"
+                            class="reference-grid"
                             id="imagePreviewGrid"
                         ></div>
 
-                        <div class="backend-note">
-                            Files stay in your browser until you
-                            click Generate. Then FastAPI stores them
-                            as a persistent job.
-                        </div>
+                        <button
+                            class="reference-add"
+                            id="uploadZone"
+                            type="button"
+                        >
+                            <strong>+ Add references</strong>
+                            <span>
+                                PNG · JPG · WEBP
+                            </span>
+                        </button>
 
                     </section>
 
 
-                    <section class="work-section">
+                    <!-- DIRECTION + COUNT -->
 
-                        <header class="work-section-header">
+                    <section class="studio-section compact-grid-section">
 
-                            <div>
-                                <span class="section-number">
-                                    03
-                                </span>
+                        <div class="direction-block">
+
+                            <div class="studio-section-heading">
+                                <span>03</span>
 
                                 <div>
                                     <h2>Creative direction</h2>
-
                                     <p>
-                                        Optional instructions added on
-                                        top of your selected profile.
+                                        Optional request layered onto the
+                                        selected system instruction.
                                     </p>
                                 </div>
                             </div>
 
-                        </header>
+                            <textarea
+                                id="description"
+                                class="direction-input"
+                                placeholder="Example: more overhead angles, warmer salon lighting, premium dark tabletop..."
+                            ></textarea>
 
-                        <textarea
-                            id="description"
-                            class="direction-input"
-                            placeholder="Example: More overhead angles, dark studio environment, product centered..."
-                        ></textarea>
+                            <div class="field-footer">
+                                <span>Optional</span>
+                                <span id="characterCount">
+                                    0 characters
+                                </span>
+                            </div>
 
-                        <div class="field-footer">
-                            <span>Optional</span>
-
-                            <span id="characterCount">
-                                0 characters
-                            </span>
                         </div>
 
-                    </section>
 
+                        <div class="output-block">
 
-                    <section class="work-section">
-
-                        <header class="work-section-header">
-
-                            <div>
-                                <span class="section-number">
-                                    04
-                                </span>
+                            <div class="studio-section-heading">
+                                <span>04</span>
 
                                 <div>
-                                    <h2>Output count</h2>
-
+                                    <h2>Outputs</h2>
                                     <p>
-                                        Auto follows the rules inside
-                                        your system instruction.
+                                        Auto follows the workflow rules.
                                     </p>
                                 </div>
                             </div>
 
-                        </header>
+                            <div class="count-selector">
+                                <button
+                                    class="count-button selected"
+                                    data-count="auto"
+                                    type="button"
+                                >
+                                    Auto
+                                </button>
 
-                        <div class="count-selector">
+                                <button
+                                    class="count-button"
+                                    data-count="1"
+                                    type="button"
+                                >
+                                    1
+                                </button>
 
-                            <button
-                                class="count-button selected"
-                                data-count="auto"
-                                type="button"
-                            >
-                                Auto
-                            </button>
+                                <button
+                                    class="count-button"
+                                    data-count="4"
+                                    type="button"
+                                >
+                                    4
+                                </button>
 
-                            <button
-                                class="count-button"
-                                data-count="1"
-                                type="button"
-                            >
-                                1
-                            </button>
+                                <button
+                                    class="count-button"
+                                    data-count="6"
+                                    type="button"
+                                >
+                                    6
+                                </button>
 
-                            <button
-                                class="count-button"
-                                data-count="4"
-                                type="button"
-                            >
-                                4
-                            </button>
+                                <button
+                                    class="count-button"
+                                    data-count="8"
+                                    type="button"
+                                >
+                                    8
+                                </button>
+                            </div>
 
-                            <button
-                                class="count-button"
-                                data-count="6"
-                                type="button"
-                            >
-                                6
-                            </button>
+                            <label class="auto-generate-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="autoGenerateImages"
+                                    checked
+                                >
+                                <span class="toggle-ui"></span>
 
-                            <button
-                                class="count-button"
-                                data-count="8"
-                                type="button"
-                            >
-                                8
-                            </button>
+                                <span>
+                                    <strong>
+                                        Generate final images automatically
+                                    </strong>
+                                    <small>
+                                        Turn off to prepare prompts only.
+                                    </small>
+                                </span>
+                            </label>
 
                         </div>
-
-                        <label class="auto-generate-toggle">
-                            <input
-                                type="checkbox"
-                                id="autoGenerateImages"
-                                checked
-                            >
-
-                            <span class="auto-generate-switch"></span>
-
-                            <span class="auto-generate-copy">
-                                <strong>AUTO-GENERATE FINAL IMAGES</strong>
-                                <small>After prompts are source-verified, generate all missing images automatically. Uses the paid Gemini image API.</small>
-                            </span>
-                        </label>
 
                     </section>
 
@@ -349,122 +358,85 @@
                         type="button"
                     >
                         <span id="generateButtonLabel">
-                            GENERATE IMAGES
+                            GENERATE
                         </span>
-
                         <span id="generateButtonArrow">
                             →
                         </span>
                     </button>
 
 
+                    <!-- PIPELINE -->
+
                     <section
-                        class="planner-result hidden-element"
-                        id="plannerResultSection"
+                        class="pipeline-card hidden-element"
+                        id="pipelineSection"
                     >
-
-                        <header class="planner-result-header">
-
-                            <div>
-                                <span>05 · PROMPT PLANNER</span>
-                                <h2>Gemini prompt plan</h2>
-                            </div>
-
-                            <strong id="plannerResultModel">
-                                —
-                            </strong>
-
+                        <header>
+                            <span>JOB PIPELINE</span>
+                            <strong id="pipelineJobId">#—</strong>
                         </header>
 
-                        <div class="planner-result-actions">
+                        <div class="pipeline-steps">
 
-                            <button
-                                id="copyPlannerOutputButton"
-                                type="button"
+                            <div
+                                class="pipeline-step"
+                                id="pipelineReferences"
                             >
-                                COPY OUTPUT
-                            </button>
+                                <i>1</i>
+                                <div>
+                                    <strong>References</strong>
+                                    <span>Waiting</span>
+                                </div>
+                            </div>
 
-                            <button
-                                id="retryPlannerButton"
-                                type="button"
+                            <div
+                                class="pipeline-step"
+                                id="pipelinePlanner"
                             >
-                                RETRY PLANNER
-                            </button>
+                                <i>2</i>
+                                <div>
+                                    <strong>Plan</strong>
+                                    <span>Waiting</span>
+                                </div>
+                            </div>
+
+                            <div
+                                class="pipeline-step"
+                                id="pipelineVerify"
+                            >
+                                <i>3</i>
+                                <div>
+                                    <strong>Verify</strong>
+                                    <span>Waiting</span>
+                                </div>
+                            </div>
+
+                            <div
+                                class="pipeline-step"
+                                id="pipelineImages"
+                            >
+                                <i>4</i>
+                                <div>
+                                    <strong>Images</strong>
+                                    <span>Waiting</span>
+                                </div>
+                            </div>
 
                         </div>
-
-                        <pre
-                            class="planner-output"
-                            id="plannerRawOutput"
-                        ></pre>
-
                     </section>
 
 
-                    <section
-                        class="prompt-packages hidden-element"
-                        id="promptPackagesSection"
-                    >
-
-                        <header class="prompt-packages-header">
-
-                            <div>
-                                <span>06 · IMAGE INPUT PACKAGES</span>
-                                <h2>Source-verified prompts</h2>
-                                <p>
-                                    Positive prompt text is copied verbatim from
-                                    the Step 7 planner. Shared negatives are also
-                                    source-verified before being attached.
-                                </p>
-                            </div>
-
-                            <strong id="promptPackagesCount">
-                                —
-                            </strong>
-
-                        </header>
-
-                        <div
-                            class="shared-negative-box hidden-element"
-                            id="sharedNegativeBox"
-                        >
-                            <span>SHARED NEGATIVE · EXACT SOURCE TEXT</span>
-                            <p id="sharedNegativeText"></p>
-                        </div>
-
-                        <div
-                            class="prompt-package-grid"
-                            id="promptPackageGrid"
-                        ></div>
-
-                        <div class="prompt-batch-launch">
-                            <div>
-                                <strong>IMAGE GENERATION</strong>
-                                <span>Generate every missing source-verified prompt. Completed images are skipped.</span>
-                            </div>
-
-                            <button
-                                type="button"
-                                id="generateAllImagesButton"
-                            >
-                                GENERATE ALL IMAGES
-                            </button>
-                        </div>
-
-                    </section>
-
+                    <!-- IMAGE BATCH PROGRESS -->
 
                     <section
                         class="image-batch-section hidden-element"
                         id="imageBatchSection"
                     >
-
-                        <header class="image-batch-header">
+                        <header class="batch-heading">
                             <div>
-                                <span>07 · IMAGE GENERATION</span>
-                                <h2>Batch generation</h2>
-                                <p>Two image requests run in parallel by default. Temporary provider failures are retried automatically; completed prompts are never duplicated on retry.</p>
+                                <span>IMAGE GENERATION</span>
+                                <h2>Creating your set</h2>
                             </div>
 
                             <strong id="imageBatchCount">
@@ -472,15 +444,16 @@
                             </strong>
                         </header>
 
-                        <div class="image-batch-progress">
-                            <div class="image-batch-progress-track">
-                                <span id="imageBatchProgressBar"></span>
-                            </div>
+                        <div class="image-batch-progress-track">
+                            <span id="imageBatchProgressBar"></span>
+                        </div>
 
-                            <div class="image-batch-progress-meta">
-                                <span id="imageBatchProgressText">Waiting</span>
-                                <span id="imageBatchFailureText"></span>
-                            </div>
+                        <div class="image-batch-progress-meta">
+                            <span id="imageBatchProgressText">
+                                Waiting
+                            </span>
+
+                            <span id="imageBatchFailureText"></span>
                         </div>
 
                         <div
@@ -488,32 +461,196 @@
                             id="imageBatchGrid"
                         ></div>
 
-                        <div class="image-batch-actions">
+                        <div class="batch-actions">
                             <button
                                 type="button"
                                 id="retryIncompleteImagesButton"
                             >
-                                RETRY MISSING / FAILED
+                                Retry missing / failed
                             </button>
 
                             <button
                                 type="button"
                                 id="refreshImageBatchButton"
                             >
-                                REFRESH STATUS
+                                Refresh
                             </button>
                         </div>
+                    </section>
 
+
+                    <!-- RESULTS -->
+
+                    <section
+                        class="results-section hidden-element"
+                        id="resultsSection"
+                    >
+                        <header class="results-header">
+
+                            <div>
+                                <span>RESULTS</span>
+                                <h2>Your generated images</h2>
+                                <p id="resultsSubtitle">
+                                    Finished outputs appear here.
+                                </p>
+                            </div>
+
+                            <div class="results-toolbar">
+                                <button
+                                    id="compareSelectedButton"
+                                    type="button"
+                                    disabled
+                                >
+                                    Compare 2
+                                </button>
+
+                                <a
+                                    id="downloadAllButton"
+                                    class="download-all-button"
+                                    href="#"
+                                >
+                                    Download all
+                                </a>
+                            </div>
+
+                        </header>
+
+                        <div
+                            class="results-grid"
+                            id="resultsGrid"
+                        ></div>
+                    </section>
+
+
+                    <!-- ADVANCED -->
+
+                    <section class="advanced-shell">
+
+                        <button
+                            class="advanced-toggle"
+                            id="advancedPipelineToggle"
+                            type="button"
+                        >
+                            <span>
+                                Advanced / prompt details
+                            </span>
+                            <strong id="advancedToggleState">
+                                Show
+                            </strong>
+                        </button>
+
+                        <div
+                            class="advanced-content hidden-element"
+                            id="advancedContent"
+                        >
+
+                            <section
+                                class="planner-result hidden-element"
+                                id="plannerResultSection"
+                            >
+                                <header class="planner-result-header">
+
+                                    <div>
+                                        <span>PROMPT PLAN</span>
+                                        <h2>Raw planner output</h2>
+                                    </div>
+
+                                    <strong id="plannerResultModel">
+                                        —
+                                    </strong>
+
+                                </header>
+
+                                <div class="planner-result-actions">
+                                    <button
+                                        id="copyPlannerOutputButton"
+                                        type="button"
+                                    >
+                                        Copy output
+                                    </button>
+
+                                    <button
+                                        id="retryPlannerButton"
+                                        type="button"
+                                    >
+                                        Retry planner
+                                    </button>
+                                </div>
+
+                                <pre
+                                    class="planner-output"
+                                    id="plannerRawOutput"
+                                ></pre>
+
+                            </section>
+
+
+                            <section
+                                class="prompt-packages hidden-element"
+                                id="promptPackagesSection"
+                            >
+                                <header class="prompt-packages-header">
+
+                                    <div>
+                                        <span>SOURCE VERIFIED</span>
+                                        <h2>Image input packages</h2>
+                                        <p>
+                                            The positive prompt and shared
+                                            constraints are preserved from
+                                            the planner output.
+                                        </p>
+                                    </div>
+
+                                    <strong id="promptPackagesCount">
+                                        —
+                                    </strong>
+
+                                </header>
+
+                                <div
+                                    class="shared-negative-box hidden-element"
+                                    id="sharedNegativeBox"
+                                >
+                                    <span>
+                                        SHARED NEGATIVE · EXACT
+                                    </span>
+                                    <p id="sharedNegativeText"></p>
+                                </div>
+
+                                <div
+                                    class="prompt-package-grid"
+                                    id="promptPackageGrid"
+                                ></div>
+
+                                <div class="prompt-batch-launch">
+                                    <div>
+                                        <strong>MANUAL IMAGE RUN</strong>
+                                        <span>
+                                            Generate any still-missing images.
+                                        </span>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        id="generateAllImagesButton"
+                                    >
+                                        Generate missing
+                                    </button>
+                                </div>
+                            </section>
+
+                        </div>
                     </section>
 
                 </section>
 
 
+                <!-- CURRENT JOB -->
+
                 <aside class="job-panel">
 
                     <div class="job-panel-title">
                         <span>CURRENT JOB</span>
-
                         <strong id="jobPanelStatus">
                             DRAFT
                         </strong>
@@ -527,12 +664,10 @@
                             IA
                         </span>
 
-                        <h3>
-                            Waiting for input
-                        </h3>
+                        <h3>Ready to create</h3>
 
                         <p>
-                            Saved jobs and backend references
+                            Your job summary and reference previews
                             will appear here.
                         </p>
                     </div>
@@ -541,10 +676,8 @@
                         class="job-saved hidden-element"
                         id="jobSavedState"
                     >
-
                         <div class="job-saved-heading">
                             <span>BACKEND JOB</span>
-
                             <strong id="currentJobId">
                                 #—
                             </strong>
@@ -554,35 +687,33 @@
                             class="stored-reference-grid"
                             id="storedReferenceGrid"
                         ></div>
-
-                        <p>
-                            These thumbnails are loaded from
-                            backend-saved files.
-                        </p>
-
                     </div>
 
                     <div class="job-details">
 
                         <div>
-                            <span>PROFILE</span>
-
+                            <span>WORKFLOW</span>
                             <strong id="summaryProfile">
-                                Loading...
+                                Loading…
                             </strong>
                         </div>
 
                         <div>
-                            <span>USING VERSION</span>
+                            <span>PLANNER</span>
+                            <strong id="summaryPlanner">
+                                —
+                            </strong>
+                        </div>
 
-                            <strong id="summaryVersion">
+                        <div>
+                            <span>IMAGE ENGINE</span>
+                            <strong id="summaryImageEngine">
                                 —
                             </strong>
                         </div>
 
                         <div>
                             <span>REFERENCES</span>
-
                             <strong id="summaryImages">
                                 0
                             </strong>
@@ -590,10 +721,14 @@
 
                         <div>
                             <span>OUTPUTS</span>
-
                             <strong id="summaryCount">
                                 Auto
                             </strong>
+                        </div>
+
+                        <!-- compatibility only -->
+                        <div class="hidden-element">
+                            <strong id="summaryVersion">—</strong>
                         </div>
 
                     </div>
@@ -606,7 +741,7 @@
 
 
         <!-- =================================================
-             PROFILE MANAGER
+             PROFILES
         ================================================== -->
 
         <section
@@ -615,20 +750,17 @@
         >
 
             <header class="page-header">
-
                 <div>
                     <span class="page-kicker">
-                        SYSTEM INSTRUCTIONS
+                        WORKFLOWS
                     </span>
 
-                    <h1>
-                        Profile manager.
-                    </h1>
+                    <h1>Profiles.</h1>
 
                     <p>
-                        Manage the instructions that define each
-                        generation workflow and choose exactly
-                        which version powers Generate.
+                        Keep one current system instruction per
+                        workflow. Older revisions stay preserved
+                        internally for safety.
                     </p>
                 </div>
 
@@ -637,9 +769,8 @@
                     id="newProfileButton"
                     type="button"
                 >
-                    + NEW PROFILE
+                    + New profile
                 </button>
-
             </header>
 
 
@@ -649,20 +780,15 @@
 
                     <header>
                         <span>PROFILE LIBRARY</span>
-
-                        <strong id="libraryCount">
-                            —
-                        </strong>
+                        <strong id="libraryCount">—</strong>
                     </header>
 
                     <div class="profile-search">
-
                         <input
                             id="profileSearch"
                             type="text"
                             placeholder="Search profiles"
                         >
-
                     </div>
 
                     <div
@@ -670,7 +796,7 @@
                         id="profileManagerList"
                     >
                         <div class="loading-state">
-                            Loading profiles...
+                            Loading profiles…
                         </div>
                     </div>
 
@@ -684,12 +810,8 @@
                         id="profileEditorEmpty"
                     >
                         <span>SELECT A PROFILE</span>
-
-                        <h2>
-                            Open a workflow to edit it.
-                        </h2>
+                        <h2>Open a workflow to edit it.</h2>
                     </div>
-
 
                     <div
                         class="profile-editor-content hidden-element"
@@ -697,11 +819,8 @@
                     >
 
                         <header class="editor-header">
-
                             <div>
-
                                 <div class="editor-title-line">
-
                                     <h2 id="profileEditorTitle">
                                         Profile
                                     </h2>
@@ -712,70 +831,47 @@
                                     >
                                         ACTIVE
                                     </span>
-
                                 </div>
 
-                                <div class="version-summary">
-
-                                    <span>
-                                        GENERATE
-                                        <strong id="activeVersionBadge">
-                                            v1
-                                        </strong>
-                                    </span>
-
-                                    <span>
-                                        LATEST
-                                        <strong id="latestVersionBadge">
-                                            v1
-                                        </strong>
-                                    </span>
-
-                                    <span>
-                                        LOADED
-                                        <strong id="loadedVersionBadge">
-                                            v1
-                                        </strong>
-                                    </span>
-
-                                </div>
-
+                                <p class="editor-subtitle">
+                                    One current instruction powers this workflow.
+                                </p>
                             </div>
 
-                            <button
-                                class="outline-button"
-                                id="archiveProfileButton"
-                                type="button"
-                            >
-                                ARCHIVE
-                            </button>
+                            <div class="editor-header-actions">
+                                <button
+                                    class="outline-button"
+                                    id="archiveProfileButton"
+                                    type="button"
+                                >
+                                    Archive
+                                </button>
 
-                            <button
-                                class="outline-button hidden-element"
-                                id="restoreProfileButton"
-                                type="button"
-                            >
-                                RESTORE
-                            </button>
-
+                                <button
+                                    class="outline-button hidden-element"
+                                    id="restoreProfileButton"
+                                    type="button"
+                                >
+                                    Restore
+                                </button>
+                            </div>
                         </header>
 
 
                         <section class="editor-block">
-
                             <div class="editor-block-heading">
-
                                 <span>01</span>
 
                                 <div>
                                     <h3>Profile details</h3>
-                                    <p>Display information only.</p>
+                                    <p>
+                                        Name and short description shown
+                                        on the Create screen.
+                                    </p>
                                 </div>
-
                             </div>
 
                             <label>PROFILE NAME</label>
-
                             <input
                                 id="profileNameInput"
                                 class="text-input"
@@ -783,7 +879,6 @@
                             >
 
                             <label>DESCRIPTION</label>
-
                             <textarea
                                 id="profileDescriptionInput"
                                 class="small-textarea"
@@ -795,26 +890,22 @@
                                 id="saveDetailsButton"
                                 type="button"
                             >
-                                SAVE DETAILS
+                                Save details
                             </button>
-
                         </section>
 
 
                         <section class="editor-block">
-
                             <div class="editor-block-heading">
-
                                 <span>02</span>
 
                                 <div>
                                     <h3>System instruction</h3>
-
-                                    <p id="loadedVersionNote">
-                                        Generation version loaded.
+                                    <p>
+                                        Saving replaces the current
+                                        instruction used by new jobs.
                                     </p>
                                 </div>
-
                             </div>
 
                             <textarea
@@ -824,15 +915,13 @@
                             ></textarea>
 
                             <div class="field-footer dark-footer">
-
                                 <span id="instructionCharacterCount">
                                     0 characters
                                 </span>
 
                                 <span>
-                                    Saving creates a new version
+                                    Previous revisions stay internal.
                                 </span>
-
                             </div>
 
                             <button
@@ -840,50 +929,30 @@
                                 id="saveVersionButton"
                                 type="button"
                             >
-                                SAVE AS NEW VERSION
+                                Save instruction
                             </button>
-
                         </section>
 
 
-                        <section class="editor-block">
-
-                            <div class="editor-block-heading">
-
-                                <span>03</span>
-
-                                <div>
-                                    <h3>Version history</h3>
-
-                                    <p>
-                                        Loading and using are
-                                        separate actions.
-                                    </p>
-                                </div>
-
-                            </div>
-
-                            <div
-                                class="version-history-list"
-                                id="versionHistoryList"
-                            ></div>
-
-                        </section>
+                        <!-- hidden compatibility fields -->
+                        <div class="hidden-element">
+                            <span id="activeVersionBadge"></span>
+                            <span id="latestVersionBadge"></span>
+                            <span id="loadedVersionBadge"></span>
+                            <span id="loadedVersionNote"></span>
+                            <div id="versionHistoryList"></div>
+                        </div>
 
 
                         <section class="danger-zone">
-
                             <span>DANGER ZONE</span>
 
                             <div>
-
                                 <div>
-                                    <h3>
-                                        Delete profile permanently
-                                    </h3>
-
+                                    <h3>Delete profile permanently</h3>
                                     <p>
-                                        This cannot be undone.
+                                        Removes the workflow when it is not
+                                        protected by historical jobs.
                                     </p>
                                 </div>
 
@@ -892,11 +961,9 @@
                                     class="danger-button"
                                     type="button"
                                 >
-                                    DELETE PERMANENTLY
+                                    Delete permanently
                                 </button>
-
                             </div>
-
                         </section>
 
                     </div>
@@ -905,6 +972,34 @@
 
             </div>
 
+        </section>
+
+
+        <!-- =================================================
+             HISTORY PLACEHOLDER
+        ================================================== -->
+
+        <section
+            class="app-view hidden-view"
+            id="historyView"
+        >
+            <header class="page-header">
+                <div>
+                    <span class="page-kicker">LIBRARY</span>
+                    <h1>History.</h1>
+                    <p>
+                        Step 12 will turn this into the searchable
+                        project/job library.
+                    </p>
+                </div>
+            </header>
+
+            <div class="history-placeholder">
+                <strong>History is the next major data view.</strong>
+                <span>
+                    Your current jobs are already stored safely in SQLite.
+                </span>
+            </div>
         </section>
 
 
@@ -918,23 +1013,27 @@
         >
 
             <header class="page-header">
-
                 <div>
                     <span class="page-kicker">
-                        PROVIDERS
+                        PROVIDERS & QUALITY
                     </span>
 
-                    <h1>
-                        Settings.
-                    </h1>
+                    <h1>Settings.</h1>
 
                     <p>
-                        Provider credentials stay on the FastAPI
-                        server. The browser only receives safe
-                        configuration status.
+                        Select which provider plans prompts and which
+                        provider generates images. API keys remain in
+                        your server-side .env file.
                     </p>
                 </div>
 
+                <button
+                    class="header-action"
+                    id="saveSettingsButton"
+                    type="button"
+                >
+                    Save settings
+                </button>
             </header>
 
 
@@ -942,202 +1041,202 @@
 
                 <div class="settings-stack">
 
-<section class="settings-card">
+                    <!-- PLANNER -->
 
-                    <header class="settings-card-header">
+                    <section class="settings-card">
 
-                        <div>
-                            <span class="settings-provider-label">
-                                PROMPT PLANNER
+                        <header class="settings-card-header">
+                            <div>
+                                <span class="settings-provider-label">
+                                    PROMPT PLANNER
+                                </span>
+
+                                <h2>
+                                    Product analysis & prompts
+                                </h2>
+                            </div>
+
+                            <span
+                                class="provider-status"
+                                id="plannerProviderStatus"
+                            >
+                                CHECKING
+                            </span>
+                        </header>
+
+                        <div class="settings-form-grid">
+
+                            <label>
+                                <span>Provider</span>
+                                <select id="plannerProviderSelect"></select>
+                            </label>
+
+                            <label>
+                                <span>Model</span>
+                                <select id="plannerModelSelect"></select>
+                            </label>
+
+                            <label
+                                id="openaiReasoningField"
+                            >
+                                <span>OpenAI reasoning</span>
+                                <select id="openaiReasoningSelect"></select>
+                            </label>
+
+                        </div>
+
+                        <div class="provider-connection-strip">
+                            <span id="plannerConnectionSummary">
+                                Checking credentials…
                             </span>
 
-                            <h2>Google Gemini</h2>
+                            <button
+                                id="testPlannerButton"
+                                type="button"
+                            >
+                                Test selected planner
+                            </button>
                         </div>
 
-                        <span
-                            class="provider-status"
-                            id="geminiProviderStatus"
+                        <div
+                            class="connection-result"
+                            id="plannerTestResult"
                         >
-                            CHECKING
-                        </span>
-
-                    </header>
-
-
-                    <div class="settings-grid">
-
-                        <div class="settings-row">
-                            <span>MODEL</span>
-
-                            <strong id="geminiModel">
-                                —
-                            </strong>
+                            No planner test has been run yet.
                         </div>
 
-                        <div class="settings-row">
-                            <span>API KEY</span>
+                    </section>
 
-                            <strong id="geminiKeyStatus">
-                                —
-                            </strong>
+
+                    <!-- IMAGE PROVIDER -->
+
+                    <section class="settings-card">
+
+                        <header class="settings-card-header">
+                            <div>
+                                <span class="settings-provider-label">
+                                    IMAGE GENERATOR
+                                </span>
+
+                                <h2>
+                                    Final image provider
+                                </h2>
+                            </div>
+
+                            <span
+                                class="provider-status"
+                                id="imageProviderStatus"
+                            >
+                                CHECKING
+                            </span>
+                        </header>
+
+                        <div class="settings-form-grid">
+
+                            <label>
+                                <span>Provider</span>
+                                <select id="imageProviderSelect"></select>
+                            </label>
+
+                            <label>
+                                <span>Model</span>
+                                <select id="imageModelSelect"></select>
+                            </label>
+
+                            <label
+                                id="openaiQualityField"
+                            >
+                                <span>Quality</span>
+                                <select id="openaiQualitySelect"></select>
+                            </label>
+
+                            <label>
+                                <span>Resolution / size</span>
+                                <select id="imageSizeSelect"></select>
+                            </label>
+
+                            <label
+                                id="geminiAspectField"
+                            >
+                                <span>Aspect ratio</span>
+                                <select id="geminiAspectSelect"></select>
+                            </label>
+
+                            <label>
+                                <span>Parallel images</span>
+                                <select id="batchConcurrencySelect"></select>
+                            </label>
+
                         </div>
 
-                        <div class="settings-row">
-                            <span>KEY SOURCE</span>
-
-                            <strong id="geminiKeySource">
-                                —
-                            </strong>
-                        </div>
-
-                        <div class="settings-row">
-                            <span>SDK</span>
-
-                            <strong id="geminiSdkVersion">
-                                —
-                            </strong>
-                        </div>
-
-                        <div class="settings-row">
-                            <span>INTERACTION STORAGE</span>
-
-                            <strong id="geminiStorageMode">
-                                OFF
-                            </strong>
-                        </div>
-
-                    </div>
-
-
-                    <button
-                        class="settings-test-button"
-                        id="testGeminiButton"
-                        type="button"
-                    >
-                        TEST GEMINI CONNECTION
-                    </button>
-
-
-                    <div
-                        class="connection-result"
-                        id="geminiTestResult"
-                    >
-                        No connection test has been run yet.
-                    </div>
-
-                </section>
-
-
-                                <section class="settings-card">
-
-                    <header class="settings-card-header">
-
-                        <div>
-                            <span class="settings-provider-label">
-                                IMAGE GENERATOR
+                        <div class="provider-connection-strip">
+                            <span id="imageConnectionSummary">
+                                Checking credentials…
                             </span>
 
-                            <h2 id="imageProviderName">
-                                Loading...
-                            </h2>
+                            <button
+                                id="testImageProviderButton"
+                                type="button"
+                            >
+                                Test selected image provider
+                            </button>
                         </div>
 
-                        <span
-                            class="provider-status"
-                            id="imageProviderStatus"
+                        <div
+                            class="connection-result"
+                            id="imageTestResult"
                         >
-                            CHECKING
-                        </span>
-
-                    </header>
-
-                    <div class="settings-grid">
-
-                        <div class="settings-row">
-                            <span>SELECTED PROVIDER</span>
-                            <strong id="selectedImageProvider">—</strong>
+                            Connection tests do not expose your API keys.
                         </div>
 
-                        <div class="settings-row">
-                            <span>MODEL</span>
-                            <strong id="selectedImageModel">—</strong>
-                        </div>
+                    </section>
 
-                        <div class="settings-row">
-                            <span>QUALITY</span>
-                            <strong id="selectedImageQuality">—</strong>
-                        </div>
+                </div>
 
-                        <div class="settings-row">
-                            <span>SIZE</span>
-                            <strong id="selectedImageSize">—</strong>
-                        </div>
 
-                        <div class="settings-row">
-                            <span>OPENAI KEY</span>
-                            <strong id="openaiImageKeyStatus">—</strong>
-                        </div>
-
-                        <div class="settings-row">
-                            <span>GEMINI KEY</span>
-                            <strong id="geminiImageKeyStatus">—</strong>
-                        </div>
-
-                        <div class="settings-row">
-                            <span>BATCH CONCURRENCY</span>
-                            <strong id="imageBatchConcurrency">—</strong>
-                        </div>
-
-                    </div>
-
-                    <button
-                        class="settings-test-button"
-                        id="testOpenAIButton"
-                        type="button"
-                    >
-                        TEST OPENAI CONNECTION
-                    </button>
-
-                    <div
-                        class="connection-result"
-                        id="openaiTestResult"
-                    >
-                        Provider switching is controlled by IMAGE_PROVIDER in .env.
-                    </div>
-
-                </section>
-
-            </div>
-
-<aside class="settings-guide">
+                <aside class="settings-guide">
 
                     <span class="settings-provider-label">
-                        LOCAL DEVELOPMENT
+                        CONNECTED ACCOUNTS
                     </span>
 
-                    <h2>
-                        Keep the key server-side.
-                    </h2>
+                    <h2>Keys stay private.</h2>
+
+                    <div class="connection-list">
+
+                        <div>
+                            <span>OpenAI</span>
+                            <strong id="openaiConnectedBadge">
+                                Checking…
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Gemini</span>
+                            <strong id="geminiConnectedBadge">
+                                Checking…
+                            </strong>
+                        </div>
+
+                    </div>
 
                     <p>
-                        Keep both credentials in <strong>.env</strong>.
-                        Choose the active image generator with
-                        <strong>IMAGE_PROVIDER</strong>, then restart FastAPI.
+                        Keep secrets in <strong>.env</strong>.
+                        Provider/model/quality choices are now saved
+                        in SQLite and can be changed here without
+                        editing the file or restarting FastAPI.
                     </p>
 
-                    <pre>GEMINI_API_KEY=your_gemini_key
-OPENAI_API_KEY=your_openai_key
+                    <pre>OPENAI_API_KEY=...
+GEMINI_API_KEY=...</pre>
 
-IMAGE_PROVIDER=openai
-OPENAI_IMAGE_MODEL=gpt-image-2
-OPENAI_IMAGE_QUALITY=low
-OPENAI_IMAGE_SIZE=1024x1024</pre>
-
-                    <p>
-                        Never paste the real API key into
-                        <strong>index.html</strong>,
-                        <strong>app.js</strong>, or Git.
-                    </p>
+                    <div class="settings-tip">
+                        <strong>Recommended test setup</strong>
+                        <span>
+                            OpenAI planner: GPT-5.6 Luna<br>
+                            OpenAI image: GPT Image 2 · Low
+                        </span>
+                    </div>
 
                 </aside>
 
@@ -1150,16 +1249,18 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
 </div>
 
 
+<!-- =========================================================
+     NEW PROFILE MODAL
+========================================================= -->
+
 <div
     class="modal-overlay"
     id="newProfileModal"
     aria-hidden="true"
 >
-
     <div class="modal-card">
 
         <header class="modal-header">
-
             <div>
                 <span>NEW WORKFLOW</span>
                 <h2>Create profile</h2>
@@ -1171,23 +1272,20 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
             >
                 ×
             </button>
-
         </header>
 
         <form id="newProfileForm">
 
             <label>PROFILE NAME</label>
-
             <input
                 class="modal-input"
                 id="newProfileName"
                 maxlength="120"
                 required
-                placeholder="Example: AdCat Images"
+                placeholder="Example: Product Lifestyle"
             >
 
             <label>DESCRIPTION</label>
-
             <textarea
                 class="modal-small-textarea"
                 id="newProfileDescription"
@@ -1195,7 +1293,6 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
             ></textarea>
 
             <label>SYSTEM INSTRUCTION</label>
-
             <textarea
                 class="modal-instruction"
                 id="newProfileInstruction"
@@ -1204,25 +1301,19 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
             ></textarea>
 
             <div class="modal-meta">
-
                 <span id="newInstructionCharacterCount">
                     0 characters
                 </span>
-
-                <span>
-                    Becomes v1 and is used for Generate.
-                </span>
-
+                <span>Becomes the current instruction.</span>
             </div>
 
             <div class="modal-actions">
-
                 <button
                     class="modal-cancel"
                     id="cancelCreateProfile"
                     type="button"
                 >
-                    CANCEL
+                    Cancel
                 </button>
 
                 <button
@@ -1230,31 +1321,33 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
                     id="createProfileButton"
                     type="submit"
                 >
-                    CREATE PROFILE
+                    Create profile
                 </button>
-
             </div>
 
         </form>
 
     </div>
-
 </div>
 
 
+<!-- =========================================================
+     FINAL INPUT MODAL
+========================================================= -->
+
 <div
-    class="final-input-overlay"
+    class="modal-overlay"
     id="finalInputModal"
     aria-hidden="true"
 >
+    <div class="modal-card modal-wide">
 
-    <div class="final-input-card">
-
-        <header class="final-input-header">
-
+        <header class="modal-header">
             <div>
-                <span>STEP 9 PAYLOAD PREVIEW</span>
-                <h2 id="finalInputTitle">Final image input</h2>
+                <span>EXACT IMAGE INPUT</span>
+                <h2 id="finalInputTitle">
+                    Prompt
+                </h2>
             </div>
 
             <button
@@ -1263,30 +1356,229 @@ OPENAI_IMAGE_SIZE=1024x1024</pre>
             >
                 ×
             </button>
-
         </header>
 
-        <div class="final-input-verification">
-            <strong>SOURCE VERIFIED</strong>
-            <span id="finalInputStrategy">—</span>
-        </div>
+        <div
+            class="modal-meta"
+            id="finalInputStrategy"
+        ></div>
 
         <pre
             class="final-input-preview"
             id="finalInputPreview"
         ></pre>
 
-        <div class="final-input-actions">
+        <div class="modal-actions">
             <button
+                class="modal-create"
                 id="copyFinalInputModalButton"
                 type="button"
             >
-                COPY FINAL INPUT
+                Copy final input
             </button>
         </div>
 
     </div>
+</div>
 
+
+<!-- =========================================================
+     IMAGE PREVIEW MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="imagePreviewModal"
+    aria-hidden="true"
+>
+    <div class="preview-modal-card">
+
+        <header class="preview-modal-header">
+            <div>
+                <span id="previewImagePosition">
+                    IMAGE 1 / 4
+                </span>
+                <h2 id="previewImageTitle">
+                    Result
+                </h2>
+            </div>
+
+            <button
+                id="closeImagePreviewModal"
+                type="button"
+            >
+                ×
+            </button>
+        </header>
+
+        <div class="preview-stage">
+
+            <button
+                class="preview-nav previous"
+                id="previewPreviousButton"
+                type="button"
+            >
+                ←
+            </button>
+
+            <img
+                id="previewLargeImage"
+                alt="Generated image preview"
+            >
+
+            <button
+                class="preview-nav next"
+                id="previewNextButton"
+                type="button"
+            >
+                →
+            </button>
+
+        </div>
+
+        <footer class="preview-modal-footer">
+
+            <div>
+                <span id="previewProviderMeta">
+                    —
+                </span>
+            </div>
+
+            <div class="preview-actions">
+                <button
+                    id="previewPromptButton"
+                    type="button"
+                >
+                    View prompt
+                </button>
+
+                <button
+                    id="previewRegenerateButton"
+                    type="button"
+                >
+                    Regenerate
+                </button>
+
+                <a
+                    id="previewDownloadButton"
+                    href="#"
+                >
+                    Download
+                </a>
+            </div>
+
+        </footer>
+
+    </div>
+</div>
+
+
+<!-- =========================================================
+     REGENERATE MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="regenerateModal"
+    aria-hidden="true"
+>
+    <div class="modal-card">
+
+        <header class="modal-header">
+            <div>
+                <span>REGENERATE ONE</span>
+                <h2 id="regenerateTitle">
+                    Regenerate image
+                </h2>
+            </div>
+
+            <button
+                id="closeRegenerateModal"
+                type="button"
+            >
+                ×
+            </button>
+        </header>
+
+        <p class="modal-help">
+            Leave this empty to use the exact same source-verified
+            prompt, or add a small extra instruction just for this retry.
+        </p>
+
+        <textarea
+            class="regenerate-direction"
+            id="regenerateDirection"
+            placeholder="Example: lower the camera slightly, preserve the same product geometry..."
+        ></textarea>
+
+        <div class="modal-actions">
+            <button
+                class="modal-cancel"
+                id="cancelRegenerateButton"
+                type="button"
+            >
+                Cancel
+            </button>
+
+            <button
+                class="modal-create"
+                id="confirmRegenerateButton"
+                type="button"
+            >
+                Regenerate
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- =========================================================
+     COMPARE MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="compareModal"
+    aria-hidden="true"
+>
+    <div class="compare-card">
+
+        <header class="modal-header">
+            <div>
+                <span>COMPARE</span>
+                <h2>Side by side</h2>
+            </div>
+
+            <button
+                id="closeCompareModal"
+                type="button"
+            >
+                ×
+            </button>
+        </header>
+
+        <div class="compare-grid">
+
+            <figure>
+                <img
+                    id="compareImageA"
+                    alt="Comparison A"
+                >
+                <figcaption id="compareTitleA"></figcaption>
+            </figure>
+
+            <figure>
+                <img
+                    id="compareImageB"
+                    alt="Comparison B"
+                >
+                <figcaption id="compareTitleB"></figcaption>
+            </figure>
+
+        </div>
+
+    </div>
 </div>
 
 

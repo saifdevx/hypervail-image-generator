@@ -3,10 +3,8 @@ from google.genai import types
 from app.gemini_service import (
     create_gemini_client,
     get_api_key,
-    get_prompt_model,
     safe_error_message,
 )
-
 from app.job_store import (
     get_job,
     get_job_for_planning,
@@ -14,21 +12,35 @@ from app.job_store import (
     mark_job_planned,
     mark_job_planning_failed,
 )
-
 from app.normalizer_service import (
     invalidate_structured_prompts,
 )
+from app.openai_planner_service import (
+    run_openai_planner,
+    test_openai_planner_connection,
+)
+from app.settings_store import (
+    get_runtime_settings,
+)
 
 
-def build_runtime_instruction(job: dict):
+def build_runtime_instruction(
+    job: dict,
+):
     creative_direction = (
-        job.get("description")
-        or ""
+        job.get(
+            "description"
+        )
+        or
+        ""
     ).strip()
 
     requested_count = (
-        job.get("requested_count")
-        or "auto"
+        job.get(
+            "requested_count"
+        )
+        or
+        "auto"
     ).strip()
 
     if requested_count == "auto":
@@ -42,8 +54,8 @@ def build_runtime_instruction(job: dict):
             f"Output count setting: {requested_count}. "
             f"The user is requesting {requested_count} outputs. "
             "Apply this as a current user request while still "
-            "following the system instruction's own priority "
-            "and conflict rules."
+            "following the system instruction's priority and "
+            "conflict rules."
         )
 
     if creative_direction:
@@ -75,97 +87,111 @@ QA, or other text that the selected system instruction requires.
 Return the response in the output format requested by the system
 instruction. Do not convert the response to JSON yet unless the
 system instruction itself explicitly requires JSON. Structured JSON
-normalization is handled by the next stage of this application.
+normalization is handled by the next local stage of this application.
 """.strip()
 
 
-def build_contents(job: dict):
+def _build_gemini_contents(
+    job: dict,
+):
     contents = []
 
-    for reference in job["references"]:
+    for reference in job[
+        "references"
+    ]:
         contents.append(
             (
-                f"Reference Image {reference['position']} "
+                f"Reference Image "
+                f"{reference['position']} "
                 f"({reference['original_filename']}):"
             )
         )
 
         image_bytes = (
-            reference["absolute_path"]
+            reference[
+                "absolute_path"
+            ]
             .read_bytes()
         )
 
         contents.append(
             types.Part.from_bytes(
                 data=image_bytes,
-                mime_type=reference["media_type"],
+                mime_type=
+                    reference[
+                        "media_type"
+                    ],
             )
         )
 
     contents.append(
-        build_runtime_instruction(job)
+        build_runtime_instruction(
+            job
+        )
     )
 
     return contents
 
 
-def plan_job(job_id: int):
-    job = get_job_for_planning(job_id)
-
-    if job is None:
-        return {
-            "ok": False,
-            "code": "job_not_found",
-            "error": "Job not found.",
-        }
-
-    if not job["references"]:
-        return {
-            "ok": False,
-            "code": "no_references",
-            "error": "The job has no reference images.",
-        }
+def _run_gemini_planner(
+    job: dict,
+):
+    settings = (
+        get_runtime_settings()
+    )
 
     api_key, _ = get_api_key()
 
     if not api_key:
         return {
             "ok": False,
-            "code": "gemini_not_configured",
-            "error": (
-                "Gemini is not configured. "
-                "Open Settings and configure the API key."
-            ),
+            "code":
+                "gemini_not_configured",
+            "provider":
+                "gemini",
+            "model":
+                settings[
+                    "gemini_planner_model"
+                ],
+            "error":
+                (
+                    "Gemini is selected as the prompt "
+                    "planner but GEMINI_API_KEY is not configured."
+                ),
         }
 
-    model = get_prompt_model()
-
-    # A new planner pass invalidates any old structured prompt package.
-    invalidate_structured_prompts(
-        job_id
-    )
-
-    mark_job_planning(
-        job_id,
-        model,
+    model = (
+        settings[
+            "gemini_planner_model"
+        ]
     )
 
     try:
-        client = create_gemini_client()
+        client = (
+            create_gemini_client()
+        )
 
-        response = client.models.generate_content(
-            model=model,
-            contents=build_contents(job),
-            config=types.GenerateContentConfig(
-                system_instruction=(
-                    job["system_instruction_snapshot"]
-                )
-            ),
+        response = (
+            client.models.generate_content(
+                model=model,
+                contents=
+                    _build_gemini_contents(
+                        job
+                    ),
+                config=
+                    types.GenerateContentConfig(
+                        system_instruction=
+                            job[
+                                "system_instruction_snapshot"
+                            ]
+                    ),
+            )
         )
 
         raw_output = (
             response.text
-            or ""
+            or
+            ""
         ).strip()
 
         if not raw_output:
@@ -173,32 +199,325 @@ def plan_job(job_id: int):
                 "Gemini returned an empty prompt-planning response."
             )
 
+        return {
+            "ok": True,
+            "provider":
+                "gemini",
+            "model":
+                model,
+            "raw_output":
+                raw_output,
+        }
+
+    except Exception as error:
+        return {
+            "ok": False,
+            "code":
+                "planner_failed",
+            "provider":
+                "gemini",
+            "model":
+                model,
+            "error":
+                safe_error_message(
+                    error,
+                    api_key,
+                ),
+        }
+
+
+def get_planner_status():
+    settings = (
+        get_runtime_settings()
+    )
+
+    gemini_key, _ = get_api_key()
+
+    from app.openai_image_service import (
+        get_openai_api_key,
+    )
+
+    selected = settings[
+        "planner_provider"
+    ]
+
+    model = (
+        settings[
+            "gemini_planner_model"
+        ]
+        if selected
+        ==
+        "gemini"
+        else settings[
+            "openai_planner_model"
+        ]
+    )
+
+    configured = (
+        bool(gemini_key)
+        if selected
+        ==
+        "gemini"
+        else bool(
+            get_openai_api_key()
+        )
+    )
+
+    return {
+        "selected_provider":
+            selected,
+        "configured":
+            configured,
+        "model":
+            model,
+        "providers": {
+            "gemini": {
+                "configured":
+                    bool(
+                        gemini_key
+                    ),
+                "model":
+                    settings[
+                        "gemini_planner_model"
+                    ],
+            },
+            "openai": {
+                "configured":
+                    bool(
+                        get_openai_api_key()
+                    ),
+                "model":
+                    settings[
+                        "openai_planner_model"
+                    ],
+                "reasoning_effort":
+                    settings[
+                        "openai_planner_reasoning"
+                    ],
+            },
+        },
+    }
+
+
+def test_selected_planner():
+    settings = (
+        get_runtime_settings()
+    )
+
+    if (
+        settings[
+            "planner_provider"
+        ]
+        ==
+        "openai"
+    ):
+        return (
+            test_openai_planner_connection()
+        )
+
+    api_key, _ = get_api_key()
+
+    if not api_key:
+        return {
+            "ok": False,
+            "provider": "gemini",
+            "model":
+                settings[
+                    "gemini_planner_model"
+                ],
+            "error":
+                "GEMINI_API_KEY is not configured.",
+        }
+
+    model = (
+        settings[
+            "gemini_planner_model"
+        ]
+    )
+
+    try:
+        client = (
+            create_gemini_client()
+        )
+
+        response = (
+            client.models.generate_content(
+                model=model,
+                contents=(
+                    "Reply with exactly: "
+                    "IMAGE_AGENT_PLANNER_OK"
+                ),
+            )
+        )
+
+        text = (
+            response.text
+            or
+            ""
+        ).strip()
+
+        return {
+            "ok":
+                "IMAGE_AGENT_PLANNER_OK"
+                in text,
+            "provider":
+                "gemini",
+            "model":
+                model,
+            "response":
+                text[:200],
+        }
+
+    except Exception as error:
+        return {
+            "ok": False,
+            "provider":
+                "gemini",
+            "model":
+                model,
+            "error":
+                safe_error_message(
+                    error,
+                    api_key,
+                ),
+        }
+
+
+def plan_job(
+    job_id: int,
+):
+    job = (
+        get_job_for_planning(
+            job_id
+        )
+    )
+
+    if job is None:
+        return {
+            "ok": False,
+            "code":
+                "job_not_found",
+            "error":
+                "Job not found.",
+        }
+
+    if not job[
+        "references"
+    ]:
+        return {
+            "ok": False,
+            "code":
+                "no_references",
+            "error":
+                (
+                    "The job has no reference images."
+                ),
+        }
+
+    settings = (
+        get_runtime_settings()
+    )
+
+    provider = (
+        settings[
+            "planner_provider"
+        ]
+    )
+
+    # A new creative pass invalidates any old structured package.
+    invalidate_structured_prompts(
+        job_id
+    )
+
+    if provider == "openai":
+        preliminary_model = (
+            settings[
+                "openai_planner_model"
+            ]
+        )
+    else:
+        preliminary_model = (
+            settings[
+                "gemini_planner_model"
+            ]
+        )
+
+    mark_job_planning(
+        job_id,
+        preliminary_model,
+        provider=provider,
+    )
+
+    if provider == "openai":
+        result = (
+            run_openai_planner(
+                job,
+                build_runtime_instruction(
+                    job
+                ),
+            )
+        )
+    else:
+        result = (
+            _run_gemini_planner(
+                job
+            )
+        )
+
+    if result["ok"]:
         mark_job_planned(
             job_id,
-            model,
-            raw_output,
+            result[
+                "model"
+            ],
+            result[
+                "raw_output"
+            ],
+            provider=
+                result[
+                    "provider"
+                ],
         )
 
         return {
             "ok": True,
-            "job": get_job(job_id),
+            "job":
+                get_job(
+                    job_id
+                ),
         }
 
-    except Exception as error:
-        safe_message = safe_error_message(
-            error,
-            api_key,
-        )
+    mark_job_planning_failed(
+        job_id,
+        result.get(
+            "model",
+            preliminary_model,
+        ),
+        result.get(
+            "error",
+            "Prompt planning failed.",
+        ),
+        provider=
+            result.get(
+                "provider",
+                provider,
+            ),
+    )
 
-        mark_job_planning_failed(
-            job_id,
-            model,
-            safe_message,
-        )
-
-        return {
-            "ok": False,
-            "code": "planner_failed",
-            "error": safe_message,
-            "job": get_job(job_id),
-        }
+    return {
+        "ok": False,
+        "code":
+            result.get(
+                "code",
+                "planner_failed",
+            ),
+        "error":
+            result.get(
+                "error",
+                "Prompt planning failed.",
+            ),
+        "job":
+            get_job(
+                job_id
+            ),
+    }
