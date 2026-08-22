@@ -73,6 +73,14 @@ from app.results_service import (
     build_job_zip,
     get_download_name,
 )
+from app.history_service import (
+    ensure_history_schema,
+    list_history_jobs,
+    get_history_options,
+    get_history_detail,
+    set_job_favorite,
+    set_image_favorite,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -137,6 +145,10 @@ class SettingsUpdateRequest(BaseModel):
     auto_generate_images: bool | None = None
 
 
+class FavoriteRequest(BaseModel):
+    favorite: bool
+
+
 def normalize_requested_count(
     value: str,
 ):
@@ -185,6 +197,7 @@ async def lifespan(
 ):
     init_database()
     ensure_settings_schema()
+    ensure_history_schema()
     seed_default_profiles()
     yield
 
@@ -194,7 +207,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.11.0",
+    version="0.12.0",
     lifespan=lifespan,
 )
 
@@ -393,6 +406,124 @@ def openai_test():
                 result.get("error")
                 or
                 "OpenAI connection test failed."
+            ),
+        )
+
+    return result
+
+
+# ============================================================
+# HISTORY / CREATIVE LIBRARY
+# ============================================================
+
+@app.get(
+    "/api/history"
+)
+def history_list(
+    q: str = "",
+    profile_id: int | None = None,
+    planner_provider: str | None = None,
+    image_provider: str | None = None,
+    status: str | None = None,
+    favorites_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+):
+    safe_limit = max(
+        1,
+        min(
+            limit,
+            200,
+        ),
+    )
+
+    safe_offset = max(
+        0,
+        offset,
+    )
+
+    return list_history_jobs(
+        q=q,
+        profile_id=
+            profile_id,
+        planner_provider=
+            planner_provider,
+        image_provider=
+            image_provider,
+        status=status,
+        favorites_only=
+            favorites_only,
+        limit=
+            safe_limit,
+        offset=
+            safe_offset,
+    )
+
+
+@app.get(
+    "/api/history/options"
+)
+def history_options():
+    return get_history_options()
+
+
+@app.get(
+    "/api/history/{job_id}"
+)
+def history_detail(
+    job_id: int,
+):
+    result = get_history_detail(
+        job_id
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return result
+
+
+@app.patch(
+    "/api/history/{job_id}/favorite"
+)
+def history_job_favorite(
+    job_id: int,
+    request: FavoriteRequest,
+):
+    result = set_job_favorite(
+        job_id,
+        request.favorite,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return result
+
+
+@app.patch(
+    "/api/images/{image_id}/favorite"
+)
+def generated_image_favorite(
+    image_id: int,
+    request: FavoriteRequest,
+):
+    result = set_image_favorite(
+        image_id,
+        request.favorite,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Generated image not found."
             ),
         )
 

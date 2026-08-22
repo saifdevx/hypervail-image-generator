@@ -408,6 +408,10 @@ def _all_image_rows(
                 gi.status,
                 gi.error_message,
                 gi.generation_note,
+                COALESCE(
+                    gi.is_favorite,
+                    0
+                ) AS is_favorite,
                 gi.created_at,
                 gp.position AS prompt_position,
                 gp.title AS prompt_title

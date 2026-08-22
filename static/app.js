@@ -93,6 +93,18 @@ const summaryImages = $("summaryImages");
 const summaryCount = $("summaryCount");
 const summaryVersion = $("summaryVersion");
 
+const historyCountLabel = $("historyCountLabel");
+const historySearchInput = $("historySearchInput");
+const historyProfileFilter = $("historyProfileFilter");
+const historyStatusFilter = $("historyStatusFilter");
+const historyPlannerFilter = $("historyPlannerFilter");
+const historyImageProviderFilter = $("historyImageProviderFilter");
+const historyFavoritesOnly = $("historyFavoritesOnly");
+const historyClearFiltersButton = $("historyClearFiltersButton");
+const historyGrid = $("historyGrid");
+const historyEmptyState = $("historyEmptyState");
+const historyEmptyCreateButton = $("historyEmptyCreateButton");
+
 
 /* Profiles */
 
@@ -204,6 +216,28 @@ const compareImageB = $("compareImageB");
 const compareTitleA = $("compareTitleA");
 const compareTitleB = $("compareTitleB");
 
+
+/* History Detail */
+
+const historyDetailModal = $("historyDetailModal");
+const closeHistoryDetailModal = $("closeHistoryDetailModal");
+const historyDetailKicker = $("historyDetailKicker");
+const historyDetailTitle = $("historyDetailTitle");
+const historyDetailMeta = $("historyDetailMeta");
+const historyDetailFavoriteButton = $("historyDetailFavoriteButton");
+const historyDuplicateButton = $("historyDuplicateButton");
+const historyDownloadAllButton = $("historyDownloadAllButton");
+const historyDetailWorkflow = $("historyDetailWorkflow");
+const historyDetailPlanner = $("historyDetailPlanner");
+const historyDetailImageEngine = $("historyDetailImageEngine");
+const historyDetailOutputs = $("historyDetailOutputs");
+const historyDetailReferenceCount = $("historyDetailReferenceCount");
+const historyDetailReferences = $("historyDetailReferences");
+const historyDetailDirection = $("historyDetailDirection");
+const historyDetailImageCount = $("historyDetailImageCount");
+const historyDetailImages = $("historyDetailImages");
+const historyDetailPrompts = $("historyDetailPrompts");
+
 const toast = $("toast");
 
 
@@ -237,11 +271,19 @@ let imageBatchRequestRunning = false;
 
 let previewResults = [];
 let previewIndex = 0;
+let previewPackageLookup = [];
+let previewJobId = null;
 
 let lastRenderedBatch = null;
 let selectedCompareIds = new Set();
 
+let historyItems = [];
+let historyOptions = null;
+let historyDetail = null;
+let historySearchTimer = null;
+
 let regenerateTarget = null;
+let regenerateJobId = null;
 
 let advancedOpen = false;
 
@@ -336,10 +378,13 @@ navProfiles.addEventListener(
 
 navHistory.addEventListener(
     "click",
-    () => {
+    async () => {
         showView(
             "history"
         );
+
+        await ensureHistoryOptions();
+        await loadHistory();
     }
 );
 
@@ -3667,6 +3712,16 @@ function renderResults(
     previewResults =
         completeItems;
 
+    previewPackageLookup =
+        currentPromptPackages;
+
+    previewJobId =
+        currentJob?.id
+        ??
+        batch.job_id
+        ??
+        null;
+
     updateCompareButton();
 }
 
@@ -3811,10 +3866,74 @@ function createResultCard(
             item.image.provider
         );
 
+    const favorite =
+        document.createElement(
+            "button"
+        );
+
+    favorite.type =
+        "button";
+
+    favorite.className =
+        "result-card-favorite";
+
+    favorite.classList.toggle(
+        "active",
+        Boolean(
+            item.image.is_favorite
+        )
+    );
+
+    favorite.textContent =
+        item.image.is_favorite
+            ?
+            "★"
+            :
+            "☆";
+
+    favorite.title =
+        "Mark this output as a favorite";
+
+    favorite.addEventListener(
+        "click",
+        async event => {
+            event.stopPropagation();
+
+            const nextValue =
+                !Boolean(
+                    item.image.is_favorite
+                );
+
+            const updated =
+                await toggleImageFavorite(
+                    item.image.id,
+                    nextValue
+                );
+
+            if (updated) {
+                item.image.is_favorite =
+                    nextValue;
+
+                favorite.classList.toggle(
+                    "active",
+                    nextValue
+                );
+
+                favorite.textContent =
+                    nextValue
+                        ?
+                        "★"
+                        :
+                        "☆";
+            }
+        }
+    );
+
     media.append(
         image,
         selectLabel,
-        provider
+        provider,
+        favorite
     );
 
     const body =
@@ -4139,6 +4258,21 @@ previewPromptButton.addEventListener(
         }
 
         const packageItem =
+            (
+                previewPackageLookup
+                ||
+                []
+            ).find(
+                packageItem =>
+                    Number(
+                        packageItem.prompt_id
+                    )
+                    ===
+                    Number(
+                        item.prompt_id
+                    )
+            )
+            ||
             findPromptPackage(
                 item.prompt_id
             );
@@ -4166,7 +4300,10 @@ previewRegenerateButton.addEventListener(
             );
 
             openRegenerate(
-                item
+                item,
+                previewJobId
+                ??
+                currentJob?.id
             );
         }
     }
@@ -4178,10 +4315,16 @@ previewRegenerateButton.addEventListener(
 ========================================================= */
 
 function openRegenerate(
-    item
+    item,
+    jobId = currentJob?.id
 ) {
     regenerateTarget =
         item;
+
+    regenerateJobId =
+        jobId
+        ??
+        null;
 
     regenerateDirection.value =
         "";
@@ -4201,7 +4344,7 @@ confirmRegenerateButton.addEventListener(
     "click",
     async () => {
         if (
-            !currentJob
+            !regenerateJobId
             ||
             !regenerateTarget
         ) {
@@ -4217,7 +4360,7 @@ confirmRegenerateButton.addEventListener(
         try {
             const response =
                 await fetch(
-                    `/api/jobs/${currentJob.id}/prompts/${regenerateTarget.prompt_id}/regenerate-image`,
+                    `/api/jobs/${regenerateJobId}/prompts/${regenerateTarget.prompt_id}/regenerate-image`,
                     {
                         method:
                             "POST",
@@ -4251,14 +4394,46 @@ confirmRegenerateButton.addEventListener(
                 regenerateModal
             );
 
-            const batch =
-                await refreshImageBatch(
+            if (
+                currentJob
+                &&
+                Number(
                     currentJob.id
-                );
+                )
+                ===
+                Number(
+                    regenerateJobId
+                )
+            ) {
+                const batch =
+                    await refreshImageBatch(
+                        currentJob.id
+                    );
 
-            if (batch) {
-                renderResults(
-                    batch
+                if (batch) {
+                    renderResults(
+                        batch
+                    );
+                }
+            }
+
+            if (
+                historyDetail
+                &&
+                Number(
+                    historyDetail.id
+                )
+                ===
+                Number(
+                    regenerateJobId
+                )
+            ) {
+                await openHistoryJob(
+                    historyDetail.id,
+                    {
+                        preserveModal:
+                            true
+                    }
                 );
             }
 
@@ -4278,6 +4453,1927 @@ confirmRegenerateButton.addEventListener(
             confirmRegenerateButton.textContent =
                 "Regenerate";
         }
+    }
+);
+
+
+/* =========================================================
+   STEP 12 — HISTORY / CREATIVE LIBRARY
+========================================================= */
+
+async function ensureHistoryOptions() {
+    if (historyOptions) {
+        return historyOptions;
+    }
+
+    try {
+        const response =
+            await fetch(
+                "/api/history/options"
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        historyOptions =
+            await response.json();
+
+        populateHistoryFilters();
+
+        return historyOptions;
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return null;
+    }
+}
+
+
+function populateHistoryFilters() {
+    if (!historyOptions) {
+        return;
+    }
+
+    const currentProfile =
+        historyProfileFilter.value;
+
+    historyProfileFilter.innerHTML = `
+        <option value="">
+            All workflows
+        </option>
+    `;
+
+    historyOptions.profiles.forEach(
+        profile => {
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                String(
+                    profile.id
+                );
+
+            option.textContent =
+                profile.name;
+
+            historyProfileFilter.appendChild(
+                option
+            );
+        }
+    );
+
+    if (
+        [
+            ...historyProfileFilter.options
+        ].some(
+            option =>
+                option.value
+                ===
+                currentProfile
+        )
+    ) {
+        historyProfileFilter.value =
+            currentProfile;
+    }
+
+    historyStatusFilter.innerHTML = `
+        <option value="">
+            All statuses
+        </option>
+    `;
+
+    const statusLabels = {
+        complete:
+            "Complete",
+        partial:
+            "Partial",
+        prompts_ready:
+            "Prompts ready",
+        planned:
+            "Planned",
+        failed:
+            "Failed",
+        prepared:
+            "Prepared",
+    };
+
+    historyOptions.statuses.forEach(
+        value => {
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                value;
+
+            option.textContent =
+                statusLabels[value]
+                ||
+                capitalize(
+                    value.replaceAll(
+                        "_",
+                        " "
+                    )
+                );
+
+            historyStatusFilter.appendChild(
+                option
+            );
+        }
+    );
+
+    fillHistoryProviderSelect(
+        historyPlannerFilter,
+        historyOptions
+            .planner_providers,
+        "Any planner"
+    );
+
+    fillHistoryProviderSelect(
+        historyImageProviderFilter,
+        historyOptions
+            .image_providers,
+        "Any image provider"
+    );
+}
+
+
+function fillHistoryProviderSelect(
+    element,
+    values,
+    emptyLabel
+) {
+    const current =
+        element.value;
+
+    element.innerHTML =
+        "";
+
+    const empty =
+        document.createElement(
+            "option"
+        );
+
+    empty.value =
+        "";
+
+    empty.textContent =
+        emptyLabel;
+
+    element.appendChild(
+        empty
+    );
+
+    values.forEach(
+        value => {
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                value;
+
+            option.textContent =
+                value === "openai"
+                    ?
+                    "OpenAI"
+                    :
+                    "Gemini";
+
+            element.appendChild(
+                option
+            );
+        }
+    );
+
+    if (
+        [
+            ...element.options
+        ].some(
+            option =>
+                option.value
+                ===
+                current
+        )
+    ) {
+        element.value =
+            current;
+    }
+}
+
+
+function historyQueryParams() {
+    const params =
+        new URLSearchParams();
+
+    const query =
+        historySearchInput
+            .value
+            .trim();
+
+    if (query) {
+        params.set(
+            "q",
+            query
+        );
+    }
+
+    if (
+        historyProfileFilter.value
+    ) {
+        params.set(
+            "profile_id",
+            historyProfileFilter.value
+        );
+    }
+
+    if (
+        historyStatusFilter.value
+    ) {
+        params.set(
+            "status",
+            historyStatusFilter.value
+        );
+    }
+
+    if (
+        historyPlannerFilter.value
+    ) {
+        params.set(
+            "planner_provider",
+            historyPlannerFilter.value
+        );
+    }
+
+    if (
+        historyImageProviderFilter.value
+    ) {
+        params.set(
+            "image_provider",
+            historyImageProviderFilter.value
+        );
+    }
+
+    if (
+        historyFavoritesOnly.checked
+    ) {
+        params.set(
+            "favorites_only",
+            "true"
+        );
+    }
+
+    params.set(
+        "limit",
+        "150"
+    );
+
+    return params;
+}
+
+
+async function loadHistory() {
+    historyGrid.innerHTML = `
+        <div class="history-loading-state">
+            Loading creative history…
+        </div>
+    `;
+
+    historyEmptyState.classList.add(
+        "hidden-element"
+    );
+
+    try {
+        const params =
+            historyQueryParams();
+
+        const response =
+            await fetch(
+                `/api/history?${params.toString()}`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const payload =
+            await response.json();
+
+        historyItems =
+            payload.items
+            ||
+            [];
+
+        historyCountLabel.textContent =
+            String(
+                payload.total
+                ??
+                historyItems.length
+            );
+
+        renderHistoryCards();
+
+    } catch (error) {
+        historyGrid.innerHTML = `
+            <div class="history-loading-state">
+                Could not load history.
+            </div>
+        `;
+
+        showToast(
+            error.message
+        );
+    }
+}
+
+
+function renderHistoryCards() {
+    historyGrid.innerHTML =
+        "";
+
+    if (!historyItems.length) {
+        historyEmptyState.classList.remove(
+            "hidden-element"
+        );
+
+        return;
+    }
+
+    historyEmptyState.classList.add(
+        "hidden-element"
+    );
+
+    historyItems.forEach(
+        item => {
+            historyGrid.appendChild(
+                createHistoryCard(
+                    item
+                )
+            );
+        }
+    );
+}
+
+
+function createHistoryCard(
+    item
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "history-card";
+
+    const thumbs =
+        document.createElement(
+            "div"
+        );
+
+    thumbs.className =
+        "history-card-thumbnails";
+
+    const thumbnails =
+        item.thumbnails
+        ||
+        [];
+
+    if (
+        thumbnails.length
+        ===
+        1
+    ) {
+        thumbs.classList.add(
+            "single"
+        );
+    }
+
+    if (
+        thumbnails.length
+        ===
+        2
+    ) {
+        thumbs.classList.add(
+            "two"
+        );
+    }
+
+    if (thumbnails.length) {
+        thumbnails.forEach(
+            thumb => {
+                const image =
+                    document.createElement(
+                        "img"
+                    );
+
+                image.src =
+                    thumb.url;
+
+                image.alt =
+                    `${item.profile_name} history thumbnail`;
+
+                image.loading =
+                    "lazy";
+
+                thumbs.appendChild(
+                    image
+                );
+            }
+        );
+    } else {
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "history-card-empty-thumb";
+
+        empty.textContent =
+            "NO PREVIEW";
+
+        thumbs.appendChild(
+            empty
+        );
+    }
+
+    const type =
+        document.createElement(
+            "span"
+        );
+
+    type.className =
+        "history-card-type-badge";
+
+    type.textContent =
+        thumbnails.some(
+            thumb =>
+                thumb.type
+                ===
+                "generated"
+        )
+            ?
+            "GENERATED"
+            :
+            "REFERENCE";
+
+    const status =
+        document.createElement(
+            "span"
+        );
+
+    status.className =
+        (
+            "history-card-status "
+            +
+            item.display_status
+        );
+
+    status.textContent =
+        historyStatusLabel(
+            item.display_status
+        );
+
+    thumbs.append(
+        type,
+        status
+    );
+
+    const body =
+        document.createElement(
+            "div"
+        );
+
+    body.className =
+        "history-card-body";
+
+    const heading =
+        document.createElement(
+            "div"
+        );
+
+    heading.className =
+        "history-card-heading";
+
+    const left =
+        document.createElement(
+            "div"
+        );
+
+    const kicker =
+        document.createElement(
+            "span"
+        );
+
+    kicker.textContent =
+        (
+            `JOB #${String(item.id).padStart(4, "0")}`
+            +
+            (
+                item.has_favorite_output
+                    ?
+                    " · ★ WINNER"
+                    :
+                    ""
+            )
+        );
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        item.profile_name;
+
+    left.append(
+        kicker,
+        title
+    );
+
+    const favorite =
+        document.createElement(
+            "button"
+        );
+
+    favorite.type =
+        "button";
+
+    favorite.className =
+        "history-job-star";
+
+    favorite.classList.toggle(
+        "active",
+        Boolean(
+            item.is_favorite
+        )
+    );
+
+    favorite.textContent =
+        item.is_favorite
+            ?
+            "★"
+            :
+            "☆";
+
+    favorite.title =
+        "Favorite this job";
+
+    favorite.addEventListener(
+        "click",
+        async event => {
+            event.stopPropagation();
+
+            const next =
+                !Boolean(
+                    item.is_favorite
+                );
+
+            const updated =
+                await toggleJobFavorite(
+                    item.id,
+                    next
+                );
+
+            if (updated) {
+                item.is_favorite =
+                    next;
+
+                favorite.classList.toggle(
+                    "active",
+                    next
+                );
+
+                favorite.textContent =
+                    next
+                        ?
+                        "★"
+                        :
+                        "☆";
+
+                if (
+                    historyFavoritesOnly.checked
+                    &&
+                    !next
+                    &&
+                    !item.has_favorite_output
+                ) {
+                    await loadHistory();
+                }
+            }
+        }
+    );
+
+    heading.append(
+        left,
+        favorite
+    );
+
+    const desc =
+        document.createElement(
+            "p"
+        );
+
+    desc.className =
+        "history-card-description";
+
+    desc.textContent =
+        item.description
+        ||
+        "No additional creative direction.";
+
+    const meta =
+        document.createElement(
+            "div"
+        );
+
+    meta.className =
+        "history-card-meta";
+
+    meta.append(
+        historyMetaCell(
+            "DATE",
+            formatHistoryDate(
+                item.created_at
+            )
+        ),
+
+        historyMetaCell(
+            "OUTPUTS",
+            `${item.complete_count || 0}/${item.prompt_count || 0}`
+        ),
+
+        historyMetaCell(
+            "PLANNER",
+            (
+                item.planner_provider
+                    ?
+                    `${capitalize(item.planner_provider)} · ${item.planner_model || "model"}`
+                    :
+                    "—"
+            )
+        ),
+
+        historyMetaCell(
+            "IMAGE ENGINE",
+            (
+                item.image_provider
+                    ?
+                    `${capitalize(item.image_provider)} · ${item.image_model || "model"}`
+                    :
+                    "Not generated"
+            )
+        )
+    );
+
+    const actions =
+        document.createElement(
+            "div"
+        );
+
+    actions.className =
+        "history-card-actions";
+
+    const open =
+        document.createElement(
+            "button"
+        );
+
+    open.type =
+        "button";
+
+    open.className =
+        "history-primary";
+
+    open.textContent =
+        "Open job";
+
+    open.onclick =
+        () =>
+            openHistoryJob(
+                item.id
+            );
+
+    const duplicate =
+        document.createElement(
+            "button"
+        );
+
+    duplicate.type =
+        "button";
+
+    duplicate.textContent =
+        "Duplicate";
+
+    duplicate.onclick =
+        async () => {
+            const detail =
+                await fetchHistoryDetail(
+                    item.id
+                );
+
+            if (detail) {
+                await duplicateHistoryJob(
+                    detail
+                );
+            }
+        };
+
+    actions.append(
+        open,
+        duplicate
+    );
+
+    body.append(
+        heading,
+        desc,
+        meta,
+        actions
+    );
+
+    card.append(
+        thumbs,
+        body
+    );
+
+    return card;
+}
+
+
+function historyMetaCell(
+    label,
+    value
+) {
+    const cell =
+        document.createElement(
+            "div"
+        );
+
+    const key =
+        document.createElement(
+            "span"
+        );
+
+    key.textContent =
+        label;
+
+    const data =
+        document.createElement(
+            "strong"
+        );
+
+    data.textContent =
+        value;
+
+    cell.append(
+        key,
+        data
+    );
+
+    return cell;
+}
+
+
+function historyStatusLabel(
+    value
+) {
+    const labels = {
+        complete:
+            "COMPLETE",
+        partial:
+            "PARTIAL",
+        prompts_ready:
+            "PROMPTS READY",
+        planned:
+            "PLANNED",
+        failed:
+            "FAILED",
+        prepared:
+            "PREPARED",
+        planning:
+            "PLANNING",
+        normalizing:
+            "VERIFYING",
+    };
+
+    return labels[value]
+        ||
+        String(
+            value
+            ||
+            "JOB"
+        )
+        .replaceAll(
+            "_",
+            " "
+        )
+        .toUpperCase();
+}
+
+
+function formatHistoryDate(
+    value
+) {
+    if (!value) {
+        return "—";
+    }
+
+    const normalized =
+        value.includes(
+            "T"
+        )
+            ?
+            value
+            :
+            value.replace(
+                " ",
+                "T"
+            )
+            +
+            "Z";
+
+    const date =
+        new Date(
+            normalized
+        );
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return value;
+    }
+
+    return date.toLocaleString(
+        [],
+        {
+            month:
+                "short",
+            day:
+                "numeric",
+            hour:
+                "numeric",
+            minute:
+                "2-digit",
+        }
+    );
+}
+
+
+async function fetchHistoryDetail(
+    jobId
+) {
+    try {
+        const response =
+            await fetch(
+                `/api/history/${jobId}`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return null;
+    }
+}
+
+
+async function openHistoryJob(
+    jobId,
+    options = {}
+) {
+    const detail =
+        await fetchHistoryDetail(
+            jobId
+        );
+
+    if (!detail) {
+        return;
+    }
+
+    historyDetail =
+        detail;
+
+    renderHistoryDetail(
+        detail
+    );
+
+    if (
+        !options.preserveModal
+    ) {
+        openModal(
+            historyDetailModal
+        );
+    }
+}
+
+
+function renderHistoryDetail(
+    detail
+) {
+    historyDetailKicker.textContent =
+        `JOB #${String(detail.id).padStart(4, "0")}`;
+
+    historyDetailTitle.textContent =
+        detail.profile_name
+        ||
+        "Image job";
+
+    historyDetailMeta.textContent =
+        (
+            `${formatHistoryDate(detail.created_at)}`
+            +
+            ` · ${historyStatusLabel(detail.batch?.status || detail.status)}`
+        );
+
+    historyDetailFavoriteButton.classList.toggle(
+        "active",
+        Boolean(
+            detail.is_favorite
+        )
+    );
+
+    historyDetailFavoriteButton.textContent =
+        detail.is_favorite
+            ?
+            "★"
+            :
+            "☆";
+
+    historyDownloadAllButton.href =
+        `/api/jobs/${detail.id}/download.zip`;
+
+    historyDetailWorkflow.textContent =
+        detail.profile_name
+        ||
+        "—";
+
+    historyDetailPlanner.textContent =
+        detail.planner_provider
+            ?
+            `${capitalize(detail.planner_provider)} · ${detail.planner_model || "model"}`
+            :
+            "—";
+
+    const completeItems =
+        (
+            detail.batch?.items
+            ||
+            []
+        )
+        .filter(
+            item =>
+                item.status
+                ===
+                "complete"
+                &&
+                item.image
+                    ?.file_url
+        );
+
+    const firstImage =
+        completeItems[0]
+            ?.image;
+
+    historyDetailImageEngine.textContent =
+        firstImage
+            ?
+            providerMeta(
+                firstImage.provider
+            )
+            :
+            "Not generated";
+
+    historyDetailOutputs.textContent =
+        `${detail.batch?.complete_count || 0}/${detail.batch?.total_prompts || 0}`;
+
+    historyDetailDirection.textContent =
+        detail.description
+        ||
+        "No additional creative direction.";
+
+    renderHistoryReferences(
+        detail.references
+        ||
+        []
+    );
+
+    renderHistoryOutputs(
+        detail,
+        completeItems
+    );
+
+    renderHistoryPrompts(
+        detail.packages
+            ?.packages
+        ||
+        []
+    );
+}
+
+
+function renderHistoryReferences(
+    references
+) {
+    historyDetailReferenceCount.textContent =
+        String(
+            references.length
+        );
+
+    historyDetailReferences.innerHTML =
+        "";
+
+    references.forEach(
+        reference => {
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+            card.className =
+                "history-reference-card";
+
+            const image =
+                document.createElement(
+                    "img"
+                );
+
+            image.src =
+                reference.file_url;
+
+            image.alt =
+                `Reference ${reference.position}`;
+
+            const label =
+                document.createElement(
+                    "span"
+                );
+
+            label.textContent =
+                reference.position === 1
+                    ?
+                    "1 · PRIMARY"
+                    :
+                    String(
+                        reference.position
+                    );
+
+            card.append(
+                image,
+                label
+            );
+
+            historyDetailReferences.appendChild(
+                card
+            );
+        }
+    );
+}
+
+
+function renderHistoryOutputs(
+    detail,
+    completeItems
+) {
+    historyDetailImageCount.textContent =
+        String(
+            completeItems.length
+        );
+
+    historyDetailImages.innerHTML =
+        "";
+
+    if (!completeItems.length) {
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "history-loading-state";
+
+        empty.textContent =
+            "No completed images for this job.";
+
+        historyDetailImages.appendChild(
+            empty
+        );
+
+        return;
+    }
+
+    completeItems.forEach(
+        item => {
+            historyDetailImages.appendChild(
+                createHistoryOutputCard(
+                    detail,
+                    item,
+                    completeItems
+                )
+            );
+        }
+    );
+}
+
+
+function createHistoryOutputCard(
+    detail,
+    item,
+    completeItems
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "history-output-card";
+
+    const media =
+        document.createElement(
+            "div"
+        );
+
+    media.className =
+        "history-output-media";
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+    image.src =
+        item.image.file_url;
+
+    image.alt =
+        item.title
+        ||
+        `Generated output ${item.position}`;
+
+    image.onclick =
+        () => {
+            previewResults =
+                completeItems;
+
+            previewPackageLookup =
+                detail.packages
+                    ?.packages
+                ||
+                [];
+
+            previewJobId =
+                detail.id;
+
+            openImagePreviewById(
+                item.image.id
+            );
+        };
+
+    const favorite =
+        document.createElement(
+            "button"
+        );
+
+    favorite.type =
+        "button";
+
+    favorite.className =
+        "history-output-star";
+
+    favorite.classList.toggle(
+        "active",
+        Boolean(
+            item.image.is_favorite
+        )
+    );
+
+    favorite.textContent =
+        item.image.is_favorite
+            ?
+            "★"
+            :
+            "☆";
+
+    favorite.title =
+        "Mark as favorite output";
+
+    favorite.onclick =
+        async event => {
+            event.stopPropagation();
+
+            const next =
+                !Boolean(
+                    item.image.is_favorite
+                );
+
+            const updated =
+                await toggleImageFavorite(
+                    item.image.id,
+                    next
+                );
+
+            if (updated) {
+                item.image.is_favorite =
+                    next;
+
+                favorite.classList.toggle(
+                    "active",
+                    next
+                );
+
+                favorite.textContent =
+                    next
+                        ?
+                        "★"
+                        :
+                        "☆";
+
+                await loadHistory();
+            }
+        };
+
+    media.append(
+        image,
+        favorite
+    );
+
+    const body =
+        document.createElement(
+            "div"
+        );
+
+    body.className =
+        "history-output-body";
+
+    const label =
+        document.createElement(
+            "span"
+        );
+
+    label.textContent =
+        `IMAGE ${item.position}`;
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    const actions =
+        document.createElement(
+            "div"
+        );
+
+    actions.className =
+        "history-output-actions";
+
+    const view =
+        document.createElement(
+            "button"
+        );
+
+    view.type =
+        "button";
+
+    view.textContent =
+        "View";
+
+    view.onclick =
+        () => {
+            previewResults =
+                completeItems;
+
+            previewPackageLookup =
+                detail.packages
+                    ?.packages
+                ||
+                [];
+
+            previewJobId =
+                detail.id;
+
+            openImagePreviewById(
+                item.image.id
+            );
+        };
+
+    const prompt =
+        document.createElement(
+            "button"
+        );
+
+    prompt.type =
+        "button";
+
+    prompt.textContent =
+        "Prompt";
+
+    prompt.onclick =
+        () => {
+            const packageItem =
+                (
+                    detail.packages
+                        ?.packages
+                    ||
+                    []
+                ).find(
+                    candidate =>
+                        Number(
+                            candidate.prompt_id
+                        )
+                        ===
+                        Number(
+                            item.prompt_id
+                        )
+                );
+
+            if (packageItem) {
+                openFinalInput(
+                    packageItem
+                );
+            }
+        };
+
+    const download =
+        document.createElement(
+            "a"
+        );
+
+    download.href =
+        `/api/images/${item.image.id}/download`;
+
+    download.textContent =
+        "Download";
+
+    actions.append(
+        view,
+        prompt,
+        download
+    );
+
+    body.append(
+        label,
+        title,
+        actions
+    );
+
+    card.append(
+        media,
+        body
+    );
+
+    return card;
+}
+
+
+function renderHistoryPrompts(
+    packages
+) {
+    historyDetailPrompts.innerHTML =
+        "";
+
+    if (!packages.length) {
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "history-prompt-item";
+
+        empty.textContent =
+            "No source-verified prompt packages saved.";
+
+        historyDetailPrompts.appendChild(
+            empty
+        );
+
+        return;
+    }
+
+    packages.forEach(
+        item => {
+            const block =
+                document.createElement(
+                    "article"
+                );
+
+            block.className =
+                "history-prompt-item";
+
+            const title =
+                document.createElement(
+                    "strong"
+                );
+
+            title.textContent =
+                item.title
+                ||
+                `Prompt ${item.position}`;
+
+            const copy =
+                document.createElement(
+                    "p"
+                );
+
+            copy.textContent =
+                item.positive_prompt_text
+                ||
+                item.final_input
+                ||
+                "";
+
+            const view =
+                document.createElement(
+                    "button"
+                );
+
+            view.type =
+                "button";
+
+            view.textContent =
+                "View exact input";
+
+            view.onclick =
+                () =>
+                    openFinalInput(
+                        item
+                    );
+
+            block.append(
+                title,
+                copy,
+                view
+            );
+
+            historyDetailPrompts.appendChild(
+                block
+            );
+        }
+    );
+}
+
+
+async function toggleJobFavorite(
+    jobId,
+    favorite
+) {
+    try {
+        const response =
+            await fetch(
+                `/api/history/${jobId}/favorite`,
+                {
+                    method:
+                        "PATCH",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            favorite:
+                                Boolean(
+                                    favorite
+                                )
+                        }),
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return null;
+    }
+}
+
+
+async function toggleImageFavorite(
+    imageId,
+    favorite
+) {
+    try {
+        const response =
+            await fetch(
+                `/api/images/${imageId}/favorite`,
+                {
+                    method:
+                        "PATCH",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            favorite:
+                                Boolean(
+                                    favorite
+                                )
+                        }),
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return null;
+    }
+}
+
+
+historyDetailFavoriteButton.addEventListener(
+    "click",
+    async () => {
+        if (!historyDetail) {
+            return;
+        }
+
+        const next =
+            !Boolean(
+                historyDetail.is_favorite
+            );
+
+        const updated =
+            await toggleJobFavorite(
+                historyDetail.id,
+                next
+            );
+
+        if (!updated) {
+            return;
+        }
+
+        historyDetail.is_favorite =
+            next;
+
+        historyDetailFavoriteButton.classList.toggle(
+            "active",
+            next
+        );
+
+        historyDetailFavoriteButton.textContent =
+            next
+                ?
+                "★"
+                :
+                "☆";
+
+        await loadHistory();
+    }
+);
+
+
+historyDuplicateButton.addEventListener(
+    "click",
+    async () => {
+        if (
+            historyDetail
+        ) {
+            await duplicateHistoryJob(
+                historyDetail
+            );
+        }
+    }
+);
+
+
+async function duplicateHistoryJob(
+    detail
+) {
+    historyDuplicateButton.disabled =
+        true;
+
+    historyDuplicateButton.textContent =
+        "Loading references…";
+
+    try {
+        await loadProfiles(
+            detail.profile_id
+        );
+
+        const profileExists =
+            profiles.some(
+                profile =>
+                    Number(
+                        profile.id
+                    )
+                    ===
+                    Number(
+                        detail.profile_id
+                    )
+            );
+
+        if (profileExists) {
+            selectGenerateProfile(
+                detail.profile_id
+            );
+        } else {
+            showToast(
+                "The original workflow is archived. Choose an active workflow before generating."
+            );
+        }
+
+        description.value =
+            detail.description
+            ||
+            "";
+
+        characterCount.textContent =
+            `${description.value.length} characters`;
+
+        setCreateOutputCount(
+            detail.requested_count
+            ||
+            "auto"
+        );
+
+        const files = [];
+
+        for (
+            const reference
+            of
+            (
+                detail.references
+                ||
+                []
+            )
+        ) {
+            const response =
+                await fetch(
+                    reference.file_url
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Could not reload reference ${reference.position}.`
+                );
+            }
+
+            const blob =
+                await response.blob();
+
+            const filename =
+                reference.original_filename
+                ||
+                `reference-${reference.position}.jpg`;
+
+            files.push(
+                new File(
+                    [
+                        blob
+                    ],
+                    filename,
+                    {
+                        type:
+                            blob.type
+                            ||
+                            "image/jpeg",
+                    }
+                )
+            );
+        }
+
+        selectedImages =
+            files;
+
+        renderReferenceCards();
+
+        closeModal(
+            historyDetailModal
+        );
+
+        showView(
+            "generate"
+        );
+
+        window.scrollTo({
+            top:
+                0,
+            behavior:
+                "smooth",
+        });
+
+        showToast(
+            "Job loaded into Create. Current provider settings will be used for the new run."
+        );
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+    } finally {
+        historyDuplicateButton.disabled =
+            false;
+
+        historyDuplicateButton.textContent =
+            "Duplicate in Create";
+    }
+}
+
+
+function setCreateOutputCount(
+    value
+) {
+    const normalized =
+        String(
+            value
+            ||
+            "auto"
+        );
+
+    let found =
+        false;
+
+    document
+        .querySelectorAll(
+            ".count-button"
+        )
+        .forEach(
+            button => {
+                const selected =
+                    button.dataset.count
+                    ===
+                    normalized;
+
+                button.classList.toggle(
+                    "selected",
+                    selected
+                );
+
+                if (selected) {
+                    found =
+                        true;
+                }
+            }
+        );
+
+    selectedCount =
+        found
+            ?
+            normalized
+            :
+            "auto";
+
+    if (!found) {
+        const auto =
+            document.querySelector(
+                '.count-button[data-count="auto"]'
+            );
+
+        if (auto) {
+            auto.classList.add(
+                "selected"
+            );
+        }
+    }
+
+    summaryCount.textContent =
+        selectedCount
+        ===
+        "auto"
+            ?
+            "Auto"
+            :
+            selectedCount;
+
+    updateCreateCostEstimate();
+}
+
+
+/* History filters */
+
+historySearchInput.addEventListener(
+    "input",
+    () => {
+        clearTimeout(
+            historySearchTimer
+        );
+
+        historySearchTimer =
+            setTimeout(
+                loadHistory,
+                280
+            );
+    }
+);
+
+
+[
+    historyProfileFilter,
+    historyStatusFilter,
+    historyPlannerFilter,
+    historyImageProviderFilter,
+    historyFavoritesOnly,
+].forEach(
+    element => {
+        element.addEventListener(
+            "change",
+            loadHistory
+        );
+    }
+);
+
+
+historyClearFiltersButton.addEventListener(
+    "click",
+    async () => {
+        historySearchInput.value =
+            "";
+
+        historyProfileFilter.value =
+            "";
+
+        historyStatusFilter.value =
+            "";
+
+        historyPlannerFilter.value =
+            "";
+
+        historyImageProviderFilter.value =
+            "";
+
+        historyFavoritesOnly.checked =
+            false;
+
+        await loadHistory();
+    }
+);
+
+
+historyEmptyCreateButton.addEventListener(
+    "click",
+    () => {
+        showView(
+            "generate"
+        );
+
+        window.scrollTo({
+            top:
+                0,
+            behavior:
+                "smooth",
+        });
     }
 );
 
@@ -5113,6 +7209,7 @@ function closeModal(
     regenerateModal,
     compareModal,
     newProfileModal,
+    historyDetailModal,
 ].forEach(
     modal => {
         modal.addEventListener(
@@ -5174,6 +7271,15 @@ closeCompareModal.addEventListener(
     () =>
         closeModal(
             compareModal
+        )
+);
+
+
+closeHistoryDetailModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            historyDetailModal
         )
 );
 
