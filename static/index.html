@@ -940,7 +940,9 @@
 
             <div class="settings-layout">
 
-                <section class="settings-card">
+                <div class="settings-stack">
+
+<section class="settings-card">
 
                     <header class="settings-card-header">
 
@@ -1026,7 +1028,88 @@
                 </section>
 
 
-                <aside class="settings-guide">
+                                <section class="settings-card">
+
+                    <header class="settings-card-header">
+
+                        <div>
+                            <span class="settings-provider-label">
+                                IMAGE GENERATOR
+                            </span>
+
+                            <h2 id="imageProviderName">
+                                Loading...
+                            </h2>
+                        </div>
+
+                        <span
+                            class="provider-status"
+                            id="imageProviderStatus"
+                        >
+                            CHECKING
+                        </span>
+
+                    </header>
+
+                    <div class="settings-grid">
+
+                        <div class="settings-row">
+                            <span>SELECTED PROVIDER</span>
+                            <strong id="selectedImageProvider">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>MODEL</span>
+                            <strong id="selectedImageModel">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>QUALITY</span>
+                            <strong id="selectedImageQuality">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>SIZE</span>
+                            <strong id="selectedImageSize">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>OPENAI KEY</span>
+                            <strong id="openaiImageKeyStatus">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>GEMINI KEY</span>
+                            <strong id="geminiImageKeyStatus">—</strong>
+                        </div>
+
+                        <div class="settings-row">
+                            <span>BATCH CONCURRENCY</span>
+                            <strong id="imageBatchConcurrency">—</strong>
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="settings-test-button"
+                        id="testOpenAIButton"
+                        type="button"
+                    >
+                        TEST OPENAI CONNECTION
+                    </button>
+
+                    <div
+                        class="connection-result"
+                        id="openaiTestResult"
+                    >
+                        Provider switching is controlled by IMAGE_PROVIDER in .env.
+                    </div>
+
+                </section>
+
+            </div>
+
+<aside class="settings-guide">
 
                     <span class="settings-provider-label">
                         LOCAL DEVELOPMENT
@@ -1037,13 +1120,18 @@
                     </h2>
 
                     <p>
-                        Copy <strong>.env.example</strong> to
-                        <strong>.env</strong>, paste your Gemini
-                        API key there, then restart FastAPI.
+                        Keep both credentials in <strong>.env</strong>.
+                        Choose the active image generator with
+                        <strong>IMAGE_PROVIDER</strong>, then restart FastAPI.
                     </p>
 
-                    <pre>GEMINI_API_KEY=your_key_here
-GEMINI_PROMPT_MODEL=gemini-3.6-flash</pre>
+                    <pre>GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key
+
+IMAGE_PROVIDER=openai
+OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_QUALITY=low
+OPENAI_IMAGE_SIZE=1024x1024</pre>
 
                     <p>
                         Never paste the real API key into

@@ -1227,6 +1227,12 @@ input {
 
 /* SETTINGS */
 
+.settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
 .settings-layout {
     max-width: 1380px;
     margin: auto;
