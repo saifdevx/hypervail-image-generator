@@ -325,6 +325,21 @@
 
                         </div>
 
+                        <label class="auto-generate-toggle">
+                            <input
+                                type="checkbox"
+                                id="autoGenerateImages"
+                                checked
+                            >
+
+                            <span class="auto-generate-switch"></span>
+
+                            <span class="auto-generate-copy">
+                                <strong>AUTO-GENERATE FINAL IMAGES</strong>
+                                <small>After prompts are source-verified, generate all missing images automatically. Uses the paid Gemini image API.</small>
+                            </span>
+                        </label>
+
                     </section>
 
 
@@ -422,6 +437,72 @@
                             class="prompt-package-grid"
                             id="promptPackageGrid"
                         ></div>
+
+                        <div class="prompt-batch-launch">
+                            <div>
+                                <strong>IMAGE GENERATION</strong>
+                                <span>Generate every missing source-verified prompt. Completed images are skipped.</span>
+                            </div>
+
+                            <button
+                                type="button"
+                                id="generateAllImagesButton"
+                            >
+                                GENERATE ALL IMAGES
+                            </button>
+                        </div>
+
+                    </section>
+
+
+                    <section
+                        class="image-batch-section hidden-element"
+                        id="imageBatchSection"
+                    >
+
+                        <header class="image-batch-header">
+                            <div>
+                                <span>07 · IMAGE GENERATION</span>
+                                <h2>Batch generation</h2>
+                                <p>Two image requests run in parallel by default. Temporary provider failures are retried automatically; completed prompts are never duplicated on retry.</p>
+                            </div>
+
+                            <strong id="imageBatchCount">
+                                —
+                            </strong>
+                        </header>
+
+                        <div class="image-batch-progress">
+                            <div class="image-batch-progress-track">
+                                <span id="imageBatchProgressBar"></span>
+                            </div>
+
+                            <div class="image-batch-progress-meta">
+                                <span id="imageBatchProgressText">Waiting</span>
+                                <span id="imageBatchFailureText"></span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="image-batch-grid"
+                            id="imageBatchGrid"
+                        ></div>
+
+                        <div class="image-batch-actions">
+                            <button
+                                type="button"
+                                id="retryIncompleteImagesButton"
+                            >
+                                RETRY MISSING / FAILED
+                            </button>
+
+                            <button
+                                type="button"
+                                id="refreshImageBatchButton"
+                            >
+                                REFRESH STATUS
+                            </button>
+                        </div>
 
                     </section>
 
