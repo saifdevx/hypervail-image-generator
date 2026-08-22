@@ -1,346 +1,280 @@
-const navGenerate =
-    document.getElementById("navGenerate");
-
-const navProfiles =
-    document.getElementById("navProfiles");
-
-const navHistory =
-    document.getElementById("navHistory");
-
-const navSettings =
-    document.getElementById("navSettings");
-
-const generateView =
-    document.getElementById("generateView");
-
-const profilesView =
-    document.getElementById("profilesView");
-
-const settingsView =
-    document.getElementById("settingsView");
-
-
-const profileOptions =
-    document.getElementById("profileOptions");
-
-const imageInput =
-    document.getElementById("imageInput");
-
-const uploadZone =
-    document.getElementById("uploadZone");
-
-const imagePreviewGrid =
-    document.getElementById("imagePreviewGrid");
-
-const description =
-    document.getElementById("description");
-
-const characterCount =
-    document.getElementById("characterCount");
-
-const summaryProfile =
-    document.getElementById("summaryProfile");
-
-const summaryVersion =
-    document.getElementById("summaryVersion");
-
-const summaryImages =
-    document.getElementById("summaryImages");
-
-const summaryCount =
-    document.getElementById("summaryCount");
-
-const generateButton =
-    document.getElementById("generateButton");
-
-const generateButtonLabel =
-    document.getElementById("generateButtonLabel");
-
-const generateButtonArrow =
-    document.getElementById("generateButtonArrow");
-
-const jobPanelStatus =
-    document.getElementById("jobPanelStatus");
-
-const jobEmptyState =
-    document.getElementById("jobEmptyState");
-
-const jobSavedState =
-    document.getElementById("jobSavedState");
-
-const currentJobId =
-    document.getElementById("currentJobId");
-
-const storedReferenceGrid =
-    document.getElementById("storedReferenceGrid");
-
-const plannerResultSection =
-    document.getElementById("plannerResultSection");
-
-const plannerResultModel =
-    document.getElementById("plannerResultModel");
-
-const plannerRawOutput =
-    document.getElementById("plannerRawOutput");
-
-const copyPlannerOutputButton =
-    document.getElementById("copyPlannerOutputButton");
-
-const retryPlannerButton =
-    document.getElementById("retryPlannerButton");
-
-const promptPackagesSection =
-    document.getElementById("promptPackagesSection");
-
-const promptPackagesCount =
-    document.getElementById("promptPackagesCount");
-
-const sharedNegativeBox =
-    document.getElementById("sharedNegativeBox");
-
-const sharedNegativeText =
-    document.getElementById("sharedNegativeText");
-
-const promptPackageGrid =
-    document.getElementById("promptPackageGrid");
-
-const autoGenerateImages =
-    document.getElementById("autoGenerateImages");
-
-const generateAllImagesButton =
-    document.getElementById("generateAllImagesButton");
-
-const imageBatchSection =
-    document.getElementById("imageBatchSection");
-
-const imageBatchCount =
-    document.getElementById("imageBatchCount");
-
-const imageBatchProgressBar =
-    document.getElementById("imageBatchProgressBar");
-
-const imageBatchProgressText =
-    document.getElementById("imageBatchProgressText");
-
-const imageBatchFailureText =
-    document.getElementById("imageBatchFailureText");
-
-const imageBatchGrid =
-    document.getElementById("imageBatchGrid");
-
-const retryIncompleteImagesButton =
-    document.getElementById("retryIncompleteImagesButton");
-
-const refreshImageBatchButton =
-    document.getElementById("refreshImageBatchButton");
-
-const finalInputModal =
-    document.getElementById("finalInputModal");
-
-const closeFinalInputModal =
-    document.getElementById("closeFinalInputModal");
-
-const finalInputTitle =
-    document.getElementById("finalInputTitle");
-
-const finalInputStrategy =
-    document.getElementById("finalInputStrategy");
-
-const finalInputPreview =
-    document.getElementById("finalInputPreview");
-
-const copyFinalInputModalButton =
-    document.getElementById("copyFinalInputModalButton");
-
-
-const newProfileButton =
-    document.getElementById("newProfileButton");
-
-const libraryCount =
-    document.getElementById("libraryCount");
-
-const profileSearch =
-    document.getElementById("profileSearch");
-
-const profileManagerList =
-    document.getElementById("profileManagerList");
-
-const profileEditorEmpty =
-    document.getElementById("profileEditorEmpty");
-
-const profileEditorContent =
-    document.getElementById("profileEditorContent");
-
-const profileEditorTitle =
-    document.getElementById("profileEditorTitle");
-
-const profileStateBadge =
-    document.getElementById("profileStateBadge");
-
-const activeVersionBadge =
-    document.getElementById("activeVersionBadge");
-
-const latestVersionBadge =
-    document.getElementById("latestVersionBadge");
-
-const loadedVersionBadge =
-    document.getElementById("loadedVersionBadge");
-
-const loadedVersionNote =
-    document.getElementById("loadedVersionNote");
-
-const profileNameInput =
-    document.getElementById("profileNameInput");
-
-const profileDescriptionInput =
-    document.getElementById("profileDescriptionInput");
-
-const profileInstructionEditor =
-    document.getElementById("profileInstructionEditor");
-
-const instructionCharacterCount =
-    document.getElementById("instructionCharacterCount");
-
-const saveDetailsButton =
-    document.getElementById("saveDetailsButton");
-
-const saveVersionButton =
-    document.getElementById("saveVersionButton");
-
-const archiveProfileButton =
-    document.getElementById("archiveProfileButton");
-
-const restoreProfileButton =
-    document.getElementById("restoreProfileButton");
-
-const deleteProfileButton =
-    document.getElementById("deleteProfileButton");
-
-const versionHistoryList =
-    document.getElementById("versionHistoryList");
-
-
-const geminiProviderStatus =
-    document.getElementById("geminiProviderStatus");
-
-const geminiModel =
-    document.getElementById("geminiModel");
-
-const geminiKeyStatus =
-    document.getElementById("geminiKeyStatus");
-
-const geminiKeySource =
-    document.getElementById("geminiKeySource");
-
-const geminiSdkVersion =
-    document.getElementById("geminiSdkVersion");
-
-const geminiStorageMode =
-    document.getElementById("geminiStorageMode");
-
-const testGeminiButton =
-    document.getElementById("testGeminiButton");
-
-const geminiTestResult =
-    document.getElementById("geminiTestResult");
-
-
-const imageProviderName =
-    document.getElementById("imageProviderName");
-
-const imageProviderStatus =
-    document.getElementById("imageProviderStatus");
-
-const selectedImageProvider =
-    document.getElementById("selectedImageProvider");
-
-const selectedImageModel =
-    document.getElementById("selectedImageModel");
-
-const selectedImageQuality =
-    document.getElementById("selectedImageQuality");
-
-const selectedImageSize =
-    document.getElementById("selectedImageSize");
-
-const openaiImageKeyStatus =
-    document.getElementById("openaiImageKeyStatus");
-
-const geminiImageKeyStatus =
-    document.getElementById("geminiImageKeyStatus");
-
-const imageBatchConcurrency =
-    document.getElementById("imageBatchConcurrency");
-
-const testOpenAIButton =
-    document.getElementById("testOpenAIButton");
-
-const openaiTestResult =
-    document.getElementById("openaiTestResult");
-
-
-const newProfileModal =
-    document.getElementById("newProfileModal");
-
-const modalCloseButton =
-    document.getElementById("modalCloseButton");
-
-const cancelCreateProfile =
-    document.getElementById("cancelCreateProfile");
-
-const newProfileForm =
-    document.getElementById("newProfileForm");
-
-const newProfileName =
-    document.getElementById("newProfileName");
-
-const newProfileDescription =
-    document.getElementById("newProfileDescription");
-
-const newProfileInstruction =
-    document.getElementById("newProfileInstruction");
-
-const newInstructionCharacterCount =
-    document.getElementById("newInstructionCharacterCount");
-
-const createProfileButton =
-    document.getElementById("createProfileButton");
-
-const toast =
-    document.getElementById("toast");
-
+/* =========================================================
+   IMAGE AGENT — STEP 11 STUDIO UI
+========================================================= */
+
+const $ = id =>
+    document.getElementById(id);
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const navGenerate = $("navGenerate");
+const navProfiles = $("navProfiles");
+const navHistory = $("navHistory");
+const navSettings = $("navSettings");
+
+const generateView = $("generateView");
+const profilesView = $("profilesView");
+const historyView = $("historyView");
+const settingsView = $("settingsView");
+
+const createPlannerSummary = $("createPlannerSummary");
+const createImageSummary = $("createImageSummary");
+const createCostEstimate = $("createCostEstimate");
+const openSettingsFromCreate = $("openSettingsFromCreate");
+
+const profileOptions = $("profileOptions");
+
+const imageInput = $("imageInput");
+const replaceImageInput = $("replaceImageInput");
+const uploadZone = $("uploadZone");
+const imagePreviewGrid = $("imagePreviewGrid");
+
+const description = $("description");
+const characterCount = $("characterCount");
+
+const autoGenerateImages = $("autoGenerateImages");
+
+const generateButton = $("generateButton");
+const generateButtonLabel = $("generateButtonLabel");
+const generateButtonArrow = $("generateButtonArrow");
+
+const pipelineSection = $("pipelineSection");
+const pipelineJobId = $("pipelineJobId");
+const pipelineReferences = $("pipelineReferences");
+const pipelinePlanner = $("pipelinePlanner");
+const pipelineVerify = $("pipelineVerify");
+const pipelineImages = $("pipelineImages");
+
+const imageBatchSection = $("imageBatchSection");
+const imageBatchCount = $("imageBatchCount");
+const imageBatchProgressBar = $("imageBatchProgressBar");
+const imageBatchProgressText = $("imageBatchProgressText");
+const imageBatchFailureText = $("imageBatchFailureText");
+const imageBatchGrid = $("imageBatchGrid");
+const retryIncompleteImagesButton = $("retryIncompleteImagesButton");
+const refreshImageBatchButton = $("refreshImageBatchButton");
+
+const resultsSection = $("resultsSection");
+const resultsSubtitle = $("resultsSubtitle");
+const resultsGrid = $("resultsGrid");
+const compareSelectedButton = $("compareSelectedButton");
+const downloadAllButton = $("downloadAllButton");
+
+const advancedPipelineToggle = $("advancedPipelineToggle");
+const advancedToggleState = $("advancedToggleState");
+const advancedContent = $("advancedContent");
+
+const plannerResultSection = $("plannerResultSection");
+const plannerResultModel = $("plannerResultModel");
+const plannerRawOutput = $("plannerRawOutput");
+const copyPlannerOutputButton = $("copyPlannerOutputButton");
+const retryPlannerButton = $("retryPlannerButton");
+
+const promptPackagesSection = $("promptPackagesSection");
+const promptPackagesCount = $("promptPackagesCount");
+const sharedNegativeBox = $("sharedNegativeBox");
+const sharedNegativeText = $("sharedNegativeText");
+const promptPackageGrid = $("promptPackageGrid");
+const generateAllImagesButton = $("generateAllImagesButton");
+
+const jobPanelStatus = $("jobPanelStatus");
+const jobEmptyState = $("jobEmptyState");
+const jobSavedState = $("jobSavedState");
+const currentJobId = $("currentJobId");
+const storedReferenceGrid = $("storedReferenceGrid");
+
+const summaryProfile = $("summaryProfile");
+const summaryPlanner = $("summaryPlanner");
+const summaryImageEngine = $("summaryImageEngine");
+const summaryImages = $("summaryImages");
+const summaryCount = $("summaryCount");
+const summaryVersion = $("summaryVersion");
+
+
+/* Profiles */
+
+const newProfileButton = $("newProfileButton");
+const libraryCount = $("libraryCount");
+const profileSearch = $("profileSearch");
+const profileManagerList = $("profileManagerList");
+
+const profileEditorEmpty = $("profileEditorEmpty");
+const profileEditorContent = $("profileEditorContent");
+const profileEditorTitle = $("profileEditorTitle");
+const profileStateBadge = $("profileStateBadge");
+
+const profileNameInput = $("profileNameInput");
+const profileDescriptionInput = $("profileDescriptionInput");
+const profileInstructionEditor = $("profileInstructionEditor");
+const instructionCharacterCount = $("instructionCharacterCount");
+
+const saveDetailsButton = $("saveDetailsButton");
+const saveVersionButton = $("saveVersionButton");
+const archiveProfileButton = $("archiveProfileButton");
+const restoreProfileButton = $("restoreProfileButton");
+const deleteProfileButton = $("deleteProfileButton");
+
+
+/* Settings */
+
+const saveSettingsButton = $("saveSettingsButton");
+
+const plannerProviderStatus = $("plannerProviderStatus");
+const plannerProviderSelect = $("plannerProviderSelect");
+const plannerModelSelect = $("plannerModelSelect");
+const openaiReasoningField = $("openaiReasoningField");
+const openaiReasoningSelect = $("openaiReasoningSelect");
+const plannerConnectionSummary = $("plannerConnectionSummary");
+const testPlannerButton = $("testPlannerButton");
+const plannerTestResult = $("plannerTestResult");
+
+const imageProviderStatus = $("imageProviderStatus");
+const imageProviderSelect = $("imageProviderSelect");
+const imageModelSelect = $("imageModelSelect");
+const openaiQualityField = $("openaiQualityField");
+const openaiQualitySelect = $("openaiQualitySelect");
+const imageSizeSelect = $("imageSizeSelect");
+const geminiAspectField = $("geminiAspectField");
+const geminiAspectSelect = $("geminiAspectSelect");
+const batchConcurrencySelect = $("batchConcurrencySelect");
+const imageConnectionSummary = $("imageConnectionSummary");
+const testImageProviderButton = $("testImageProviderButton");
+const imageTestResult = $("imageTestResult");
+
+const openaiConnectedBadge = $("openaiConnectedBadge");
+const geminiConnectedBadge = $("geminiConnectedBadge");
+
+
+/* New Profile Modal */
+
+const newProfileModal = $("newProfileModal");
+const modalCloseButton = $("modalCloseButton");
+const cancelCreateProfile = $("cancelCreateProfile");
+const newProfileForm = $("newProfileForm");
+const newProfileName = $("newProfileName");
+const newProfileDescription = $("newProfileDescription");
+const newProfileInstruction = $("newProfileInstruction");
+const newInstructionCharacterCount = $("newInstructionCharacterCount");
+
+
+/* Prompt Modal */
+
+const finalInputModal = $("finalInputModal");
+const closeFinalInputModal = $("closeFinalInputModal");
+const finalInputTitle = $("finalInputTitle");
+const finalInputStrategy = $("finalInputStrategy");
+const finalInputPreview = $("finalInputPreview");
+const copyFinalInputModalButton = $("copyFinalInputModalButton");
+
+
+/* Image Preview */
+
+const imagePreviewModal = $("imagePreviewModal");
+const closeImagePreviewModal = $("closeImagePreviewModal");
+const previewImagePosition = $("previewImagePosition");
+const previewImageTitle = $("previewImageTitle");
+const previewLargeImage = $("previewLargeImage");
+const previewPreviousButton = $("previewPreviousButton");
+const previewNextButton = $("previewNextButton");
+const previewProviderMeta = $("previewProviderMeta");
+const previewPromptButton = $("previewPromptButton");
+const previewRegenerateButton = $("previewRegenerateButton");
+const previewDownloadButton = $("previewDownloadButton");
+
+
+/* Regenerate */
+
+const regenerateModal = $("regenerateModal");
+const closeRegenerateModal = $("closeRegenerateModal");
+const cancelRegenerateButton = $("cancelRegenerateButton");
+const confirmRegenerateButton = $("confirmRegenerateButton");
+const regenerateTitle = $("regenerateTitle");
+const regenerateDirection = $("regenerateDirection");
+
+
+/* Compare */
+
+const compareModal = $("compareModal");
+const closeCompareModal = $("closeCompareModal");
+const compareImageA = $("compareImageA");
+const compareImageB = $("compareImageB");
+const compareTitleA = $("compareTitleA");
+const compareTitleB = $("compareTitleB");
+
+const toast = $("toast");
+
+
+/* =========================================================
+   STATE
+========================================================= */
 
 let profiles = [];
 let managerProfiles = [];
+
 let selectedProfileId = null;
 let selectedProfileVersionId = null;
+
 let selectedImages = [];
+let replaceTargetIndex = null;
+let draggedReferenceIndex = null;
+
 let selectedCount = "auto";
+
 let editingProfileId = null;
 let editingProfileName = null;
-let loadedEditorVersionNumber = null;
+
 let currentJob = null;
 let currentPromptPackages = [];
 let activeFinalPackage = null;
+
+let settingsPayload = null;
+
 let imageBatchPollTimer = null;
 let imageBatchRequestRunning = false;
+
+let previewResults = [];
+let previewIndex = 0;
+
+let lastRenderedBatch = null;
+let selectedCompareIds = new Set();
+
+let regenerateTarget = null;
+
+let advancedOpen = false;
+
 let toastTimer = null;
 
 
-function showView(view) {
-    generateView.classList.toggle(
-        "hidden-view",
-        view !== "generate"
-    );
+/* =========================================================
+   VIEW NAVIGATION
+========================================================= */
 
-    profilesView.classList.toggle(
-        "hidden-view",
-        view !== "profiles"
-    );
+function showView(
+    view
+) {
+    const mapping = {
+        generate:
+            generateView,
+        profiles:
+            profilesView,
+        history:
+            historyView,
+        settings:
+            settingsView,
+    };
 
-    settingsView.classList.toggle(
-        "hidden-view",
-        view !== "settings"
+    Object.entries(
+        mapping
+    ).forEach(
+        ([name, element]) => {
+            element.classList.toggle(
+                "hidden-view",
+                name !== view
+            );
+        }
     );
 
     navGenerate.classList.toggle(
@@ -353,6 +287,11 @@ function showView(view) {
         view === "profiles"
     );
 
+    navHistory.classList.toggle(
+        "active",
+        view === "history"
+    );
+
     navSettings.classList.toggle(
         "active",
         view === "settings"
@@ -362,15 +301,20 @@ function showView(view) {
 
 navGenerate.addEventListener(
     "click",
-    () => showView("generate")
+    () => {
+        showView(
+            "generate"
+        );
+    }
 );
 
 
 navProfiles.addEventListener(
     "click",
     async () => {
-
-        showView("profiles");
+        showView(
+            "profiles"
+        );
 
         await loadManagerProfiles();
 
@@ -390,30 +334,43 @@ navProfiles.addEventListener(
 );
 
 
-navSettings.addEventListener(
-    "click",
-    async () => {
-
-        showView("settings");
-
-        await Promise.all([
-            loadGeminiStatus(),
-            loadImageProviderStatus(),
-        ]);
-    }
-);
-
-
 navHistory.addEventListener(
     "click",
     () => {
-
-        showToast(
-            "History will be added after the AI generation flow."
+        showView(
+            "history"
         );
     }
 );
 
+
+navSettings.addEventListener(
+    "click",
+    async () => {
+        showView(
+            "settings"
+        );
+
+        await loadSettings();
+    }
+);
+
+
+openSettingsFromCreate.addEventListener(
+    "click",
+    async () => {
+        showView(
+            "settings"
+        );
+
+        await loadSettings();
+    }
+);
+
+
+/* =========================================================
+   API HELPERS
+========================================================= */
 
 async function apiError(
     response
@@ -427,306 +384,762 @@ async function apiError(
             ===
             "string"
         ) {
-            return data.detail;
+            return friendlyError(
+                data.detail
+            );
+        }
+
+        if (
+            Array.isArray(
+                data.detail
+            )
+        ) {
+            return data.detail
+                .map(
+                    item =>
+                        item.msg
+                        ||
+                        String(item)
+                )
+                .join(
+                    " · "
+                );
         }
     } catch {
-        // Ignore JSON parsing errors.
+        // Ignore JSON parse failure.
     }
 
     return (
-        `Request failed (${response.status})`
+        `Request failed (${response.status}).`
     );
 }
 
 
+function friendlyError(
+    message
+) {
+    const lower =
+        String(
+            message
+            ||
+            ""
+        ).toLowerCase();
+
+    if (
+        lower.includes(
+            "resource_exhausted"
+        )
+        ||
+        lower.includes(
+            "quota"
+        )
+        ||
+        lower.includes(
+            "rate limit"
+        )
+    ) {
+        return (
+            "Provider quota or credit limit reached. "
+            +
+            "Check the selected provider's billing/rate limits."
+        );
+    }
+
+    if (
+        lower.includes(
+            "401"
+        )
+        ||
+        lower.includes(
+            "unauthenticated"
+        )
+        ||
+        lower.includes(
+            "invalid api key"
+        )
+    ) {
+        return (
+            "Provider authentication failed. "
+            +
+            "Check the API key saved in .env."
+        );
+    }
+
+    if (
+        lower.includes(
+            "503"
+        )
+        ||
+        lower.includes(
+            "high demand"
+        )
+        ||
+        lower.includes(
+            "unavailable"
+        )
+    ) {
+        return (
+            "The provider is temporarily busy. "
+            +
+            "Retry in a moment."
+        );
+    }
+
+    return message;
+}
+
+
+async function copyText(
+    value
+) {
+    try {
+        await navigator.clipboard.writeText(
+            value
+        );
+
+        showToast(
+            "Copied."
+        );
+    } catch {
+        showToast(
+            "Could not access clipboard."
+        );
+    }
+}
+
+
 /* =========================================================
-   GEMINI SETTINGS
+   SETTINGS
 ========================================================= */
 
-async function loadGeminiStatus() {
-    geminiProviderStatus.textContent =
-        "CHECKING";
-
-    geminiProviderStatus.classList.remove(
-        "ready"
-    );
-
+async function loadSettings() {
     try {
         const response =
             await fetch(
-                "/api/providers/gemini/status"
+                "/api/settings"
             );
 
         if (!response.ok) {
             throw new Error(
-                await apiError(response)
+                await apiError(
+                    response
+                )
             );
         }
 
-        const status =
+        settingsPayload =
             await response.json();
 
-        geminiModel.textContent =
-            status.model
-            ||
-            "—";
-
-        geminiKeyStatus.textContent =
-            status.configured
-                ?
-                "CONFIGURED"
-                :
-                "NOT CONFIGURED";
-
-        geminiKeySource.textContent =
-            status.key_source
-            ||
-            "—";
-
-        geminiSdkVersion.textContent =
-            status.sdk_version
-            ||
-            "—";
-
-        geminiStorageMode.textContent =
-            status.store_interactions
-                ?
-                "ON"
-                :
-                "OFF";
-
-        geminiProviderStatus.textContent =
-            status.configured
-                ?
-                "CONFIGURED"
-                :
-                "NEEDS KEY";
-
-        geminiProviderStatus.classList.toggle(
-            "ready",
-            Boolean(
-                status.configured
-            )
-        );
-
-        if (!status.configured) {
-            geminiTestResult.classList.remove(
-                "success"
-            );
-
-            geminiTestResult.textContent =
-                "Create a project .env file, add GEMINI_API_KEY, restart FastAPI, then test again.";
-        }
+        renderSettings();
+        renderCreateProviderSummary();
 
     } catch (error) {
-        console.error(error);
-
-        geminiProviderStatus.textContent =
-            "ERROR";
-
-        geminiTestResult.classList.remove(
-            "success"
+        console.error(
+            error
         );
 
-        geminiTestResult.textContent =
-            error.message;
+        showToast(
+            error.message
+        );
     }
 }
 
 
-testGeminiButton.addEventListener(
-    "click",
-    async () => {
+function fillSelect(
+    element,
+    items,
+    selectedValue
+) {
+    element.innerHTML =
+        "";
 
-        testGeminiButton.disabled =
-            true;
-
-        testGeminiButton.textContent =
-            "TESTING CONNECTION...";
-
-        geminiTestResult.classList.remove(
-            "success"
-        );
-
-        geminiTestResult.textContent =
-            "Sending a small stateless request to Gemini...";
-
-        try {
-            const response =
-                await fetch(
-                    "/api/providers/gemini/test",
-                    {
-                        method: "POST"
-                    }
+    items.forEach(
+        item => {
+            const option =
+                document.createElement(
+                    "option"
                 );
 
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(response)
-                );
+            if (
+                typeof item
+                ===
+                "object"
+            ) {
+                option.value =
+                    item.id;
+
+                option.textContent =
+                    item.note
+                        ?
+                        `${item.label} — ${item.note}`
+                        :
+                        item.label;
+            } else {
+                option.value =
+                    String(item);
+
+                option.textContent =
+                    String(item);
             }
 
-            const result =
-                await response.json();
+            option.selected =
+                String(
+                    option.value
+                )
+                ===
+                String(
+                    selectedValue
+                );
 
-            geminiTestResult.classList.add(
-                "success"
+            element.appendChild(
+                option
             );
-
-            geminiTestResult.textContent =
-                `Connection successful. ${result.model} replied: ${result.response}`;
-
-            await loadGeminiStatus();
-
-            showToast(
-                "Gemini connection successful."
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            geminiTestResult.classList.remove(
-                "success"
-            );
-
-            geminiTestResult.textContent =
-                error.message;
-
-            showToast(
-                "Gemini connection test failed."
-            );
-
-        } finally {
-            testGeminiButton.disabled =
-                false;
-
-            testGeminiButton.textContent =
-                "TEST GEMINI CONNECTION";
         }
+    );
+}
+
+
+function renderSettings() {
+    if (!settingsPayload) {
+        return;
     }
-);
+
+    const settings =
+        settingsPayload.settings;
+
+    const catalog =
+        settingsPayload.catalog;
+
+    fillSelect(
+        plannerProviderSelect,
+        catalog.planner_providers,
+        settings.planner_provider
+    );
+
+    renderPlannerModelOptions();
+
+    fillSelect(
+        openaiReasoningSelect,
+        catalog.openai_reasoning,
+        settings.openai_planner_reasoning
+    );
+
+    fillSelect(
+        imageProviderSelect,
+        catalog.image_providers,
+        settings.image_provider
+    );
+
+    renderImageProviderOptions();
+
+    fillSelect(
+        batchConcurrencySelect,
+        catalog.batch_concurrency,
+        settings.batch_concurrency
+    );
+
+    autoGenerateImages.checked =
+        Boolean(
+            settings.auto_generate_images
+        );
+
+    renderConnectionBadges();
+
+    renderPlannerSettingsState();
+    renderImageSettingsState();
+}
 
 
-/* =========================================================
-   IMAGE PROVIDER SETTINGS
-========================================================= */
+function renderPlannerModelOptions() {
+    if (!settingsPayload) {
+        return;
+    }
 
-async function loadImageProviderStatus() {
+    const provider =
+        plannerProviderSelect.value
+        ||
+        settingsPayload.settings
+            .planner_provider;
+
+    const settings =
+        settingsPayload.settings;
+
+    const selected =
+        provider === "gemini"
+            ?
+            settings.gemini_planner_model
+            :
+            settings.openai_planner_model;
+
+    fillSelect(
+        plannerModelSelect,
+        settingsPayload.catalog
+            .planner_models[
+                provider
+            ],
+        selected
+    );
+
+    openaiReasoningField
+        .classList
+        .toggle(
+            "hidden-element",
+            provider !== "openai"
+        );
+}
+
+
+function renderImageProviderOptions() {
+    if (!settingsPayload) {
+        return;
+    }
+
+    const provider =
+        imageProviderSelect.value
+        ||
+        settingsPayload.settings
+            .image_provider;
+
+    const settings =
+        settingsPayload.settings;
+
+    const model =
+        provider === "openai"
+            ?
+            settings.openai_image_model
+            :
+            settings.gemini_image_model;
+
+    fillSelect(
+        imageModelSelect,
+        settingsPayload.catalog
+            .image_models[
+                provider
+            ],
+        model
+    );
+
+    if (
+        provider
+        ===
+        "openai"
+    ) {
+        fillSelect(
+            openaiQualitySelect,
+            settingsPayload.catalog
+                .openai_image_quality,
+            settings.openai_image_quality
+        );
+
+        fillSelect(
+            imageSizeSelect,
+            settingsPayload.catalog
+                .openai_image_sizes,
+            settings.openai_image_size
+        );
+    } else {
+        fillSelect(
+            imageSizeSelect,
+            settingsPayload.catalog
+                .gemini_image_sizes,
+            settings.gemini_image_size
+        );
+
+        fillSelect(
+            geminiAspectSelect,
+            settingsPayload.catalog
+                .gemini_image_aspect_ratios,
+            settings
+                .gemini_image_aspect_ratio
+        );
+    }
+
+    openaiQualityField
+        .classList
+        .toggle(
+            "hidden-element",
+            provider !== "openai"
+        );
+
+    geminiAspectField
+        .classList
+        .toggle(
+            "hidden-element",
+            provider !== "gemini"
+        );
+
+    // Flash Lite image only supports 1K.
+    if (
+        provider === "gemini"
+        &&
+        imageModelSelect.value
+        ===
+        "gemini-3.1-flash-lite-image"
+    ) {
+        imageSizeSelect.value =
+            "1K";
+
+        imageSizeSelect.disabled =
+            true;
+    } else {
+        imageSizeSelect.disabled =
+            false;
+    }
+}
+
+
+function renderConnectionBadges() {
+    const planner =
+        settingsPayload?.planner;
+
+    const image =
+        settingsPayload?.image;
+
+    const openaiConfigured =
+        Boolean(
+            planner?.providers?.openai
+                ?.configured
+            ||
+            image?.providers?.openai
+                ?.configured
+        );
+
+    const geminiConfigured =
+        Boolean(
+            planner?.providers?.gemini
+                ?.configured
+            ||
+            image?.providers?.gemini
+                ?.configured
+        );
+
+    setConnectionBadge(
+        openaiConnectedBadge,
+        openaiConfigured
+    );
+
+    setConnectionBadge(
+        geminiConnectedBadge,
+        geminiConfigured
+    );
+}
+
+
+function setConnectionBadge(
+    element,
+    connected
+) {
+    element.textContent =
+        connected
+            ?
+            "CONNECTED"
+            :
+            "NOT CONFIGURED";
+
+    element.classList.toggle(
+        "connected",
+        connected
+    );
+
+    element.classList.toggle(
+        "not-connected",
+        !connected
+    );
+}
+
+
+function renderPlannerSettingsState() {
+    const provider =
+        plannerProviderSelect.value;
+
+    const providerStatus =
+        settingsPayload
+            ?.planner
+            ?.providers
+            ?.[
+                provider
+            ];
+
+    const configured =
+        Boolean(
+            providerStatus
+                ?.configured
+        );
+
+    plannerProviderStatus.textContent =
+        configured
+            ?
+            "READY"
+            :
+            "NEEDS KEY";
+
+    plannerProviderStatus
+        .classList
+        .toggle(
+            "ready",
+            configured
+        );
+
+    plannerProviderStatus
+        .classList
+        .toggle(
+            "warning",
+            !configured
+        );
+
+    plannerConnectionSummary.textContent =
+        configured
+            ?
+            `${provider.toUpperCase()} credential is configured.`
+            :
+            `${provider.toUpperCase()} key is missing from .env.`;
+}
+
+
+function renderImageSettingsState() {
+    const provider =
+        imageProviderSelect.value;
+
+    const providerStatus =
+        settingsPayload
+            ?.image
+            ?.providers
+            ?.[
+                provider
+            ];
+
+    const configured =
+        Boolean(
+            providerStatus
+                ?.configured
+        );
+
     imageProviderStatus.textContent =
-        "CHECKING";
+        configured
+            ?
+            "READY"
+            :
+            "NEEDS KEY";
 
-    imageProviderStatus.classList.remove(
-        "ready"
-    );
+    imageProviderStatus
+        .classList
+        .toggle(
+            "ready",
+            configured
+        );
+
+    imageProviderStatus
+        .classList
+        .toggle(
+            "warning",
+            !configured
+        );
+
+    imageConnectionSummary.textContent =
+        configured
+            ?
+            `${provider.toUpperCase()} credential is configured.`
+            :
+            `${provider.toUpperCase()} key is missing from .env.`;
+}
+
+
+plannerProviderSelect.addEventListener(
+    "change",
+    () => {
+        renderPlannerModelOptions();
+        renderPlannerSettingsState();
+    }
+);
+
+
+imageProviderSelect.addEventListener(
+    "change",
+    () => {
+        renderImageProviderOptions();
+        renderImageSettingsState();
+        updateCreateCostEstimate();
+    }
+);
+
+
+imageModelSelect.addEventListener(
+    "change",
+    () => {
+        renderImageProviderOptions();
+        updateCreateCostEstimate();
+    }
+);
+
+
+openaiQualitySelect.addEventListener(
+    "change",
+    updateCreateCostEstimate
+);
+
+
+imageSizeSelect.addEventListener(
+    "change",
+    updateCreateCostEstimate
+);
+
+
+async function saveSettings() {
+    if (!settingsPayload) {
+        return;
+    }
+
+    const providerPlanner =
+        plannerProviderSelect.value;
+
+    const providerImage =
+        imageProviderSelect.value;
+
+    const body = {
+        planner_provider:
+            providerPlanner,
+
+        openai_planner_reasoning:
+            openaiReasoningSelect.value,
+
+        image_provider:
+            providerImage,
+
+        batch_concurrency:
+            Number(
+                batchConcurrencySelect
+                    .value
+            ),
+
+        auto_generate_images:
+            autoGenerateImages.checked,
+    };
+
+    if (
+        providerPlanner
+        ===
+        "gemini"
+    ) {
+        body.gemini_planner_model =
+            plannerModelSelect.value;
+    } else {
+        body.openai_planner_model =
+            plannerModelSelect.value;
+    }
+
+    if (
+        providerImage
+        ===
+        "openai"
+    ) {
+        body.openai_image_model =
+            imageModelSelect.value;
+
+        body.openai_image_quality =
+            openaiQualitySelect.value;
+
+        body.openai_image_size =
+            imageSizeSelect.value;
+    } else {
+        body.gemini_image_model =
+            imageModelSelect.value;
+
+        body.gemini_image_size =
+            imageSizeSelect.value;
+
+        body.gemini_image_aspect_ratio =
+            geminiAspectSelect.value;
+    }
+
+    saveSettingsButton.disabled =
+        true;
+
+    saveSettingsButton.textContent =
+        "Saving…";
 
     try {
         const response =
             await fetch(
-                "/api/providers/image/status"
+                "/api/settings",
+                {
+                    method:
+                        "PATCH",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            body
+                        ),
+                }
             );
 
         if (!response.ok) {
             throw new Error(
-                await apiError(response)
+                await apiError(
+                    response
+                )
             );
         }
 
-        const status =
+        const updated =
             await response.json();
 
-        const provider =
-            status.selected_provider
-            ||
-            status.provider
-            ||
-            "unknown";
+        // Refresh the full catalog/status payload.
+        await loadSettings();
 
-        imageProviderName.textContent =
-            provider === "openai"
-                ? "OpenAI GPT Image"
-                : "Google Gemini Image";
-
-        selectedImageProvider.textContent =
-            provider.toUpperCase();
-
-        selectedImageModel.textContent =
-            status.model
-            ||
-            "—";
-
-        selectedImageQuality.textContent =
-            status.quality
-            ||
-            (provider === "gemini"
-                ? "MODEL DEFAULT"
-                : "—");
-
-        selectedImageSize.textContent =
-            status.size
-            ||
-            status.image_size
-            ||
-            "—";
-
-        openaiImageKeyStatus.textContent =
-            status.providers?.openai?.configured
-                ? "CONFIGURED"
-                : "NOT CONFIGURED";
-
-        geminiImageKeyStatus.textContent =
-            status.providers?.gemini?.configured
-                ? "CONFIGURED"
-                : "NOT CONFIGURED";
-
-        imageBatchConcurrency.textContent =
-            String(
-                status.batch_concurrency
-                ??
-                "—"
-            );
-
-        imageProviderStatus.textContent =
-            status.configured
-                ? "READY"
-                : "NEEDS KEY";
-
-        imageProviderStatus.classList.toggle(
-            "ready",
-            Boolean(status.configured)
+        showToast(
+            "Provider settings saved. No restart required."
         );
 
     } catch (error) {
-        console.error(error);
+        console.error(
+            error
+        );
 
-        imageProviderStatus.textContent =
-            "ERROR";
+        showToast(
+            error.message
+        );
 
-        openaiTestResult.textContent =
-            error.message;
+    } finally {
+        saveSettingsButton.disabled =
+            false;
+
+        saveSettingsButton.textContent =
+            "Save settings";
     }
 }
 
 
-testOpenAIButton.addEventListener(
+saveSettingsButton.addEventListener(
+    "click",
+    saveSettings
+);
+
+
+testPlannerButton.addEventListener(
     "click",
     async () => {
-        testOpenAIButton.disabled =
+        plannerTestResult.className =
+            "connection-result";
+
+        plannerTestResult.textContent =
+            "Testing selected planner…";
+
+        testPlannerButton.disabled =
             true;
 
-        testOpenAIButton.textContent =
-            "TESTING OPENAI...";
-
-        openaiTestResult.classList.remove(
-            "success"
-        );
-
-        openaiTestResult.textContent =
-            "Checking OpenAI authentication and image-model access...";
-
         try {
+            // Save selection first so the backend tests exactly
+            // what the user currently sees.
+            await saveSettings();
+
             const response =
                 await fetch(
-                    "/api/providers/openai/test",
+                    "/api/providers/planner/test",
                     {
                         method: "POST"
                     }
@@ -734,57 +1147,263 @@ testOpenAIButton.addEventListener(
 
             if (!response.ok) {
                 throw new Error(
-                    await apiError(response)
+                    await apiError(
+                        response
+                    )
                 );
             }
 
             const result =
                 await response.json();
 
-            openaiTestResult.classList.add(
+            plannerTestResult.classList.add(
                 "success"
             );
 
-            openaiTestResult.textContent =
-                `OpenAI connection successful. Model accessible: ${result.model}`;
-
-            await loadImageProviderStatus();
-
-            showToast(
-                "OpenAI connection successful."
-            );
+            plannerTestResult.textContent =
+                `Connected: ${result.provider || plannerProviderSelect.value} · ${result.model || plannerModelSelect.value}`;
 
         } catch (error) {
-            console.error(error);
-
-            openaiTestResult.textContent =
-                error.message;
-
-            showToast(
-                "OpenAI connection test failed."
+            plannerTestResult.classList.add(
+                "error"
             );
 
-        } finally {
-            testOpenAIButton.disabled =
-                false;
+            plannerTestResult.textContent =
+                error.message;
 
-            testOpenAIButton.textContent =
-                "TEST OPENAI CONNECTION";
+        } finally {
+            testPlannerButton.disabled =
+                false;
+        }
+    }
+);
+
+
+testImageProviderButton.addEventListener(
+    "click",
+    async () => {
+        imageTestResult.className =
+            "connection-result";
+
+        imageTestResult.textContent =
+            "Testing selected image provider credential…";
+
+        testImageProviderButton.disabled =
+            true;
+
+        try {
+            await saveSettings();
+
+            const provider =
+                imageProviderSelect.value;
+
+            const endpoint =
+                provider === "openai"
+                    ?
+                    "/api/providers/openai/test"
+                    :
+                    "/api/providers/gemini/test";
+
+            const response =
+                await fetch(
+                    endpoint,
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            imageTestResult.classList.add(
+                "success"
+            );
+
+            imageTestResult.textContent =
+                `${provider.toUpperCase()} credential connected.`;
+
+        } catch (error) {
+            imageTestResult.classList.add(
+                "error"
+            );
+
+            imageTestResult.textContent =
+                error.message;
+
+        } finally {
+            testImageProviderButton.disabled =
+                false;
         }
     }
 );
 
 
 /* =========================================================
-   GENERATE PROFILES
+   CREATE PROVIDER SUMMARY / COST
+========================================================= */
+
+function renderCreateProviderSummary() {
+    if (!settingsPayload) {
+        return;
+    }
+
+    const settings =
+        settingsPayload.settings;
+
+    const plannerProvider =
+        settings.planner_provider;
+
+    const plannerModel =
+        plannerProvider
+        ===
+        "gemini"
+            ?
+            settings
+                .gemini_planner_model
+            :
+            settings
+                .openai_planner_model;
+
+    createPlannerSummary.textContent =
+        `${plannerProvider === "gemini" ? "Gemini" : "OpenAI"} · ${plannerModel}`;
+
+    const imageProvider =
+        settings.image_provider;
+
+    const imageModel =
+        imageProvider
+        ===
+        "openai"
+            ?
+            settings
+                .openai_image_model
+            :
+            settings
+                .gemini_image_model;
+
+    const quality =
+        imageProvider
+        ===
+        "openai"
+            ?
+            ` · ${capitalize(settings.openai_image_quality)}`
+            :
+            "";
+
+    createImageSummary.textContent =
+        `${imageProvider === "gemini" ? "Gemini" : "OpenAI"} · ${imageModel}${quality}`;
+
+    summaryPlanner.textContent =
+        `${plannerProvider === "gemini" ? "Gemini" : "OpenAI"} · ${plannerModel}`;
+
+    summaryImageEngine.textContent =
+        `${imageProvider === "gemini" ? "Gemini" : "OpenAI"} · ${imageModel}`;
+
+    updateCreateCostEstimate();
+}
+
+
+function updateCreateCostEstimate() {
+    if (!settingsPayload) {
+        createCostEstimate.textContent =
+            "—";
+
+        return;
+    }
+
+    const settings =
+        settingsPayload.settings;
+
+    const count =
+        selectedCount === "auto"
+            ?
+            null
+            :
+            Number(
+                selectedCount
+            );
+
+    if (
+        settings.image_provider
+        ===
+        "openai"
+    ) {
+        createCostEstimate.textContent =
+            count
+                ?
+                `${count} images · ${capitalize(settings.openai_image_quality)}`
+                :
+                `${capitalize(settings.openai_image_quality)} · provider billed`;
+
+        return;
+    }
+
+    const model =
+        settings.gemini_image_model;
+
+    const size =
+        settings.gemini_image_size;
+
+    let perImage = null;
+
+    if (
+        model
+        ===
+        "gemini-3.1-flash-lite-image"
+        &&
+        size === "1K"
+    ) {
+        perImage = 0.0336;
+    }
+
+    if (
+        model
+        ===
+        "gemini-3.1-flash-image"
+    ) {
+        perImage = {
+            "1K": 0.067,
+            "2K": 0.101,
+            "4K": 0.151,
+        }[
+            size
+        ];
+    }
+
+    if (
+        count
+        &&
+        perImage
+    ) {
+        createCostEstimate.textContent =
+            `≈ $${(
+                count
+                *
+                perImage
+            ).toFixed(2)}`;
+    } else {
+        createCostEstimate.textContent =
+            `${size} · provider billed`;
+    }
+}
+
+
+/* =========================================================
+   GENERATION PROFILES
 ========================================================= */
 
 async function loadProfiles(
-    preferredId = selectedProfileId
+    preferredId =
+        selectedProfileId
 ) {
     profileOptions.innerHTML = `
         <div class="loading-state">
-            Loading profiles...
+            Loading profiles…
         </div>
     `;
 
@@ -819,13 +1438,15 @@ async function loadProfiles(
         );
 
     } catch (error) {
-        console.error(error);
-
         profileOptions.innerHTML = `
             <div class="loading-state">
                 Could not load profiles.
             </div>
         `;
+
+        showToast(
+            error.message
+        );
     }
 }
 
@@ -839,28 +1460,21 @@ function renderGenerateProfiles(
     if (!profiles.length) {
         profileOptions.innerHTML = `
             <div class="loading-state">
-                No active profiles.
+                No active profiles. Create one in Profiles.
             </div>
         `;
 
         selectedProfileId =
             null;
 
-        selectedProfileVersionId =
-            null;
-
         summaryProfile.textContent =
-            "No profile";
-
-        summaryVersion.textContent =
-            "—";
+            "No workflow";
 
         return;
     }
 
     profiles.forEach(
         profile => {
-
             profileOptions.appendChild(
                 createGenerateProfileCard(
                     profile
@@ -869,7 +1483,7 @@ function renderGenerateProfiles(
         }
     );
 
-    let chosen =
+    let selected =
         profiles.find(
             item =>
                 Number(item.id)
@@ -877,13 +1491,13 @@ function renderGenerateProfiles(
                 Number(preferredId)
         );
 
-    if (!chosen) {
-        chosen =
+    if (!selected) {
+        selected =
             profiles[0];
     }
 
     selectGenerateProfile(
-        chosen.id
+        selected.id
     );
 }
 
@@ -900,18 +1514,20 @@ function createGenerateProfileCard(
         "profile-card";
 
     card.dataset.profileId =
-        profile.id;
+        String(
+            profile.id
+        );
 
-    const radio =
+    const input =
         document.createElement(
             "input"
         );
 
-    radio.type =
+    input.type =
         "radio";
 
-    radio.name =
-        "profile";
+    input.name =
+        "generation-profile";
 
     const icon =
         document.createElement(
@@ -942,32 +1558,19 @@ function createGenerateProfileCard(
     title.textContent =
         profile.name;
 
-    const detail =
+    const desc =
         document.createElement(
             "span"
         );
 
-    const active =
-        profile.active_version_number;
-
-    const latest =
-        profile.latest_version_number;
-
-    if (
-        active
-        ===
-        latest
-    ) {
-        detail.textContent =
-            `Using v${active} · ${profile.description || "No description"}`;
-    } else {
-        detail.textContent =
-            `Using v${active} · Latest v${latest} · ${profile.description || "No description"}`;
-    }
+    desc.textContent =
+        profile.description
+        ||
+        "Custom image-generation workflow";
 
     const check =
         document.createElement(
-            "div"
+            "span"
         );
 
     check.className =
@@ -978,11 +1581,11 @@ function createGenerateProfileCard(
 
     text.append(
         title,
-        detail
+        desc
     );
 
     card.append(
-        radio,
+        input,
         icon,
         text,
         check
@@ -991,7 +1594,6 @@ function createGenerateProfileCard(
     card.addEventListener(
         "click",
         () => {
-
             selectGenerateProfile(
                 profile.id
             );
@@ -1025,6 +1627,10 @@ function selectGenerateProfile(
     selectedProfileVersionId =
         Number(
             profile.active_version_id
+            ||
+            profile.version_id
+            ||
+            0
         );
 
     document
@@ -1033,28 +1639,14 @@ function selectGenerateProfile(
         )
         .forEach(
             card => {
-
-                const selected =
+                card.classList.toggle(
+                    "active-profile",
                     Number(
                         card.dataset.profileId
                     )
                     ===
-                    selectedProfileId;
-
-                card.classList.toggle(
-                    "active-profile",
-                    selected
+                    selectedProfileId
                 );
-
-                const radio =
-                    card.querySelector(
-                        "input"
-                    );
-
-                if (radio) {
-                    radio.checked =
-                        selected;
-                }
             }
         );
 
@@ -1062,1347 +1654,22 @@ function selectGenerateProfile(
         profile.name;
 
     summaryVersion.textContent =
-        `v${profile.active_version_number}`;
-
-    markDraftChanged();
-}
-
-
-/* =========================================================
-   MANAGER
-========================================================= */
-
-async function loadManagerProfiles() {
-    try {
-        const response =
-            await fetch(
-                "/api/profiles?include_archived=true"
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        const data =
-            await response.json();
-
-        managerProfiles =
-            Array.isArray(
-                data.profiles
-            )
-                ?
-                data.profiles
-                :
-                [];
-
-        libraryCount.textContent =
-            String(
-                managerProfiles.length
-            );
-
-        renderManagerProfiles();
-
-    } catch (error) {
-        console.error(error);
-
-        profileManagerList.innerHTML = `
-            <div class="loading-state">
-                Could not load profiles.
-            </div>
-        `;
-    }
-}
-
-
-function renderManagerProfiles() {
-    profileManagerList.innerHTML =
-        "";
-
-    const query =
-        profileSearch
-            .value
-            .trim()
-            .toLowerCase();
-
-    const filtered =
-        managerProfiles.filter(
-            profile => {
-
-                const text =
-                    `${profile.name} ${profile.description || ""}`
-                        .toLowerCase();
-
-                return text.includes(
-                    query
-                );
-            }
-        );
-
-    if (!filtered.length) {
-        profileManagerList.innerHTML = `
-            <div class="loading-state">
-                No profiles found.
-            </div>
-        `;
-
-        return;
-    }
-
-    filtered.forEach(
-        profile => {
-
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-            button.type =
-                "button";
-
-            button.className =
-                "manager-profile-item";
-
-            if (
-                Number(profile.id)
-                ===
-                Number(editingProfileId)
-            ) {
-                button.classList.add(
-                    "selected"
-                );
-            }
-
-            const titleRow =
-                document.createElement(
-                    "div"
-                );
-
-            titleRow.className =
-                "manager-profile-title-row";
-
-            const title =
-                document.createElement(
-                    "div"
-                );
-
-            title.className =
-                "manager-profile-title";
-
-            title.textContent =
-                profile.name;
-
-            const version =
-                document.createElement(
-                    "span"
-                );
-
-            version.className =
-                "manager-profile-version";
-
-            version.textContent =
-                `v${profile.active_version_number}`;
-
-            titleRow.append(
-                title,
-                version
-            );
-
-            const desc =
-                document.createElement(
-                    "div"
-                );
-
-            desc.className =
-                "manager-profile-description";
-
-            desc.textContent =
-                profile.description
-                ||
-                "No description";
-
-            const status =
-                document.createElement(
-                    "span"
-                );
-
-            status.className =
-                "manager-profile-status";
-
-            status.textContent =
-                Number(
-                    profile.is_active
-                )
-                ===
-                1
-                    ?
-                    `ACTIVE · GENERATE v${profile.active_version_number}`
-                    :
-                    "ARCHIVED";
-
-            button.append(
-                titleRow,
-                desc,
-                status
-            );
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    openProfileEditor(
-                        profile.id
-                    );
-                }
-            );
-
-            profileManagerList.appendChild(
-                button
-            );
-        }
-    );
-}
-
-
-profileSearch.addEventListener(
-    "input",
-    renderManagerProfiles
-);
-
-
-async function openProfileEditor(
-    profileId,
-    versionNumber = null
-) {
-    try {
-        let url =
-            `/api/profiles/${profileId}`;
-
-        if (
-            versionNumber
-            !==
-            null
-        ) {
-            url =
-                `/api/profiles/${profileId}/versions/${versionNumber}`;
-        }
-
-        const response =
-            await fetch(
-                url
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        const profile =
-            await response.json();
-
-        editingProfileId =
-            Number(
-                profile.id
-            );
-
-        editingProfileName =
-            profile.name;
-
-        loadedEditorVersionNumber =
-            Number(
-                profile.version_number
-            );
-
-        profileEditorEmpty.classList.add(
-            "hidden-element"
-        );
-
-        profileEditorContent.classList.remove(
-            "hidden-element"
-        );
-
-        profileEditorTitle.textContent =
-            profile.name;
-
-        profileNameInput.value =
-            profile.name;
-
-        profileDescriptionInput.value =
-            profile.description
-            ||
-            "";
-
-        profileInstructionEditor.value =
-            profile.system_instruction
-            ||
-            "";
-
-        activeVersionBadge.textContent =
-            `v${profile.active_version_number}`;
-
-        latestVersionBadge.textContent =
-            `v${profile.latest_version_number}`;
-
-        loadedVersionBadge.textContent =
-            `v${profile.version_number}`;
-
-        if (
-            Number(
-                profile.version_number
-            )
-            ===
-            Number(
-                profile.active_version_number
-            )
-        ) {
-            loadedVersionNote.textContent =
-                `v${profile.version_number} is currently used by Generate.`;
-        } else {
-            loadedVersionNote.textContent =
-                `You are editing v${profile.version_number}. Generate currently uses v${profile.active_version_number}.`;
-        }
-
-        const active =
-            Number(
-                profile.is_active
-            )
-            ===
-            1;
-
-        profileStateBadge.textContent =
-            active
-                ?
-                "ACTIVE"
-                :
-                "ARCHIVED";
-
-        archiveProfileButton.classList.toggle(
-            "hidden-element",
-            !active
-        );
-
-        restoreProfileButton.classList.toggle(
-            "hidden-element",
-            active
-        );
-
-        profileNameInput.disabled =
-            !active;
-
-        profileDescriptionInput.disabled =
-            !active;
-
-        profileInstructionEditor.disabled =
-            !active;
-
-        saveDetailsButton.disabled =
-            !active;
-
-        saveVersionButton.disabled =
-            !active;
-
-        updateInstructionCount();
-
-        renderManagerProfiles();
-
-        await loadVersionHistory(
-            editingProfileId
-        );
-
-    } catch (error) {
-        console.error(error);
-
-        showToast(
-            error.message
-        );
-    }
-}
-
-
-async function loadVersionHistory(
-    profileId
-) {
-    versionHistoryList.innerHTML = `
-        <div class="loading-state">
-            Loading versions...
-        </div>
-    `;
-
-    try {
-        const response =
-            await fetch(
-                `/api/profiles/${profileId}/versions`
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        const data =
-            await response.json();
-
-        const versions =
-            Array.isArray(
-                data.versions
-            )
-                ?
-                data.versions
-                :
-                [];
-
-        versionHistoryList.innerHTML =
-            "";
-
-        versions.forEach(
-            version => {
-
-                versionHistoryList.appendChild(
-                    createVersionRow(
-                        profileId,
-                        version,
-                        versions.length
-                    )
-                );
-            }
-        );
-
-    } catch (error) {
-        console.error(error);
-
-        versionHistoryList.innerHTML = `
-            <div class="loading-state">
-                Could not load versions.
-            </div>
-        `;
-    }
-}
-
-
-function createVersionRow(
-    profileId,
-    version,
-    totalVersions
-) {
-    const row =
-        document.createElement(
-            "div"
-        );
-
-    row.className =
-        "version-row";
-
-    const isGenerationVersion =
-        Number(
-            version.is_generation_version
-        )
-        ===
-        1;
-
-    if (isGenerationVersion) {
-        row.classList.add(
-            "generation-version"
-        );
-    }
-
-    const info =
-        document.createElement(
-            "div"
-        );
-
-    info.className =
-        "version-row-info";
-
-    const title =
-        document.createElement(
-            "strong"
-        );
-
-    title.textContent =
-        `Version ${version.version_number}`;
-
-    const meta =
-        document.createElement(
-            "div"
-        );
-
-    meta.className =
-        "version-row-meta";
-
-    meta.innerHTML = `
-        <span>${formatDate(version.created_at)}</span>
-        <span>${formatNumber(version.character_count)} characters</span>
-    `;
-
-    info.append(
-        title,
-        meta
-    );
-
-    if (isGenerationVersion) {
-        const activeLabel =
-            document.createElement(
-                "span"
-            );
-
-        activeLabel.className =
-            "version-active-label";
-
-        activeLabel.textContent =
-            "USED BY GENERATE";
-
-        info.appendChild(
-            activeLabel
-        );
-    }
-
-    const actions =
-        document.createElement(
-            "div"
-        );
-
-    actions.className =
-        "version-actions";
-
-    const loadButton =
-        document.createElement(
-            "button"
-        );
-
-    loadButton.className =
-        "version-action";
-
-    loadButton.type =
-        "button";
-
-    const isLoaded =
-        Number(
-            version.version_number
-        )
-        ===
-        Number(
-            loadedEditorVersionNumber
-        );
-
-    loadButton.textContent =
-        isLoaded
+        profile.active_version_number
             ?
-            "LOADED"
+            `v${profile.active_version_number}`
             :
-            "LOAD";
-
-    loadButton.disabled =
-        isLoaded;
-
-    loadButton.addEventListener(
-        "click",
-        () => {
-
-            openProfileEditor(
-                profileId,
-                version.version_number
-            );
-        }
-    );
-
-    const useButton =
-        document.createElement(
-            "button"
-        );
-
-    useButton.className =
-        "version-action primary";
-
-    useButton.type =
-        "button";
-
-    useButton.textContent =
-        isGenerationVersion
-            ?
-            "IN GENERATE"
-            :
-            "USE FOR GENERATE";
-
-    useButton.disabled =
-        isGenerationVersion;
-
-    useButton.addEventListener(
-        "click",
-        async () => {
-
-            await activateVersion(
-                profileId,
-                version.version_number
-            );
-        }
-    );
-
-    const deleteButton =
-        document.createElement(
-            "button"
-        );
-
-    deleteButton.className =
-        "version-action delete";
-
-    deleteButton.type =
-        "button";
-
-    deleteButton.textContent =
-        "DELETE";
-
-    const usedByJobs =
-        Number(
-            version.usage_count
-        )
-        >
-        0;
-
-    deleteButton.disabled =
-        isGenerationVersion
-        ||
-        totalVersions <= 1
-        ||
-        usedByJobs;
-
-    deleteButton.addEventListener(
-        "click",
-        async () => {
-
-            await deleteVersion(
-                profileId,
-                version.version_number
-            );
-        }
-    );
-
-    actions.append(
-        loadButton,
-        useButton,
-        deleteButton
-    );
-
-    row.append(
-        info,
-        actions
-    );
-
-    return row;
+            "current";
 }
-
-
-async function activateVersion(
-    profileId,
-    versionNumber
-) {
-    const confirmed =
-        window.confirm(
-            `Use version ${versionNumber} for Generate?`
-        );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        const response =
-            await fetch(
-                `/api/profiles/${profileId}/versions/${versionNumber}/activate`,
-                {
-                    method: "POST"
-                }
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        await response.json();
-
-        await loadProfiles(
-            profileId
-        );
-
-        await loadManagerProfiles();
-
-        await openProfileEditor(
-            profileId,
-            versionNumber
-        );
-
-        showToast(
-            `Generate now uses version ${versionNumber}.`
-        );
-
-    } catch (error) {
-        console.error(error);
-
-        showToast(
-            error.message
-        );
-    }
-}
-
-
-async function deleteVersion(
-    profileId,
-    versionNumber
-) {
-    const confirmed =
-        window.confirm(
-            `Delete version ${versionNumber} permanently?\n\nThis cannot be undone.`
-        );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        const response =
-            await fetch(
-                `/api/profiles/${profileId}/versions/${versionNumber}`,
-                {
-                    method: "DELETE"
-                }
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        await response.json();
-
-        await loadProfiles(
-            profileId
-        );
-
-        await loadManagerProfiles();
-
-        await openProfileEditor(
-            profileId
-        );
-
-        showToast(
-            `Version ${versionNumber} deleted.`
-        );
-
-    } catch (error) {
-        console.error(error);
-
-        showToast(
-            error.message
-        );
-    }
-}
-
-
-saveDetailsButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!editingProfileId) {
-            return;
-        }
-
-        const name =
-            profileNameInput
-                .value
-                .trim();
-
-        if (!name) {
-            showToast(
-                "Profile name cannot be empty."
-            );
-
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    `/api/profiles/${editingProfileId}`,
-                    {
-                        method: "PATCH",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-                                name,
-
-                                description:
-                                    profileDescriptionInput
-                                        .value
-                                        .trim()
-                            })
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            await response.json();
-
-            await loadProfiles(
-                editingProfileId
-            );
-
-            await loadManagerProfiles();
-
-            await openProfileEditor(
-                editingProfileId,
-                loadedEditorVersionNumber
-            );
-
-            showToast(
-                "Profile details saved."
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-saveVersionButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!editingProfileId) {
-            return;
-        }
-
-        const instruction =
-            profileInstructionEditor
-                .value
-                .trim();
-
-        if (!instruction) {
-            showToast(
-                "System instruction cannot be empty."
-            );
-
-            return;
-        }
-
-        const confirmed =
-            window.confirm(
-                "Save this instruction as a new version?\n\nThe new version will automatically become the version used by Generate."
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    `/api/profiles/${editingProfileId}/versions`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-                                system_instruction:
-                                    instruction
-                            })
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            const updated =
-                await response.json();
-
-            await loadProfiles(
-                editingProfileId
-            );
-
-            await loadManagerProfiles();
-
-            await openProfileEditor(
-                editingProfileId
-            );
-
-            showToast(
-                `Version ${updated.version_number} created and activated.`
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-archiveProfileButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!editingProfileId) {
-            return;
-        }
-
-        const confirmed =
-            window.confirm(
-                `Archive "${editingProfileName}"?\n\nIt will disappear from Generate but remain saved.`
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    `/api/profiles/${editingProfileId}`,
-                    {
-                        method: "DELETE"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            await response.json();
-
-            const id =
-                editingProfileId;
-
-            await loadProfiles();
-            await loadManagerProfiles();
-            await openProfileEditor(
-                id
-            );
-
-            showToast(
-                "Profile archived."
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-restoreProfileButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!editingProfileId) {
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    `/api/profiles/${editingProfileId}/restore`,
-                    {
-                        method: "POST"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            await response.json();
-
-            const id =
-                editingProfileId;
-
-            await loadProfiles(
-                id
-            );
-
-            await loadManagerProfiles();
-
-            await openProfileEditor(
-                id
-            );
-
-            showToast(
-                "Profile restored."
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-deleteProfileButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!editingProfileId) {
-            return;
-        }
-
-        const typed =
-            window.prompt(
-                `Permanent deletion cannot be undone.\n\nType the profile name exactly to continue:\n\n${editingProfileName}`
-            );
-
-        if (
-            typed
-            !==
-            editingProfileName
-        ) {
-            if (
-                typed
-                !==
-                null
-            ) {
-                showToast(
-                    "Profile name did not match. Nothing was deleted."
-                );
-            }
-
-            return;
-        }
-
-        const finalConfirm =
-            window.confirm(
-                `Delete "${editingProfileName}" permanently?`
-            );
-
-        if (!finalConfirm) {
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    `/api/profiles/${editingProfileId}/permanent`,
-                    {
-                        method: "DELETE"
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            await response.json();
-
-            editingProfileId =
-                null;
-
-            editingProfileName =
-                null;
-
-            loadedEditorVersionNumber =
-                null;
-
-            profileEditorContent.classList.add(
-                "hidden-element"
-            );
-
-            profileEditorEmpty.classList.remove(
-                "hidden-element"
-            );
-
-            await loadProfiles();
-            await loadManagerProfiles();
-
-            showToast(
-                "Profile permanently deleted."
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-function updateInstructionCount() {
-    const length =
-        profileInstructionEditor
-            .value
-            .length;
-
-    instructionCharacterCount.textContent =
-        `${formatNumber(length)} ${
-            length === 1
-                ?
-                "character"
-                :
-                "characters"
-        }`;
-}
-
-
-profileInstructionEditor.addEventListener(
-    "input",
-    updateInstructionCount
-);
 
 
 /* =========================================================
-   CREATE PROFILE MODAL
-========================================================= */
-
-function openModal() {
-    newProfileForm.reset();
-
-    newInstructionCharacterCount.textContent =
-        "0 characters";
-
-    newProfileModal.classList.add(
-        "visible"
-    );
-
-    newProfileModal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-}
-
-
-function closeModal() {
-    newProfileModal.classList.remove(
-        "visible"
-    );
-
-    newProfileModal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-}
-
-
-newProfileButton.addEventListener(
-    "click",
-    openModal
-);
-
-
-modalCloseButton.addEventListener(
-    "click",
-    closeModal
-);
-
-
-cancelCreateProfile.addEventListener(
-    "click",
-    closeModal
-);
-
-
-newProfileModal.addEventListener(
-    "click",
-    event => {
-
-        if (
-            event.target
-            ===
-            newProfileModal
-        ) {
-            closeModal();
-        }
-    }
-);
-
-
-newProfileInstruction.addEventListener(
-    "input",
-    () => {
-
-        const length =
-            newProfileInstruction
-                .value
-                .length;
-
-        newInstructionCharacterCount.textContent =
-            `${formatNumber(length)} characters`;
-    }
-);
-
-
-newProfileForm.addEventListener(
-    "submit",
-    async event => {
-
-        event.preventDefault();
-
-        const name =
-            newProfileName
-                .value
-                .trim();
-
-        const instruction =
-            newProfileInstruction
-                .value
-                .trim();
-
-        if (
-            !name
-            ||
-            !instruction
-        ) {
-            showToast(
-                "Profile name and system instruction are required."
-            );
-
-            return;
-        }
-
-        try {
-            const response =
-                await fetch(
-                    "/api/profiles",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-                                name,
-
-                                description:
-                                    newProfileDescription
-                                        .value
-                                        .trim(),
-
-                                system_instruction:
-                                    instruction
-                            })
-                    }
-                );
-
-            if (!response.ok) {
-                throw new Error(
-                    await apiError(
-                        response
-                    )
-                );
-            }
-
-            const profile =
-                await response.json();
-
-            closeModal();
-
-            await loadProfiles(
-                profile.id
-            );
-
-            await loadManagerProfiles();
-
-            await openProfileEditor(
-                profile.id
-            );
-
-            showToast(
-                `${profile.name} created.`
-            );
-
-        } catch (error) {
-            console.error(error);
-
-            showToast(
-                error.message
-            );
-        }
-    }
-);
-
-
-/* =========================================================
-   IMAGE UPLOAD / JOB PREP
+   REFERENCE IMAGES
 ========================================================= */
 
 uploadZone.addEventListener(
     "click",
-    () => imageInput.click()
-);
-
-
-imageInput.addEventListener(
-    "change",
-    event => {
-
-        addImages(
-            event.target.files
-        );
+    () => {
+        imageInput.click();
     }
 );
 
@@ -2410,12 +1677,10 @@ imageInput.addEventListener(
 uploadZone.addEventListener(
     "dragover",
     event => {
-
         event.preventDefault();
 
-        uploadZone.classList.add(
-            "dragging"
-        );
+        uploadZone.style.borderColor =
+            "var(--orange)";
     }
 );
 
@@ -2423,10 +1688,8 @@ uploadZone.addEventListener(
 uploadZone.addEventListener(
     "dragleave",
     () => {
-
-        uploadZone.classList.remove(
-            "dragging"
-        );
+        uploadZone.style.borderColor =
+            "";
     }
 );
 
@@ -2434,12 +1697,10 @@ uploadZone.addEventListener(
 uploadZone.addEventListener(
     "drop",
     event => {
-
         event.preventDefault();
 
-        uploadZone.classList.remove(
-            "dragging"
-        );
+        uploadZone.style.borderColor =
+            "";
 
         addImages(
             event.dataTransfer.files
@@ -2448,10 +1709,62 @@ uploadZone.addEventListener(
 );
 
 
+imageInput.addEventListener(
+    "change",
+    event => {
+        addImages(
+            event.target.files
+        );
+
+        imageInput.value =
+            "";
+    }
+);
+
+
+replaceImageInput.addEventListener(
+    "change",
+    event => {
+        const file =
+            event.target.files?.[0];
+
+        if (
+            file
+            &&
+            replaceTargetIndex
+            !==
+            null
+        ) {
+            if (
+                !file.type.startsWith(
+                    "image/"
+                )
+            ) {
+                showToast(
+                    "Choose an image file."
+                );
+            } else {
+                selectedImages[
+                    replaceTargetIndex
+                ] = file;
+
+                renderReferenceCards();
+            }
+        }
+
+        replaceTargetIndex =
+            null;
+
+        replaceImageInput.value =
+            "";
+    }
+);
+
+
 function addImages(
     files
 ) {
-    const images =
+    const imageFiles =
         Array.from(
             files
         ).filter(
@@ -2463,7 +1776,7 @@ function addImages(
 
     for (
         const file
-        of images
+        of imageFiles
     ) {
         if (
             selectedImages.length
@@ -2482,16 +1795,11 @@ function addImages(
         );
     }
 
-    renderImages();
-
-    imageInput.value =
-        "";
-
-    markDraftChanged();
+    renderReferenceCards();
 }
 
 
-function renderImages() {
+function renderReferenceCards() {
     imagePreviewGrid.innerHTML =
         "";
 
@@ -2500,14 +1808,19 @@ function renderImages() {
             file,
             index
         ) => {
-
-            const preview =
+            const card =
                 document.createElement(
-                    "div"
+                    "article"
                 );
 
-            preview.className =
-                "image-preview";
+            card.className =
+                "reference-card";
+
+            card.draggable =
+                true;
+
+            card.dataset.index =
+                String(index);
 
             const image =
                 document.createElement(
@@ -2522,18 +1835,22 @@ function renderImages() {
             image.src =
                 url;
 
-            image.addEventListener(
-                "load",
-                () => {
+            image.alt =
+                `Reference ${index + 1}`;
 
+            image.onload =
+                () =>
                     URL.revokeObjectURL(
                         url
                     );
-                },
-                {
-                    once: true
-                }
-            );
+
+            const badges =
+                document.createElement(
+                    "div"
+                );
+
+            badges.className =
+                "reference-badges";
 
             const number =
                 document.createElement(
@@ -2541,10 +1858,62 @@ function renderImages() {
                 );
 
             number.className =
-                "image-number";
+                "reference-badge";
 
             number.textContent =
-                `Image ${index + 1}`;
+                `IMAGE ${index + 1}`;
+
+            badges.appendChild(
+                number
+            );
+
+            if (index === 0) {
+                const primary =
+                    document.createElement(
+                        "span"
+                    );
+
+                primary.className =
+                    "reference-badge primary";
+
+                primary.textContent =
+                    "PRIMARY";
+
+                badges.appendChild(
+                    primary
+                );
+            }
+
+            const footer =
+                document.createElement(
+                    "div"
+                );
+
+            footer.className =
+                "reference-card-footer";
+
+            const replace =
+                document.createElement(
+                    "button"
+                );
+
+            replace.type =
+                "button";
+
+            replace.textContent =
+                "Replace";
+
+            replace.addEventListener(
+                "click",
+                event => {
+                    event.stopPropagation();
+
+                    replaceTargetIndex =
+                        index;
+
+                    replaceImageInput.click();
+                }
+            );
 
             const remove =
                 document.createElement(
@@ -2554,35 +1923,139 @@ function renderImages() {
             remove.type =
                 "button";
 
-            remove.className =
-                "remove-image";
-
             remove.textContent =
-                "×";
+                "Remove";
 
             remove.addEventListener(
                 "click",
-                () => {
+                event => {
+                    event.stopPropagation();
 
                     selectedImages.splice(
                         index,
                         1
                     );
 
-                    renderImages();
-
-                    markDraftChanged();
+                    renderReferenceCards();
                 }
             );
 
-            preview.append(
-                image,
-                number,
+            footer.append(
+                replace,
                 remove
             );
 
+            card.append(
+                image,
+                badges,
+                footer
+            );
+
+            card.addEventListener(
+                "dragstart",
+                event => {
+                    draggedReferenceIndex =
+                        index;
+
+                    card.classList.add(
+                        "dragging"
+                    );
+
+                    event
+                        .dataTransfer
+                        .setData(
+                            "text/plain",
+                            String(index)
+                        );
+                }
+            );
+
+            card.addEventListener(
+                "dragend",
+                () => {
+                    draggedReferenceIndex =
+                        null;
+
+                    card.classList.remove(
+                        "dragging"
+                    );
+
+                    document
+                        .querySelectorAll(
+                            ".reference-card"
+                        )
+                        .forEach(
+                            item =>
+                                item.classList.remove(
+                                    "drag-over"
+                                )
+                        );
+                }
+            );
+
+            card.addEventListener(
+                "dragover",
+                event => {
+                    event.preventDefault();
+
+                    card.classList.add(
+                        "drag-over"
+                    );
+                }
+            );
+
+            card.addEventListener(
+                "dragleave",
+                () => {
+                    card.classList.remove(
+                        "drag-over"
+                    );
+                }
+            );
+
+            card.addEventListener(
+                "drop",
+                event => {
+                    event.preventDefault();
+
+                    card.classList.remove(
+                        "drag-over"
+                    );
+
+                    const source =
+                        draggedReferenceIndex;
+
+                    const target =
+                        index;
+
+                    if (
+                        source === null
+                        ||
+                        source === target
+                    ) {
+                        return;
+                    }
+
+                    const [
+                        moved
+                    ] =
+                        selectedImages.splice(
+                            source,
+                            1
+                        );
+
+                    selectedImages.splice(
+                        target,
+                        0,
+                        moved
+                    );
+
+                    renderReferenceCards();
+                }
+            );
+
             imagePreviewGrid.appendChild(
-                preview
+                card
             );
         }
     );
@@ -2594,19 +2067,15 @@ function renderImages() {
 }
 
 
+/* =========================================================
+   CREATIVE DIRECTION / OUTPUTS
+========================================================= */
+
 description.addEventListener(
     "input",
     () => {
-
-        const length =
-            description
-                .value
-                .length;
-
         characterCount.textContent =
-            `${length} characters`;
-
-        markDraftChanged();
+            `${description.value.length} characters`;
     }
 );
 
@@ -2617,22 +2086,18 @@ document
     )
     .forEach(
         button => {
-
             button.addEventListener(
                 "click",
                 () => {
-
                     document
                         .querySelectorAll(
                             ".count-button"
                         )
                         .forEach(
-                            item => {
-
+                            item =>
                                 item.classList.remove(
                                     "selected"
-                                );
-                            }
+                                )
                         );
 
                     button.classList.add(
@@ -2643,31 +2108,96 @@ document
                         button.dataset.count;
 
                     summaryCount.textContent =
-                        selectedCount
-                        ===
-                        "auto"
+                        selectedCount === "auto"
                             ?
                             "Auto"
                             :
                             selectedCount;
 
-                    markDraftChanged();
+                    updateCreateCostEstimate();
                 }
             );
         }
     );
 
 
+/* =========================================================
+   PIPELINE UI
+========================================================= */
+
+function resetPipeline() {
+    [
+        pipelineReferences,
+        pipelinePlanner,
+        pipelineVerify,
+        pipelineImages,
+    ].forEach(
+        step => {
+            step.classList.remove(
+                "active",
+                "complete",
+                "error"
+            );
+
+            step.querySelector(
+                "span"
+            ).textContent =
+                "Waiting";
+        }
+    );
+}
+
+
+function setPipelineStep(
+    element,
+    state,
+    text
+) {
+    element.classList.remove(
+        "active",
+        "complete",
+        "error"
+    );
+
+    if (state) {
+        element.classList.add(
+            state
+        );
+    }
+
+    element.querySelector(
+        "span"
+    ).textContent =
+        text;
+}
+
+
+function showPipeline(
+    jobId
+) {
+    pipelineSection.classList.remove(
+        "hidden-element"
+    );
+
+    pipelineJobId.textContent =
+        `#${String(jobId).padStart(4, "0")}`;
+}
+
+
+/* =========================================================
+   GENERATION JOB PIPELINE
+========================================================= */
+
 generateButton.addEventListener(
     "click",
-    prepareGenerationJob
+    runCreateJob
 );
 
 
-async function prepareGenerationJob() {
+async function runCreateJob() {
     if (!selectedProfileId) {
         showToast(
-            "Select a profile first."
+            "Choose a workflow first."
         );
 
         return;
@@ -2675,11 +2205,21 @@ async function prepareGenerationJob() {
 
     if (!selectedImages.length) {
         showToast(
-            "Add at least one reference image."
+            "Add at least one product reference."
         );
 
         return;
     }
+
+    stopImageBatchPolling();
+
+    resultsSection.classList.add(
+        "hidden-element"
+    );
+
+    imageBatchSection.classList.add(
+        "hidden-element"
+    );
 
     plannerResultSection.classList.add(
         "hidden-element"
@@ -2689,35 +2229,17 @@ async function prepareGenerationJob() {
         "hidden-element"
     );
 
-    promptPackageGrid.innerHTML =
-        "";
+    currentPromptPackages =
+        [];
 
-    sharedNegativeBox.classList.add(
-        "hidden-element"
+    selectedCompareIds.clear();
+
+    resetPipeline();
+
+    setGenerateBusy(
+        true,
+        "UPLOADING REFERENCES"
     );
-
-    currentPromptPackages = [];
-
-    stopImageBatchPolling();
-
-    imageBatchSection.classList.add(
-        "hidden-element"
-    );
-
-    imageBatchGrid.innerHTML =
-        "";
-
-    imageBatchProgressBar.style.width =
-        "0%";
-
-    imageBatchProgressText.textContent =
-        "Waiting";
-
-    imageBatchFailureText.textContent =
-        "";
-
-    plannerRawOutput.textContent =
-        "";
 
     const formData =
         new FormData();
@@ -2731,9 +2253,7 @@ async function prepareGenerationJob() {
 
     formData.append(
         "description",
-        description
-            .value
-            .trim()
+        description.value.trim()
     );
 
     formData.append(
@@ -2743,7 +2263,6 @@ async function prepareGenerationJob() {
 
     selectedImages.forEach(
         file => {
-
             formData.append(
                 "files",
                 file,
@@ -2752,21 +2271,13 @@ async function prepareGenerationJob() {
         }
     );
 
-    setGenerateBusy(
-        true,
-        "SAVING REFERENCES"
-    );
-
-    jobPanelStatus.textContent =
-        "SAVING";
-
     try {
         const response =
             await fetch(
                 "/api/jobs",
                 {
                     method: "POST",
-                    body: formData
+                    body: formData,
                 }
             );
 
@@ -2778,29 +2289,168 @@ async function prepareGenerationJob() {
             );
         }
 
-        const job =
+        currentJob =
             await response.json();
 
-        currentJob =
-            job;
-
         renderPreparedJob(
-            job
+            currentJob
         );
 
-        await runPromptPlanner(
-            job.id
+        showPipeline(
+            currentJob.id
         );
 
-    } catch (error) {
-        console.error(error);
+        setPipelineStep(
+            pipelineReferences,
+            "complete",
+            `${currentJob.reference_count} saved`
+        );
+
+        setPipelineStep(
+            pipelinePlanner,
+            "active",
+            "Analyzing product"
+        );
+
+        setGenerateBusy(
+            true,
+            "PLANNING PROMPTS"
+        );
+
+        const planResponse =
+            await fetch(
+                `/api/jobs/${currentJob.id}/plan`,
+                {
+                    method: "POST"
+                }
+            );
+
+        if (!planResponse.ok) {
+            setPipelineStep(
+                pipelinePlanner,
+                "error",
+                "Planner failed"
+            );
+
+            throw new Error(
+                await apiError(
+                    planResponse
+                )
+            );
+        }
+
+        currentJob =
+            await planResponse.json();
+
+        renderPlannerResult(
+            currentJob
+        );
+
+        setPipelineStep(
+            pipelinePlanner,
+            "complete",
+            `${currentJob.planner_provider || "AI"} plan ready`
+        );
+
+        setPipelineStep(
+            pipelineVerify,
+            "active",
+            "Source checking"
+        );
+
+        setGenerateBusy(
+            true,
+            "VERIFYING PROMPTS"
+        );
+
+        const normalizeResponse =
+            await fetch(
+                `/api/jobs/${currentJob.id}/normalize`,
+                {
+                    method: "POST"
+                }
+            );
+
+        if (!normalizeResponse.ok) {
+            setPipelineStep(
+                pipelineVerify,
+                "error",
+                "Verification failed"
+            );
+
+            throw new Error(
+                await apiError(
+                    normalizeResponse
+                )
+            );
+        }
+
+        const packageResponse =
+            await fetch(
+                `/api/jobs/${currentJob.id}/packages`
+            );
+
+        if (!packageResponse.ok) {
+            throw new Error(
+                await apiError(
+                    packageResponse
+                )
+            );
+        }
+
+        const packages =
+            await packageResponse.json();
+
+        if (!packages.source_verified) {
+            throw new Error(
+                "Prompt source verification failed."
+            );
+        }
+
+        renderPromptPackages(
+            packages
+        );
+
+        setPipelineStep(
+            pipelineVerify,
+            "complete",
+            `${packages.package_count} verified`
+        );
 
         jobPanelStatus.textContent =
-            currentJob
-                ?
-                "DRAFT CHANGED"
-                :
-                "DRAFT";
+            "PROMPTS READY";
+
+        if (
+            autoGenerateImages.checked
+        ) {
+            setPipelineStep(
+                pipelineImages,
+                "active",
+                "Starting"
+            );
+
+            await runImageBatch(
+                currentJob.id
+            );
+        } else {
+            setPipelineStep(
+                pipelineImages,
+                null,
+                "Prompts only"
+            );
+
+            showToast(
+                "Prompts are ready. Final image generation is off."
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            error
+        );
+
+        jobPanelStatus.textContent =
+            "ERROR";
 
         showToast(
             error.message
@@ -2808,7 +2458,8 @@ async function prepareGenerationJob() {
 
     } finally {
         setGenerateBusy(
-            false
+            false,
+            "GENERATE"
         );
     }
 }
@@ -2816,116 +2467,20 @@ async function prepareGenerationJob() {
 
 function setGenerateBusy(
     busy,
-    label = "SAVING REFERENCES"
+    label
 ) {
     generateButton.disabled =
         busy;
 
-    if (busy) {
-        generateButtonLabel.textContent =
-            label;
+    generateButtonLabel.textContent =
+        label;
 
-        generateButtonArrow.textContent =
-            "…";
-    } else {
-        generateButtonLabel.textContent =
-            "GENERATE IMAGES";
-
-        generateButtonArrow.textContent =
+    generateButtonArrow.textContent =
+        busy
+            ?
+            "…"
+            :
             "→";
-    }
-}
-
-
-async function runPromptPlanner(
-    jobId
-) {
-    setGenerateBusy(
-        true,
-        "GENERATING PROMPTS"
-    );
-
-    retryPlannerButton.disabled =
-        true;
-
-    jobPanelStatus.textContent =
-        "PLANNING";
-
-    try {
-        const response =
-            await fetch(
-                `/api/jobs/${jobId}/plan`,
-                {
-                    method: "POST"
-                }
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
-        }
-
-        const job =
-            await response.json();
-
-        currentJob =
-            job;
-
-        renderPlannedJob(
-            job
-        );
-
-        const normalized =
-            await runPromptNormalizer(
-                job.id
-            );
-
-        if (!normalized) {
-            return false;
-        }
-
-        if (
-            autoGenerateImages
-            &&
-            autoGenerateImages.checked
-        ) {
-            const batchFinished =
-                await runImageBatch(
-                    job.id
-                );
-
-            if (!batchFinished) {
-                return false;
-            }
-        } else {
-            showToast(
-                `Lossless prompt packages ready for Job #${job.id}.`
-            );
-        }
-
-    } catch (error) {
-        console.error(error);
-
-        jobPanelStatus.textContent =
-            "PLANNER ERROR";
-
-        showToast(
-            error.message
-        );
-
-        return false;
-
-    } finally {
-        retryPlannerButton.disabled =
-            false;
-
-        setGenerateBusy(
-            false
-        );
-    }
 }
 
 
@@ -2940,21 +2495,22 @@ function renderPreparedJob(
         "hidden-element"
     );
 
-    jobPanelStatus.textContent =
-        "PREPARED";
-
     currentJobId.textContent =
         `#${String(job.id).padStart(4, "0")}`;
 
-    summaryProfile.textContent =
-        job.profile_name;
+    jobPanelStatus.textContent =
+        "PREPARED";
 
-    summaryVersion.textContent =
-        `v${job.profile_version_number}`;
+    summaryProfile.textContent =
+        job.profile_name
+        ||
+        summaryProfile.textContent;
 
     summaryImages.textContent =
         String(
             job.reference_count
+            ||
+            0
         );
 
     summaryCount.textContent =
@@ -2969,9 +2525,12 @@ function renderPreparedJob(
     storedReferenceGrid.innerHTML =
         "";
 
-    job.references.forEach(
+    (
+        job.references
+        ||
+        []
+    ).forEach(
         reference => {
-
             const item =
                 document.createElement(
                     "div"
@@ -2997,9 +2556,7 @@ function renderPreparedJob(
                 );
 
             position.textContent =
-                String(
-                    reference.position
-                );
+                reference.position;
 
             item.append(
                 image,
@@ -3014,127 +2571,29 @@ function renderPreparedJob(
 }
 
 
-function renderPlannedJob(
+function renderPlannerResult(
     job
 ) {
-    renderPreparedJob(
-        job
+    plannerResultSection.classList.remove(
+        "hidden-element"
     );
 
-    jobPanelStatus.textContent =
-        "RAW PLAN READY";
-
     plannerResultModel.textContent =
-        job.planner_model
-        ||
-        "Gemini";
+        `${job.planner_provider || "AI"} · ${job.planner_model || "model"}`;
 
     plannerRawOutput.textContent =
         job.planner_raw_output
         ||
         "";
 
-    plannerResultSection.classList.remove(
-        "hidden-element"
-    );
-
-    plannerResultSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
+    summaryPlanner.textContent =
+        `${capitalize(job.planner_provider || "AI")} · ${job.planner_model || "model"}`;
 }
 
 
-async function runPromptNormalizer(
-    jobId
-) {
-    setGenerateBusy(
-        true,
-        "STRUCTURING PROMPTS"
-    );
-
-    jobPanelStatus.textContent =
-        "VERIFYING";
-
-    promptPackagesSection.classList.add(
-        "hidden-element"
-    );
-
-    promptPackageGrid.innerHTML =
-        "";
-
-    currentPromptPackages = [];
-
-    try {
-        const normalizeResponse =
-            await fetch(
-                `/api/jobs/${jobId}/normalize`,
-                {
-                    method: "POST"
-                }
-            );
-
-        if (!normalizeResponse.ok) {
-            throw new Error(
-                await apiError(
-                    normalizeResponse
-                )
-            );
-        }
-
-        await normalizeResponse.json();
-
-        const packageResponse =
-            await fetch(
-                `/api/jobs/${jobId}/packages`
-            );
-
-        if (!packageResponse.ok) {
-            throw new Error(
-                await apiError(
-                    packageResponse
-                )
-            );
-        }
-
-        const packages =
-            await packageResponse.json();
-
-        if (!packages.source_verified) {
-            throw new Error(
-                "Prompt package source verification failed."
-            );
-        }
-
-        if (!packages.package_count) {
-            throw new Error(
-                "No image-generation prompts were extracted."
-            );
-        }
-
-        renderPromptPackages(
-            packages
-        );
-
-        jobPanelStatus.textContent =
-            "PROMPTS READY";
-
-        return true;
-
-    } catch (error) {
-        console.error(error);
-
-        jobPanelStatus.textContent =
-            "STRUCTURE ERROR";
-
-        showToast(
-            error.message
-        );
-
-        return false;
-    }
-}
-
+/* =========================================================
+   PROMPT PACKAGES
+========================================================= */
 
 function renderPromptPackages(
     payload
@@ -3150,17 +2609,17 @@ function renderPromptPackages(
     promptPackageGrid.innerHTML =
         "";
 
-    const sharedNegative =
+    const negative =
         payload.shared_negative
         ||
         "";
 
     sharedNegativeText.textContent =
-        sharedNegative;
+        negative;
 
     sharedNegativeBox.classList.toggle(
         "hidden-element",
-        !sharedNegative
+        !negative
     );
 
     currentPromptPackages.forEach(
@@ -3176,12 +2635,428 @@ function renderPromptPackages(
     promptPackagesSection.classList.remove(
         "hidden-element"
     );
-
-    promptPackagesSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
 }
+
+
+function createPromptPackageCard(
+    item
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "prompt-package-card";
+
+    const header =
+        document.createElement(
+            "header"
+        );
+
+    const number =
+        document.createElement(
+            "span"
+        );
+
+    number.textContent =
+        `PROMPT ${item.position}`;
+
+    const verified =
+        document.createElement(
+            "strong"
+        );
+
+    verified.textContent =
+        "SOURCE VERIFIED";
+
+    header.append(
+        number,
+        verified
+    );
+
+    const title =
+        document.createElement(
+            "h3"
+        );
+
+    title.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    const preview =
+        document.createElement(
+            "p"
+        );
+
+    preview.className =
+        "prompt-package-preview";
+
+    preview.textContent =
+        item.positive_prompt_text;
+
+    const tags =
+        document.createElement(
+            "div"
+        );
+
+    tags.className =
+        "prompt-package-tags";
+
+    const exact =
+        document.createElement(
+            "span"
+        );
+
+    exact.textContent =
+        "POSITIVE · EXACT";
+
+    tags.appendChild(
+        exact
+    );
+
+    if (
+        item.shared_negative_text
+    ) {
+        const negative =
+            document.createElement(
+                "span"
+            );
+
+        negative.textContent =
+            "NEGATIVE · EXACT";
+
+        tags.appendChild(
+            negative
+        );
+    }
+
+    const actions =
+        document.createElement(
+            "div"
+        );
+
+    actions.className =
+        "prompt-package-actions";
+
+    const copyOriginal =
+        document.createElement(
+            "button"
+        );
+
+    copyOriginal.type =
+        "button";
+
+    copyOriginal.textContent =
+        "Copy original";
+
+    copyOriginal.onclick =
+        () =>
+            copyText(
+                item
+                    .positive_prompt_text
+            );
+
+    const viewFinal =
+        document.createElement(
+            "button"
+        );
+
+    viewFinal.type =
+        "button";
+
+    viewFinal.className =
+        "primary";
+
+    viewFinal.textContent =
+        "View final input";
+
+    viewFinal.onclick =
+        () =>
+            openFinalInput(
+                item
+            );
+
+    actions.append(
+        copyOriginal,
+        viewFinal
+    );
+
+    card.append(
+        header,
+        title,
+        preview,
+        tags,
+        actions
+    );
+
+    return card;
+}
+
+
+function findPromptPackage(
+    promptId
+) {
+    return (
+        currentPromptPackages.find(
+            item =>
+                Number(
+                    item.prompt_id
+                )
+                ===
+                Number(
+                    promptId
+                )
+        )
+        ||
+        null
+    );
+}
+
+
+function openFinalInput(
+    item
+) {
+    activeFinalPackage =
+        item;
+
+    finalInputTitle.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    finalInputStrategy.textContent =
+        item.final_input_strategy
+        ||
+        "Source-verified prompt";
+
+    finalInputPreview.textContent =
+        item.final_input
+        ||
+        item.positive_prompt_text
+        ||
+        "";
+
+    openModal(
+        finalInputModal
+    );
+}
+
+
+copyFinalInputModalButton
+    .addEventListener(
+        "click",
+        () => {
+            if (
+                activeFinalPackage
+            ) {
+                copyText(
+                    activeFinalPackage
+                        .final_input
+                    ||
+                    ""
+                );
+            }
+        }
+    );
+
+
+copyPlannerOutputButton
+    .addEventListener(
+        "click",
+        () =>
+            copyText(
+                plannerRawOutput
+                    .textContent
+            )
+    );
+
+
+retryPlannerButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob) {
+            return;
+        }
+
+        const confirmed =
+            window.confirm(
+                "Run the creative planner again for this job? Existing structured prompts will be replaced."
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setPipelineStep(
+            pipelinePlanner,
+            "active",
+            "Replanning"
+        );
+
+        retryPlannerButton.disabled =
+            true;
+
+        try {
+            const response =
+                await fetch(
+                    `/api/jobs/${currentJob.id}/plan`,
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            currentJob =
+                await response.json();
+
+            renderPlannerResult(
+                currentJob
+            );
+
+            const normalize =
+                await fetch(
+                    `/api/jobs/${currentJob.id}/normalize`,
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (!normalize.ok) {
+                throw new Error(
+                    await apiError(
+                        normalize
+                    )
+                );
+            }
+
+            const packages =
+                await fetch(
+                    `/api/jobs/${currentJob.id}/packages`
+                );
+
+            if (!packages.ok) {
+                throw new Error(
+                    await apiError(
+                        packages
+                    )
+                );
+            }
+
+            renderPromptPackages(
+                await packages.json()
+            );
+
+            setPipelineStep(
+                pipelinePlanner,
+                "complete",
+                "Replanned"
+            );
+
+            setPipelineStep(
+                pipelineVerify,
+                "complete",
+                "Verified"
+            );
+
+            showToast(
+                "Planner output refreshed."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            retryPlannerButton.disabled =
+                false;
+        }
+    }
+);
+
+
+/* =========================================================
+   ADVANCED PANEL
+========================================================= */
+
+advancedPipelineToggle.addEventListener(
+    "click",
+    () => {
+        advancedOpen =
+            !advancedOpen;
+
+        advancedContent.classList.toggle(
+            "hidden-element",
+            !advancedOpen
+        );
+
+        advancedToggleState.textContent =
+            advancedOpen
+                ?
+                "Hide"
+                :
+                "Show";
+    }
+);
+
+
+/* =========================================================
+   IMAGE BATCH
+========================================================= */
+
+generateAllImagesButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob) {
+            showToast(
+                "Create a job first."
+            );
+
+            return;
+        }
+
+        await runImageBatch(
+            currentJob.id
+        );
+    }
+);
+
+
+retryIncompleteImagesButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob) {
+            return;
+        }
+
+        await runImageBatch(
+            currentJob.id
+        );
+    }
+);
+
+
+refreshImageBatchButton.addEventListener(
+    "click",
+    async () => {
+        if (!currentJob) {
+            return;
+        }
+
+        await refreshImageBatch(
+            currentJob.id
+        );
+    }
+);
 
 
 async function refreshImageBatch(
@@ -3223,6 +3098,9 @@ async function refreshImageBatch(
 function renderImageBatch(
     payload
 ) {
+    lastRenderedBatch =
+        payload;
+
     imageBatchSection.classList.remove(
         "hidden-element"
     );
@@ -3230,49 +3108,63 @@ function renderImageBatch(
     const total =
         Number(
             payload.total_prompts
-            || 0
+            ||
+            0
         );
 
     const complete =
         Number(
             payload.complete_count
-            || 0
+            ||
+            0
         );
 
     const failed =
         Number(
             payload.failed_count
-            || 0
+            ||
+            0
         );
 
     const active =
         Number(
             payload.generating_count
-            || 0
+            ||
+            0
         )
         +
         Number(
             payload.queued_count
-            || 0
+            ||
+            0
         );
 
     const percent =
         total
             ?
             Math.round(
-                (complete / total)
-                * 100
+                (
+                    complete
+                    /
+                    total
+                )
+                *
+                100
             )
             :
             0;
 
     imageBatchCount.textContent =
-        `${complete}/${total} COMPLETE`;
+        `${complete}/${total}`;
 
     imageBatchProgressBar.style.width =
         `${percent}%`;
 
-    if (payload.status === "complete") {
+    if (
+        payload.status
+        ===
+        "complete"
+    ) {
         imageBatchProgressText.textContent =
             "All images complete";
     } else if (active > 0) {
@@ -3303,24 +3195,62 @@ function renderImageBatch(
     ).forEach(
         item => {
             imageBatchGrid.appendChild(
-                createImageBatchCard(
+                createBatchCard(
                     item
                 )
             );
         }
     );
 
+    if (complete > 0) {
+        renderResults(
+            payload
+        );
+    }
+
+    if (
+        payload.status
+        ===
+        "complete"
+    ) {
+        setPipelineStep(
+            pipelineImages,
+            "complete",
+            `${complete} ready`
+        );
+
+        jobPanelStatus.textContent =
+            "IMAGES READY";
+    }
+
+    if (
+        payload.status
+        ===
+        "partial_failed"
+        ||
+        payload.status
+        ===
+        "failed"
+    ) {
+        setPipelineStep(
+            pipelineImages,
+            "error",
+            `${failed} failed`
+        );
+    }
+
     retryIncompleteImagesButton.disabled =
         imageBatchRequestRunning
         ||
         (
             total > 0
-            && complete === total
+            &&
+            complete === total
         );
 }
 
 
-function createImageBatchCard(
+function createBatchCard(
     item
 ) {
     const card =
@@ -3370,7 +3300,9 @@ function createImageBatchCard(
         "image-batch-media";
 
     if (
-        item.status === "complete"
+        item.status
+        ===
+        "complete"
         &&
         item.image?.file_url
     ) {
@@ -3387,23 +3319,9 @@ function createImageBatchCard(
             ||
             `Generated image ${item.position}`;
 
-        image.loading =
-            "lazy";
-
-        image.addEventListener(
-            "click",
-            () => {
-                window.open(
-                    item.image.file_url,
-                    "_blank"
-                );
-            }
-        );
-
         media.appendChild(
             image
         );
-
     } else {
         const placeholder =
             document.createElement(
@@ -3413,19 +3331,21 @@ function createImageBatchCard(
         placeholder.className =
             "image-batch-placeholder";
 
-        if (item.status === "generating") {
-            placeholder.textContent =
-                "GENERATING…";
-        } else if (item.status === "queued") {
-            placeholder.textContent =
-                "QUEUED";
-        } else if (item.status === "failed") {
-            placeholder.textContent =
-                "FAILED";
-        } else {
-            placeholder.textContent =
-                "WAITING";
-        }
+        placeholder.textContent =
+            {
+                generating:
+                    "GENERATING…",
+                queued:
+                    "QUEUED",
+                failed:
+                    "FAILED",
+                pending:
+                    "WAITING",
+            }[
+                item.status
+            ]
+            ||
+            "WAITING";
 
         media.appendChild(
             placeholder
@@ -3449,9 +3369,12 @@ function createImageBatchCard(
     );
 
     if (
-        item.status === "failed"
+        item.status
+        ===
+        "failed"
         &&
-        item.image?.error_message
+        item.image
+            ?.error_message
     ) {
         const error =
             document.createElement(
@@ -3462,7 +3385,10 @@ function createImageBatchCard(
             "image-batch-error";
 
         error.textContent =
-            item.image.error_message;
+            friendlyError(
+                item.image
+                    .error_message
+            );
 
         card.appendChild(
             error
@@ -3473,56 +3399,12 @@ function createImageBatchCard(
 }
 
 
-function stopImageBatchPolling() {
-    if (imageBatchPollTimer) {
-        clearInterval(
-            imageBatchPollTimer
-        );
-
-        imageBatchPollTimer =
-            null;
-    }
-}
-
-
-function startImageBatchPolling(
-    jobId
-) {
-    stopImageBatchPolling();
-
-    imageBatchPollTimer =
-        setInterval(
-            async () => {
-                const payload =
-                    await refreshImageBatch(
-                        jobId
-                    );
-
-                if (
-                    !imageBatchRequestRunning
-                    &&
-                    payload
-                    &&
-                    [
-                        "complete",
-                        "partial_failed",
-                        "failed"
-                    ].includes(
-                        payload.status
-                    )
-                ) {
-                    stopImageBatchPolling();
-                }
-            },
-            1500
-        );
-}
-
-
 async function runImageBatch(
     jobId
 ) {
-    if (imageBatchRequestRunning) {
+    if (
+        imageBatchRequestRunning
+    ) {
         showToast(
             "Image generation is already running."
         );
@@ -3543,8 +3425,11 @@ async function runImageBatch(
     retryIncompleteImagesButton.disabled =
         true;
 
-    retryPlannerButton.disabled =
-        true;
+    setPipelineStep(
+        pipelineImages,
+        "active",
+        "Generating"
+    );
 
     setGenerateBusy(
         true,
@@ -3552,7 +3437,7 @@ async function runImageBatch(
     );
 
     jobPanelStatus.textContent =
-        "IMAGES GENERATING";
+        "GENERATING";
 
     await refreshImageBatch(
         jobId
@@ -3588,44 +3473,50 @@ async function runImageBatch(
 
         if (!finalStatus) {
             throw new Error(
-                "Could not read final image-generation status."
+                "Could not read final image status."
             );
         }
 
-        if (finalStatus.status === "complete") {
-            jobPanelStatus.textContent =
-                "IMAGES READY";
-
+        if (
+            finalStatus.status
+            ===
+            "complete"
+        ) {
             showToast(
                 `All ${finalStatus.complete_count} images are ready.`
             );
 
+            resultsSection.scrollIntoView({
+                behavior:
+                    "smooth",
+                block:
+                    "start",
+            });
+
             return true;
         }
 
-        if (finalStatus.status === "partial_failed") {
-            jobPanelStatus.textContent =
-                "PARTIAL RESULT";
-
+        if (
+            finalStatus.status
+            ===
+            "partial_failed"
+        ) {
             showToast(
-                `${finalStatus.complete_count} images completed; ${finalStatus.failed_count} failed. Retry will skip completed images.`
+                `${finalStatus.complete_count} completed; ${finalStatus.failed_count} failed. Retry skips completed images.`
             );
 
             return true;
         }
 
-        jobPanelStatus.textContent =
-            "IMAGE ERROR";
-
-        showToast(
-            "Image batch finished without a successful image."
+        throw new Error(
+            "Image generation did not complete."
         );
 
-        return false;
-
     } catch (error) {
-        console.error(
-            error
+        setPipelineStep(
+            pipelineImages,
+            "error",
+            "Generation failed"
         );
 
         jobPanelStatus.textContent =
@@ -3635,94 +3526,152 @@ async function runImageBatch(
             error.message
         );
 
-        await refreshImageBatch(
-            jobId
-        );
-
         return false;
 
     } finally {
         imageBatchRequestRunning =
             false;
 
-        stopImageBatchPolling();
-
         generateAllImagesButton.disabled =
             false;
 
-        retryPlannerButton.disabled =
-            false;
-
         setGenerateBusy(
-            false
+            false,
+            "GENERATE"
         );
 
-        const finalPayload =
-            await refreshImageBatch(
-                jobId
-            );
-
-        retryIncompleteImagesButton.disabled =
-            Boolean(
-                finalPayload
-                &&
-                finalPayload.total_prompts > 0
-                &&
-                finalPayload.complete_count
-                    ===
-                    finalPayload.total_prompts
-            );
+        stopImageBatchPolling();
     }
 }
 
 
-generateAllImagesButton.addEventListener(
-    "click",
-    async () => {
-        if (!currentJob?.id) {
-            showToast(
-                "Create and structure a job first."
+function startImageBatchPolling(
+    jobId
+) {
+    stopImageBatchPolling();
+
+    imageBatchPollTimer =
+        setInterval(
+            async () => {
+                const payload =
+                    await refreshImageBatch(
+                        jobId
+                    );
+
+                if (
+                    !imageBatchRequestRunning
+                    &&
+                    payload
+                    &&
+                    [
+                        "complete",
+                        "partial_failed",
+                        "failed",
+                    ].includes(
+                        payload.status
+                    )
+                ) {
+                    stopImageBatchPolling();
+                }
+            },
+            1500
+        );
+}
+
+
+function stopImageBatchPolling() {
+    if (
+        imageBatchPollTimer
+    ) {
+        clearInterval(
+            imageBatchPollTimer
+        );
+
+        imageBatchPollTimer =
+            null;
+    }
+}
+
+
+/* =========================================================
+   RESULTS GALLERY
+========================================================= */
+
+function renderResults(
+    batch
+) {
+    const completeItems =
+        (
+            batch.items
+            ||
+            []
+        )
+        .filter(
+            item =>
+                item.status
+                ===
+                "complete"
+                &&
+                item.image
+                    ?.file_url
+        );
+
+    if (!completeItems.length) {
+        resultsSection.classList.add(
+            "hidden-element"
+        );
+
+        return;
+    }
+
+    resultsSection.classList.remove(
+        "hidden-element"
+    );
+
+    resultsSubtitle.textContent =
+        `${completeItems.length} of ${batch.total_prompts} outputs complete.`;
+
+    downloadAllButton.href =
+        `/api/jobs/${batch.job_id}/download.zip`;
+
+    resultsGrid.innerHTML =
+        "";
+
+    selectedCompareIds =
+        new Set(
+            [
+                ...selectedCompareIds
+            ].filter(
+                id =>
+                    completeItems.some(
+                        item =>
+                            Number(
+                                item.image.id
+                            )
+                            ===
+                            Number(id)
+                    )
+            )
+        );
+
+    completeItems.forEach(
+        item => {
+            resultsGrid.appendChild(
+                createResultCard(
+                    item
+                )
             );
-
-            return;
         }
+    );
 
-        await runImageBatch(
-            currentJob.id
-        );
-    }
-);
+    previewResults =
+        completeItems;
 
-
-retryIncompleteImagesButton.addEventListener(
-    "click",
-    async () => {
-        if (!currentJob?.id) {
-            return;
-        }
-
-        await runImageBatch(
-            currentJob.id
-        );
-    }
-);
+    updateCompareButton();
+}
 
 
-refreshImageBatchButton.addEventListener(
-    "click",
-    async () => {
-        if (!currentJob?.id) {
-            return;
-        }
-
-        await refreshImageBatch(
-            currentJob.id
-        );
-    }
-);
-
-
-function createPromptPackageCard(
+function createResultCard(
     item
 ) {
     const card =
@@ -3731,25 +3680,161 @@ function createPromptPackageCard(
         );
 
     card.className =
-        "prompt-package-card";
+        "result-card";
 
-    const header =
-        document.createElement(
-            "header"
-        );
-
-    const heading =
+    const media =
         document.createElement(
             "div"
         );
 
-    const number =
+    media.className =
+        "result-card-media";
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+    image.src =
+        item.image.file_url;
+
+    image.alt =
+        item.title
+        ||
+        `Generated image ${item.position}`;
+
+    image.loading =
+        "lazy";
+
+    image.addEventListener(
+        "click",
+        () => {
+            openImagePreviewById(
+                item.image.id
+            );
+        }
+    );
+
+    const selectLabel =
+        document.createElement(
+            "label"
+        );
+
+    selectLabel.className =
+        "result-card-select";
+
+    const checkbox =
+        document.createElement(
+            "input"
+        );
+
+    checkbox.type =
+        "checkbox";
+
+    checkbox.checked =
+        selectedCompareIds.has(
+            Number(
+                item.image.id
+            )
+        );
+
+    checkbox.addEventListener(
+        "change",
+        () => {
+            const id =
+                Number(
+                    item.image.id
+                );
+
+            if (
+                checkbox.checked
+            ) {
+                selectedCompareIds.add(
+                    id
+                );
+
+                if (
+                    selectedCompareIds.size
+                    >
+                    2
+                ) {
+                    const first =
+                        [
+                            ...selectedCompareIds
+                        ][0];
+
+                    selectedCompareIds.delete(
+                        first
+                    );
+
+                    if (
+                        lastRenderedBatch
+                    ) {
+                        renderResults(
+                            lastRenderedBatch
+                        );
+                    }
+                }
+            } else {
+                selectedCompareIds.delete(
+                    id
+                );
+            }
+
+            updateCompareButton();
+        }
+    );
+
+    const compareText =
         document.createElement(
             "span"
         );
 
-    number.textContent =
-        `PROMPT ${item.position}`;
+    compareText.textContent =
+        "COMPARE";
+
+    selectLabel.append(
+        checkbox,
+        compareText
+    );
+
+    const provider =
+        document.createElement(
+            "span"
+        );
+
+    provider.className =
+        "result-card-provider";
+
+    provider.textContent =
+        providerLabel(
+            item.image.provider
+        );
+
+    media.append(
+        image,
+        selectLabel,
+        provider
+    );
+
+    const body =
+        document.createElement(
+            "div"
+        );
+
+    body.className =
+        "result-card-body";
+
+    const label =
+        document.createElement(
+            "span"
+        );
+
+    label.className =
+        "result-card-label";
+
+    label.textContent =
+        `IMAGE ${item.position}`;
 
     const title =
         document.createElement(
@@ -3761,47 +3846,18 @@ function createPromptPackageCard(
         ||
         `Prompt ${item.position}`;
 
-    heading.append(
-        number,
-        title
-    );
-
-    const badge =
-        document.createElement(
-            "strong"
-        );
-
-    badge.textContent =
-        "SOURCE VERIFIED";
-
-    header.append(
-        heading,
-        badge
-    );
-
-    const prompt =
-        document.createElement(
-            "p"
-        );
-
-    prompt.className =
-        "prompt-package-text";
-
-    prompt.textContent =
-        item.positive_prompt_text;
-
-    const verification =
+    const meta =
         document.createElement(
             "div"
         );
 
-    verification.className =
-        "prompt-package-verification";
+    meta.className =
+        "result-card-meta";
 
-    verification.innerHTML = `
-        <span>POSITIVE · EXACT</span>
-        <span>${item.shared_negative_applied ? "SHARED NEGATIVE · EXACT" : "NO SHARED NEGATIVE"}</span>
-    `;
+    meta.textContent =
+        providerMeta(
+            item.image.provider
+        );
 
     const actions =
         document.createElement(
@@ -3809,272 +3865,1367 @@ function createPromptPackageCard(
         );
 
     actions.className =
-        "prompt-package-actions";
+        "result-actions";
 
-    const copyPrompt =
+    const view =
         document.createElement(
             "button"
         );
 
-    copyPrompt.type =
+    view.type =
         "button";
 
-    copyPrompt.textContent =
-        "COPY ORIGINAL PROMPT";
+    view.className =
+        "result-primary";
 
-    copyPrompt.addEventListener(
-        "click",
-        async () => {
-            await copyText(
-                item.positive_prompt_text,
-                "Original prompt copied."
+    view.textContent =
+        "View";
+
+    view.onclick =
+        () =>
+            openImagePreviewById(
+                item.image.id
             );
-        }
-    );
 
-    const viewFinal =
+    const regenerate =
         document.createElement(
             "button"
         );
 
-    viewFinal.type =
+    regenerate.type =
         "button";
 
-    viewFinal.className =
-        "primary";
+    regenerate.textContent =
+        "Regenerate";
 
-    viewFinal.textContent =
-        "VIEW FINAL INPUT";
-
-    viewFinal.addEventListener(
-        "click",
-        () => {
-            openFinalInput(
+    regenerate.onclick =
+        () =>
+            openRegenerate(
                 item
             );
-        }
-    );
 
-    const copyFinal =
+    const download =
         document.createElement(
-            "button"
+            "a"
         );
 
-    copyFinal.type =
-        "button";
+    download.href =
+        `/api/images/${item.image.id}/download`;
 
-    copyFinal.textContent =
-        "COPY FINAL INPUT";
-
-    copyFinal.addEventListener(
-        "click",
-        async () => {
-            await copyText(
-                item.final_input,
-                "Final image input copied."
-            );
-        }
-    );
+    download.textContent =
+        "Download";
 
     actions.append(
-        copyPrompt,
-        viewFinal,
-        copyFinal
+        view,
+        regenerate,
+        download
+    );
+
+    body.append(
+        label,
+        title,
+        meta,
+        actions
     );
 
     card.append(
-        header,
-        prompt,
-        verification,
-        actions
+        media,
+        body
     );
 
     return card;
 }
 
 
-function openFinalInput(
-    item
-) {
-    activeFinalPackage =
-        item;
+function updateCompareButton() {
+    compareSelectedButton.disabled =
+        selectedCompareIds.size
+        !==
+        2;
 
-    finalInputTitle.textContent =
+    compareSelectedButton.textContent =
+        selectedCompareIds.size
+        ===
+        2
+            ?
+            "Compare selected"
+            :
+            "Compare 2";
+}
+
+
+compareSelectedButton.addEventListener(
+    "click",
+    () => {
+        if (
+            selectedCompareIds.size
+            !==
+            2
+        ) {
+            return;
+        }
+
+        const ids =
+            [
+                ...selectedCompareIds
+            ];
+
+        const items =
+            previewResults.filter(
+                item =>
+                    ids.includes(
+                        Number(
+                            item.image.id
+                        )
+                    )
+            );
+
+        if (
+            items.length
+            !==
+            2
+        ) {
+            return;
+        }
+
+        compareImageA.src =
+            items[0]
+                .image
+                .file_url;
+
+        compareTitleA.textContent =
+            items[0].title;
+
+        compareImageB.src =
+            items[1]
+                .image
+                .file_url;
+
+        compareTitleB.textContent =
+            items[1].title;
+
+        openModal(
+            compareModal
+        );
+    }
+);
+
+
+/* =========================================================
+   IMAGE PREVIEW
+========================================================= */
+
+function openImagePreviewById(
+    imageId
+) {
+    const index =
+        previewResults.findIndex(
+            item =>
+                Number(
+                    item.image.id
+                )
+                ===
+                Number(
+                    imageId
+                )
+        );
+
+    if (index < 0) {
+        return;
+    }
+
+    previewIndex =
+        index;
+
+    renderPreview();
+
+    openModal(
+        imagePreviewModal
+    );
+}
+
+
+function renderPreview() {
+    const item =
+        previewResults[
+            previewIndex
+        ];
+
+    if (!item) {
+        return;
+    }
+
+    previewImagePosition.textContent =
+        `IMAGE ${previewIndex + 1} / ${previewResults.length}`;
+
+    previewImageTitle.textContent =
         item.title
         ||
         `Prompt ${item.position}`;
 
-    finalInputStrategy.textContent =
-        item.final_input_strategy
-        ||
-        "positive_exact";
+    previewLargeImage.src =
+        item.image.file_url;
 
-    finalInputPreview.textContent =
-        item.final_input
-        ||
-        "";
+    previewProviderMeta.textContent =
+        providerMeta(
+            item.image.provider
+        );
 
-    finalInputModal.classList.add(
-        "visible"
-    );
+    previewDownloadButton.href =
+        `/api/images/${item.image.id}/download`;
 
-    finalInputModal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
+    previewPreviousButton.disabled =
+        previewResults.length < 2;
+
+    previewNextButton.disabled =
+        previewResults.length < 2;
 }
 
 
-function closeFinalInput() {
-    finalInputModal.classList.remove(
-        "visible"
-    );
-
-    finalInputModal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-    activeFinalPackage =
-        null;
-}
-
-
-closeFinalInputModal.addEventListener(
+previewPreviousButton.addEventListener(
     "click",
-    closeFinalInput
-);
-
-
-finalInputModal.addEventListener(
-    "click",
-    event => {
-        if (
-            event.target
-            ===
-            finalInputModal
-        ) {
-            closeFinalInput();
-        }
-    }
-);
-
-
-copyFinalInputModalButton.addEventListener(
-    "click",
-    async () => {
-        if (!activeFinalPackage) {
+    () => {
+        if (!previewResults.length) {
             return;
         }
 
-        await copyText(
-            activeFinalPackage.final_input,
-            "Final image input copied."
-        );
+        previewIndex =
+            (
+                previewIndex
+                -
+                1
+                +
+                previewResults.length
+            )
+            %
+            previewResults.length;
+
+        renderPreview();
     }
 );
 
 
-async function copyText(
-    text,
-    successMessage
+previewNextButton.addEventListener(
+    "click",
+    () => {
+        if (!previewResults.length) {
+            return;
+        }
+
+        previewIndex =
+            (
+                previewIndex
+                +
+                1
+            )
+            %
+            previewResults.length;
+
+        renderPreview();
+    }
+);
+
+
+previewPromptButton.addEventListener(
+    "click",
+    () => {
+        const item =
+            previewResults[
+                previewIndex
+            ];
+
+        if (!item) {
+            return;
+        }
+
+        const packageItem =
+            findPromptPackage(
+                item.prompt_id
+            );
+
+        if (packageItem) {
+            openFinalInput(
+                packageItem
+            );
+        }
+    }
+);
+
+
+previewRegenerateButton.addEventListener(
+    "click",
+    () => {
+        const item =
+            previewResults[
+                previewIndex
+            ];
+
+        if (item) {
+            closeModal(
+                imagePreviewModal
+            );
+
+            openRegenerate(
+                item
+            );
+        }
+    }
+);
+
+
+/* =========================================================
+   REGENERATE ONE
+========================================================= */
+
+function openRegenerate(
+    item
 ) {
-    if (!text?.trim()) {
+    regenerateTarget =
+        item;
+
+    regenerateDirection.value =
+        "";
+
+    regenerateTitle.textContent =
+        item.title
+        ||
+        `Prompt ${item.position}`;
+
+    openModal(
+        regenerateModal
+    );
+}
+
+
+confirmRegenerateButton.addEventListener(
+    "click",
+    async () => {
+        if (
+            !currentJob
+            ||
+            !regenerateTarget
+        ) {
+            return;
+        }
+
+        confirmRegenerateButton.disabled =
+            true;
+
+        confirmRegenerateButton.textContent =
+            "Generating…";
+
+        try {
+            const response =
+                await fetch(
+                    `/api/jobs/${currentJob.id}/prompts/${regenerateTarget.prompt_id}/regenerate-image`,
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                extra_direction:
+                                    regenerateDirection
+                                        .value
+                                        .trim()
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            closeModal(
+                regenerateModal
+            );
+
+            const batch =
+                await refreshImageBatch(
+                    currentJob.id
+                );
+
+            if (batch) {
+                renderResults(
+                    batch
+                );
+            }
+
+            showToast(
+                "Regenerated image is ready."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            confirmRegenerateButton.disabled =
+                false;
+
+            confirmRegenerateButton.textContent =
+                "Regenerate";
+        }
+    }
+);
+
+
+/* =========================================================
+   PROFILE MANAGER
+========================================================= */
+
+async function loadManagerProfiles() {
+    try {
+        const response =
+            await fetch(
+                "/api/profiles?include_archived=true"
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const data =
+            await response.json();
+
+        managerProfiles =
+            Array.isArray(
+                data.profiles
+            )
+                ?
+                data.profiles
+                :
+                [];
+
+        libraryCount.textContent =
+            String(
+                managerProfiles.length
+            );
+
+        renderManagerProfiles();
+
+    } catch (error) {
+        profileManagerList.innerHTML = `
+            <div class="loading-state">
+                Could not load profiles.
+            </div>
+        `;
+
         showToast(
-            "Nothing to copy."
+            error.message
         );
+    }
+}
+
+
+function renderManagerProfiles() {
+    profileManagerList.innerHTML =
+        "";
+
+    const query =
+        profileSearch
+            .value
+            .trim()
+            .toLowerCase();
+
+    const filtered =
+        managerProfiles.filter(
+            profile => {
+                const value =
+                    `${profile.name} ${profile.description || ""}`
+                        .toLowerCase();
+
+                return value.includes(
+                    query
+                );
+            }
+        );
+
+    if (!filtered.length) {
+        profileManagerList.innerHTML = `
+            <div class="loading-state">
+                No profiles found.
+            </div>
+        `;
+
         return;
     }
 
+    filtered.forEach(
+        profile => {
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.type =
+                "button";
+
+            button.className =
+                "manager-profile-item";
+
+            if (
+                Number(profile.id)
+                ===
+                Number(editingProfileId)
+            ) {
+                button.classList.add(
+                    "selected"
+                );
+            }
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "manager-profile-title-row";
+
+            const title =
+                document.createElement(
+                    "div"
+                );
+
+            title.className =
+                "manager-profile-title";
+
+            title.textContent =
+                profile.name;
+
+            row.appendChild(
+                title
+            );
+
+            const desc =
+                document.createElement(
+                    "div"
+                );
+
+            desc.className =
+                "manager-profile-description";
+
+            desc.textContent =
+                profile.description
+                ||
+                "No description";
+
+            const status =
+                document.createElement(
+                    "span"
+                );
+
+            status.className =
+                "manager-profile-status";
+
+            status.textContent =
+                Number(
+                    profile.is_active
+                )
+                ===
+                1
+                    ?
+                    "ACTIVE"
+                    :
+                    "ARCHIVED";
+
+            button.append(
+                row,
+                desc,
+                status
+            );
+
+            button.addEventListener(
+                "click",
+                () =>
+                    openProfileEditor(
+                        profile.id
+                    )
+            );
+
+            profileManagerList.appendChild(
+                button
+            );
+        }
+    );
+}
+
+
+profileSearch.addEventListener(
+    "input",
+    renderManagerProfiles
+);
+
+
+async function openProfileEditor(
+    profileId
+) {
     try {
-        await navigator.clipboard.writeText(
-            text
+        const response =
+            await fetch(
+                `/api/profiles/${profileId}`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const profile =
+            await response.json();
+
+        editingProfileId =
+            Number(
+                profile.id
+            );
+
+        editingProfileName =
+            profile.name;
+
+        profileEditorEmpty.classList.add(
+            "hidden-element"
         );
 
-        showToast(
-            successMessage
+        profileEditorContent.classList.remove(
+            "hidden-element"
         );
-    } catch {
+
+        profileEditorTitle.textContent =
+            profile.name;
+
+        profileNameInput.value =
+            profile.name;
+
+        profileDescriptionInput.value =
+            profile.description
+            ||
+            "";
+
+        profileInstructionEditor.value =
+            profile.system_instruction
+            ||
+            "";
+
+        instructionCharacterCount.textContent =
+            `${formatNumber(profileInstructionEditor.value.length)} characters`;
+
+        const active =
+            Number(
+                profile.is_active
+            )
+            ===
+            1;
+
+        profileStateBadge.textContent =
+            active
+                ?
+                "ACTIVE"
+                :
+                "ARCHIVED";
+
+        archiveProfileButton.classList.toggle(
+            "hidden-element",
+            !active
+        );
+
+        restoreProfileButton.classList.toggle(
+            "hidden-element",
+            active
+        );
+
+        [
+            profileNameInput,
+            profileDescriptionInput,
+            profileInstructionEditor,
+            saveDetailsButton,
+            saveVersionButton,
+        ].forEach(
+            item => {
+                item.disabled =
+                    !active;
+            }
+        );
+
+        renderManagerProfiles();
+
+    } catch (error) {
         showToast(
-            "Browser could not copy the text."
+            error.message
         );
     }
 }
 
 
-retryPlannerButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!currentJob?.id) {
-            showToast(
-                "Create a job first."
-            );
-
-            return;
-        }
-
-        promptPackagesSection.classList.add(
-            "hidden-element"
-        );
-
-        promptPackageGrid.innerHTML =
-            "";
-
-        currentPromptPackages = [];
-
-        await runPromptPlanner(
-            currentJob.id
-        );
+profileInstructionEditor.addEventListener(
+    "input",
+    () => {
+        instructionCharacterCount.textContent =
+            `${formatNumber(profileInstructionEditor.value.length)} characters`;
     }
 );
 
 
-copyPlannerOutputButton.addEventListener(
+saveDetailsButton.addEventListener(
     "click",
     async () => {
+        if (!editingProfileId) {
+            return;
+        }
 
-        const text =
-            plannerRawOutput.textContent
-            ||
-            "";
+        const name =
+            profileNameInput
+                .value
+                .trim();
 
-        if (!text.trim()) {
+        if (!name) {
             showToast(
-                "No planner output to copy."
+                "Profile name cannot be empty."
             );
 
             return;
         }
 
         try {
-            await navigator.clipboard.writeText(
-                text
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}`,
+                    {
+                        method:
+                            "PATCH",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                name:
+                                    name,
+
+                                description:
+                                    profileDescriptionInput
+                                        .value
+                                        .trim(),
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            await loadProfiles(
+                editingProfileId
+            );
+
+            await loadManagerProfiles();
+
+            await openProfileEditor(
+                editingProfileId
             );
 
             showToast(
-                "Prompt plan copied."
+                "Profile details saved."
             );
-        } catch {
+
+        } catch (error) {
             showToast(
-                "Browser could not copy the prompt plan."
+                error.message
             );
         }
     }
 );
 
-function markDraftChanged() {
-    if (!currentJob) {
-        return;
-    }
 
-    jobPanelStatus.textContent =
-        "DRAFT CHANGED";
-}
+saveVersionButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingProfileId) {
+            return;
+        }
+
+        const instruction =
+            profileInstructionEditor
+                .value
+                .trim();
+
+        if (!instruction) {
+            showToast(
+                "System instruction cannot be empty."
+            );
+
+            return;
+        }
+
+        saveVersionButton.disabled =
+            true;
+
+        saveVersionButton.textContent =
+            "Saving…";
+
+        try {
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}/instruction`,
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                system_instruction:
+                                    instruction
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            await loadProfiles(
+                editingProfileId
+            );
+
+            await loadManagerProfiles();
+
+            await openProfileEditor(
+                editingProfileId
+            );
+
+            showToast(
+                "Current system instruction updated."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            saveVersionButton.disabled =
+                false;
+
+            saveVersionButton.textContent =
+                "Save instruction";
+        }
+    }
+);
+
+
+archiveProfileButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingProfileId) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Archive "${editingProfileName}"?`
+            )
+        ) {
+            return;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            const id =
+                editingProfileId;
+
+            await loadProfiles();
+            await loadManagerProfiles();
+            await openProfileEditor(
+                id
+            );
+
+            showToast(
+                "Profile archived."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+        }
+    }
+);
+
+
+restoreProfileButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingProfileId) {
+            return;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}/restore`,
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            const id =
+                editingProfileId;
+
+            await loadProfiles(
+                id
+            );
+
+            await loadManagerProfiles();
+
+            await openProfileEditor(
+                id
+            );
+
+            showToast(
+                "Profile restored."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+        }
+    }
+);
+
+
+deleteProfileButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingProfileId) {
+            return;
+        }
+
+        const typed =
+            window.prompt(
+                `Type the profile name exactly to permanently delete it:\n\n${editingProfileName}`
+            );
+
+        if (
+            typed
+            !==
+            editingProfileName
+        ) {
+            if (
+                typed !== null
+            ) {
+                showToast(
+                    "Profile name did not match."
+                );
+            }
+
+            return;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}/permanent`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            editingProfileId =
+                null;
+
+            editingProfileName =
+                null;
+
+            profileEditorContent.classList.add(
+                "hidden-element"
+            );
+
+            profileEditorEmpty.classList.remove(
+                "hidden-element"
+            );
+
+            await loadProfiles();
+            await loadManagerProfiles();
+
+            showToast(
+                "Profile deleted."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+        }
+    }
+);
 
 
 /* =========================================================
-   HELPERS
+   NEW PROFILE MODAL
+========================================================= */
+
+newProfileButton.addEventListener(
+    "click",
+    () => {
+        newProfileForm.reset();
+
+        newInstructionCharacterCount.textContent =
+            "0 characters";
+
+        openModal(
+            newProfileModal
+        );
+    }
+);
+
+
+modalCloseButton.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            newProfileModal
+        )
+);
+
+
+cancelCreateProfile.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            newProfileModal
+        )
+);
+
+
+newProfileInstruction.addEventListener(
+    "input",
+    () => {
+        newInstructionCharacterCount.textContent =
+            `${formatNumber(newProfileInstruction.value.length)} characters`;
+    }
+);
+
+
+newProfileForm.addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const name =
+            newProfileName
+                .value
+                .trim();
+
+        const instruction =
+            newProfileInstruction
+                .value
+                .trim();
+
+        if (
+            !name
+            ||
+            !instruction
+        ) {
+            showToast(
+                "Name and system instruction are required."
+            );
+
+            return;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    "/api/profiles",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+                                name:
+                                    name,
+
+                                description:
+                                    newProfileDescription
+                                        .value
+                                        .trim(),
+
+                                system_instruction:
+                                    instruction,
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const profile =
+                await response.json();
+
+            closeModal(
+                newProfileModal
+            );
+
+            await loadProfiles(
+                profile.id
+            );
+
+            await loadManagerProfiles();
+
+            await openProfileEditor(
+                profile.id
+            );
+
+            showToast(
+                "Profile created."
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+        }
+    }
+);
+
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+function openModal(
+    element
+) {
+    element.classList.add(
+        "visible"
+    );
+
+    element.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+}
+
+
+function closeModal(
+    element
+) {
+    element.classList.remove(
+        "visible"
+    );
+
+    element.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+}
+
+
+[
+    finalInputModal,
+    imagePreviewModal,
+    regenerateModal,
+    compareModal,
+    newProfileModal,
+].forEach(
+    modal => {
+        modal.addEventListener(
+            "click",
+            event => {
+                if (
+                    event.target
+                    ===
+                    modal
+                ) {
+                    closeModal(
+                        modal
+                    );
+                }
+            }
+        );
+    }
+);
+
+
+closeFinalInputModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            finalInputModal
+        )
+);
+
+
+closeImagePreviewModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            imagePreviewModal
+        )
+);
+
+
+closeRegenerateModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            regenerateModal
+        )
+);
+
+
+cancelRegenerateButton.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            regenerateModal
+        )
+);
+
+
+closeCompareModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            compareModal
+        )
+);
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+        if (
+            event.key
+            ===
+            "Escape"
+        ) {
+            [
+                finalInputModal,
+                imagePreviewModal,
+                regenerateModal,
+                compareModal,
+                newProfileModal,
+            ].forEach(
+                closeModal
+            );
+        }
+
+        if (
+            imagePreviewModal
+                .classList
+                .contains(
+                    "visible"
+                )
+        ) {
+            if (
+                event.key
+                ===
+                "ArrowLeft"
+            ) {
+                previewPreviousButton.click();
+            }
+
+            if (
+                event.key
+                ===
+                "ArrowRight"
+            ) {
+                previewNextButton.click();
+            }
+        }
+    }
+);
+
+
+/* =========================================================
+   FORMAT / PROVIDER HELPERS
 ========================================================= */
 
 function initials(
@@ -4126,34 +5277,82 @@ function formatNumber(
 }
 
 
-function formatDate(
+function capitalize(
     value
 ) {
-    if (!value) {
-        return "Unknown date";
-    }
-
-    const date =
-        new Date(
-            value.replace(
-                " ",
-                "T"
-            )
-            +
-            "Z"
+    const string =
+        String(
+            value
+            ||
+            ""
         );
 
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return value;
-    }
-
-    return date.toLocaleString();
+    return (
+        string.charAt(0).toUpperCase()
+        +
+        string.slice(1)
+    );
 }
 
+
+function providerLabel(
+    value
+) {
+    const provider =
+        String(
+            value
+            ||
+            ""
+        ).split(
+            ":"
+        )[0];
+
+    return provider
+        ?
+        provider.toUpperCase()
+        :
+        "AI";
+}
+
+
+function providerMeta(
+    value
+) {
+    const pieces =
+        String(
+            value
+            ||
+            ""
+        ).split(
+            ":"
+        );
+
+    if (!pieces.length) {
+        return "AI provider";
+    }
+
+    return pieces
+        .filter(Boolean)
+        .map(
+            (
+                value,
+                index
+            ) =>
+                index === 0
+                    ?
+                    value.toUpperCase()
+                    :
+                    value
+        )
+        .join(
+            " · "
+        );
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
 
 function showToast(
     message
@@ -4172,18 +5371,17 @@ function showToast(
     toastTimer =
         setTimeout(
             () => {
-
                 toast.classList.remove(
                     "visible"
                 );
             },
-            3200
+            3400
         );
 }
 
 
 /* =========================================================
-   START
+   STARTUP
 ========================================================= */
 
 async function startApplication() {
@@ -4191,7 +5389,12 @@ async function startApplication() {
         "generate"
     );
 
-    await loadProfiles();
+    await Promise.all([
+        loadSettings(),
+        loadProfiles(),
+    ]);
+
+    renderReferenceCards();
 }
 
 

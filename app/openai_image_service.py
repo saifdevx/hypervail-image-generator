@@ -3,6 +3,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 from openai import OpenAI
 
+from app.settings_store import get_runtime_settings
+
 
 DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-2"
 DEFAULT_OPENAI_IMAGE_QUALITY = "low"
@@ -43,57 +45,31 @@ def get_openai_api_key():
 
 def get_openai_image_model():
     return (
-        os.getenv(
-            "OPENAI_IMAGE_MODEL",
-            DEFAULT_OPENAI_IMAGE_MODEL,
-        )
-        .strip()
-        or DEFAULT_OPENAI_IMAGE_MODEL
+        get_runtime_settings()[
+            "openai_image_model"
+        ]
     )
-
 
 def get_openai_image_quality():
-    value = (
-        os.getenv(
-            "OPENAI_IMAGE_QUALITY",
-            DEFAULT_OPENAI_IMAGE_QUALITY,
-        )
-        .strip()
-        .lower()
+    return (
+        get_runtime_settings()[
+            "openai_image_quality"
+        ]
     )
-
-    if value not in SUPPORTED_QUALITIES:
-        return DEFAULT_OPENAI_IMAGE_QUALITY
-
-    return value
-
 
 def get_openai_image_size():
     return (
-        os.getenv(
-            "OPENAI_IMAGE_SIZE",
-            DEFAULT_OPENAI_IMAGE_SIZE,
-        )
-        .strip()
-        or DEFAULT_OPENAI_IMAGE_SIZE
+        get_runtime_settings()[
+            "openai_image_size"
+        ]
     )
-
 
 def get_openai_output_format():
-    value = (
-        os.getenv(
-            "OPENAI_IMAGE_OUTPUT_FORMAT",
-            DEFAULT_OPENAI_OUTPUT_FORMAT,
-        )
-        .strip()
-        .lower()
+    return (
+        get_runtime_settings()[
+            "openai_image_output_format"
+        ]
     )
-
-    if value not in SUPPORTED_OUTPUT_FORMATS:
-        return DEFAULT_OPENAI_OUTPUT_FORMAT
-
-    return value
-
 
 def get_openai_sdk_version():
     try:

@@ -177,6 +177,7 @@ def get_job(job_id: int):
                 gj.description,
                 gj.requested_count,
                 gj.status,
+                gj.planner_provider,
                 gj.planner_model,
                 gj.planner_raw_output,
                 gj.planner_error,
@@ -306,7 +307,11 @@ def get_job_for_planning(job_id: int):
         connection.close()
 
 
-def mark_job_planning(job_id: int, model: str):
+def mark_job_planning(
+    job_id: int,
+    model: str,
+    provider: str = "gemini",
+):
     connection = get_connection()
 
     try:
@@ -315,12 +320,17 @@ def mark_job_planning(job_id: int, model: str):
             UPDATE generation_jobs
             SET
                 status = 'planning',
+                planner_provider = ?,
                 planner_model = ?,
                 planner_error = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
-            (model, job_id),
+            (
+                provider,
+                model,
+                job_id,
+            ),
         )
         connection.commit()
 
@@ -332,6 +342,7 @@ def mark_job_planned(
     job_id: int,
     model: str,
     raw_output: str,
+    provider: str = "gemini",
 ):
     connection = get_connection()
 
@@ -341,6 +352,7 @@ def mark_job_planned(
             UPDATE generation_jobs
             SET
                 status = 'planned_raw',
+                planner_provider = ?,
                 planner_model = ?,
                 planner_raw_output = ?,
                 planner_error = NULL,
@@ -349,6 +361,7 @@ def mark_job_planned(
             WHERE id = ?
             """,
             (
+                provider,
                 model,
                 raw_output,
                 job_id,
@@ -364,6 +377,7 @@ def mark_job_planning_failed(
     job_id: int,
     model: str,
     error_message: str,
+    provider: str = "gemini",
 ):
     connection = get_connection()
 
@@ -373,12 +387,14 @@ def mark_job_planning_failed(
             UPDATE generation_jobs
             SET
                 status = 'planning_failed',
+                planner_provider = ?,
                 planner_model = ?,
                 planner_error = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
             (
+                provider,
                 model,
                 error_message[:2000],
                 job_id,

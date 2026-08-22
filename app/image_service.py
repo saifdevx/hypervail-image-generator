@@ -19,6 +19,9 @@ from app.job_store import (
 from app.normalizer_service import (
     get_prompt_packages,
 )
+from app.settings_store import (
+    get_runtime_settings,
+)
 from app.openai_image_service import (
     create_openai_client,
     get_openai_api_key,
@@ -70,64 +73,35 @@ OUTPUTS_DIR = (
 
 
 def get_image_provider():
-    value = (
-        os.getenv(
-            "IMAGE_PROVIDER",
-            DEFAULT_IMAGE_PROVIDER,
-        )
-        .strip()
-        .lower()
+    return (
+        get_runtime_settings()[
+            "image_provider"
+        ]
     )
-
-    if value not in {
-        "gemini",
-        "openai",
-    }:
-        return DEFAULT_IMAGE_PROVIDER
-
-    return value
 
 
 def get_gemini_image_model():
     return (
-        os.getenv(
-            "GEMINI_IMAGE_MODEL",
-            DEFAULT_GEMINI_IMAGE_MODEL,
-        )
-        .strip()
-        or DEFAULT_GEMINI_IMAGE_MODEL
+        get_runtime_settings()[
+            "gemini_image_model"
+        ]
     )
 
 
 def get_gemini_image_size():
-    value = (
-        os.getenv(
-            "GEMINI_IMAGE_SIZE",
-            DEFAULT_GEMINI_IMAGE_SIZE,
-        )
-        .strip()
-        .upper()
+    return (
+        get_runtime_settings()[
+            "gemini_image_size"
+        ]
     )
-
-    if value not in SUPPORTED_GEMINI_IMAGE_SIZES:
-        return DEFAULT_GEMINI_IMAGE_SIZE
-
-    return value
 
 
 def get_gemini_aspect_ratio():
-    value = (
-        os.getenv(
-            "GEMINI_IMAGE_ASPECT_RATIO",
-            DEFAULT_GEMINI_ASPECT_RATIO,
-        )
-        .strip()
+    return (
+        get_runtime_settings()[
+            "gemini_image_aspect_ratio"
+        ]
     )
-
-    if value not in SUPPORTED_GEMINI_ASPECT_RATIOS:
-        return DEFAULT_GEMINI_ASPECT_RATIO
-
-    return value
 
 
 def get_image_model():
@@ -179,19 +153,10 @@ def _selected_key_source():
     return key_source
 
 def get_batch_concurrency():
-    raw = os.getenv(
-        "IMAGE_BATCH_CONCURRENCY",
-        str(DEFAULT_BATCH_CONCURRENCY),
-    )
-
-    try:
-        value = int(raw)
-    except ValueError:
-        value = DEFAULT_BATCH_CONCURRENCY
-
-    return max(
-        1,
-        min(value, 4),
+    return (
+        get_runtime_settings()[
+            "batch_concurrency"
+        ]
     )
 
 
@@ -290,6 +255,7 @@ def _create_image_record(
     job_id: int,
     prompt_id: int,
     status: str = "queued",
+    generation_note: str = "",
 ):
     connection = get_connection()
 
@@ -300,15 +266,17 @@ def _create_image_record(
                 job_id,
                 prompt_id,
                 provider,
-                status
+                status,
+                generation_note
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 job_id,
                 prompt_id,
                 _provider_label(),
                 status,
+                generation_note.strip(),
             ),
         )
 
@@ -439,6 +407,7 @@ def _all_image_rows(
                 gi.file_path,
                 gi.status,
                 gi.error_message,
+                gi.generation_note,
                 gi.created_at,
                 gp.position AS prompt_position,
                 gp.title AS prompt_title
@@ -758,6 +727,7 @@ def _find_verified_package(
 def _build_gemini_image_contents(
     job: dict,
     package: dict,
+    extra_direction: str = "",
 ):
     contents = []
 
@@ -797,6 +767,13 @@ def _build_gemini_image_contents(
             "Reference/Image 2, and so on.\n\n"
             "EXACT IMAGE PROMPT:\n"
             f"{package['final_input']}"
+            +
+            (
+                "\n\nADDITIONAL USER REGENERATION DIRECTION:\n"
+                f"{extra_direction.strip()}"
+                if extra_direction.strip()
+                else ""
+            )
         )
     )
 
@@ -806,6 +783,7 @@ def _build_gemini_image_contents(
 def _build_openai_image_prompt(
     package: dict,
     reference_count: int,
+    extra_direction: str = "",
 ):
     return (
         "Generate one new image using the uploaded reference "
@@ -817,12 +795,20 @@ def _build_openai_image_prompt(
         f"Reference image count: {reference_count}.\n\n"
         "EXACT SOURCE-VERIFIED IMAGE PROMPT:\n"
         f"{package['final_input']}"
+        +
+        (
+            "\n\nADDITIONAL USER REGENERATION DIRECTION:\n"
+            f"{extra_direction.strip()}"
+            if extra_direction.strip()
+            else ""
+        )
     )
 
 
 def _generate_gemini_image_bytes(
     job: dict,
     package: dict,
+    extra_direction: str = "",
 ):
     client = create_gemini_client()
 
@@ -831,6 +817,7 @@ def _generate_gemini_image_bytes(
         contents=_build_gemini_image_contents(
             job,
             package,
+            extra_direction=extra_direction,
         ),
         config=types.GenerateContentConfig(
             response_modalities=[
@@ -858,6 +845,7 @@ def _generate_gemini_image_bytes(
 def _generate_openai_image_bytes(
     job: dict,
     package: dict,
+    extra_direction: str = "",
 ):
     client = create_openai_client()
 
@@ -871,6 +859,7 @@ def _generate_openai_image_bytes(
         reference_count=len(
             job["references"]
         ),
+        extra_direction=extra_direction,
     )
 
     with ExitStack() as stack:
@@ -915,16 +904,19 @@ def _generate_openai_image_bytes(
 def _generate_provider_image_bytes(
     job: dict,
     package: dict,
+    extra_direction: str = "",
 ):
     if get_image_provider() == "openai":
         return _generate_openai_image_bytes(
             job,
             package,
+            extra_direction=extra_direction,
         )
 
     return _generate_gemini_image_bytes(
         job,
         package,
+        extra_direction=extra_direction,
     )
 
 
@@ -1051,6 +1043,7 @@ def _generate_into_record(
     image_id: int,
     job: dict,
     package: dict,
+    extra_direction: str = "",
 ):
     model = get_image_model()
     provider = get_image_provider()
@@ -1073,6 +1066,7 @@ def _generate_into_record(
                 _generate_provider_image_bytes(
                     job,
                     package,
+                    extra_direction=extra_direction,
                 )
             )
 
@@ -1181,6 +1175,7 @@ def _generate_into_record(
 def generate_prompt_image(
     job_id: int,
     prompt_id: int,
+    extra_direction: str = "",
 ):
     if not _selected_provider_configured():
         provider = get_image_provider()
@@ -1232,12 +1227,14 @@ def generate_prompt_image(
         job_id,
         prompt_id,
         status="queued",
+        generation_note=extra_direction,
     )
 
     result = _generate_into_record(
         image_id,
         job,
         package,
+        extra_direction=extra_direction,
     )
 
     if not result["ok"]:
