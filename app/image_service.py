@@ -1,6 +1,7 @@
 import base64
 import os
 import time
+from contextlib import ExitStack
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from google.genai import types
@@ -18,22 +19,33 @@ from app.job_store import (
 from app.normalizer_service import (
     get_prompt_packages,
 )
+from app.openai_image_service import (
+    create_openai_client,
+    get_openai_api_key,
+    get_openai_image_model,
+    get_openai_image_quality,
+    get_openai_image_size,
+    get_openai_output_format,
+    get_openai_image_status,
+    safe_openai_error_message,
+)
 
 
-DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image"
-DEFAULT_IMAGE_SIZE = "1K"
-DEFAULT_ASPECT_RATIO = "1:1"
+DEFAULT_GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
+DEFAULT_GEMINI_IMAGE_SIZE = "1K"
+DEFAULT_GEMINI_ASPECT_RATIO = "1:1"
+DEFAULT_IMAGE_PROVIDER = "openai"
 DEFAULT_BATCH_CONCURRENCY = 2
 DEFAULT_RETRY_ATTEMPTS = 3
 DEFAULT_RETRY_BASE_SECONDS = 2.0
 
-SUPPORTED_IMAGE_SIZES = {
+SUPPORTED_GEMINI_IMAGE_SIZES = {
     "1K",
     "2K",
     "4K",
 }
 
-SUPPORTED_ASPECT_RATIOS = {
+SUPPORTED_GEMINI_ASPECT_RATIOS = {
     "1:1",
     "1:4",
     "1:8",
@@ -57,47 +69,114 @@ OUTPUTS_DIR = (
 )
 
 
-def get_image_model():
+def get_image_provider():
+    value = (
+        os.getenv(
+            "IMAGE_PROVIDER",
+            DEFAULT_IMAGE_PROVIDER,
+        )
+        .strip()
+        .lower()
+    )
+
+    if value not in {
+        "gemini",
+        "openai",
+    }:
+        return DEFAULT_IMAGE_PROVIDER
+
+    return value
+
+
+def get_gemini_image_model():
     return (
         os.getenv(
             "GEMINI_IMAGE_MODEL",
-            DEFAULT_IMAGE_MODEL,
+            DEFAULT_GEMINI_IMAGE_MODEL,
         )
         .strip()
-        or DEFAULT_IMAGE_MODEL
+        or DEFAULT_GEMINI_IMAGE_MODEL
     )
 
 
-def get_image_size():
+def get_gemini_image_size():
     value = (
         os.getenv(
             "GEMINI_IMAGE_SIZE",
-            DEFAULT_IMAGE_SIZE,
+            DEFAULT_GEMINI_IMAGE_SIZE,
         )
         .strip()
         .upper()
     )
 
-    if value not in SUPPORTED_IMAGE_SIZES:
-        return DEFAULT_IMAGE_SIZE
+    if value not in SUPPORTED_GEMINI_IMAGE_SIZES:
+        return DEFAULT_GEMINI_IMAGE_SIZE
 
     return value
 
 
-def get_image_aspect_ratio():
+def get_gemini_aspect_ratio():
     value = (
         os.getenv(
             "GEMINI_IMAGE_ASPECT_RATIO",
-            DEFAULT_ASPECT_RATIO,
+            DEFAULT_GEMINI_ASPECT_RATIO,
         )
         .strip()
     )
 
-    if value not in SUPPORTED_ASPECT_RATIOS:
-        return DEFAULT_ASPECT_RATIO
+    if value not in SUPPORTED_GEMINI_ASPECT_RATIOS:
+        return DEFAULT_GEMINI_ASPECT_RATIO
 
     return value
 
+
+def get_image_model():
+    if get_image_provider() == "openai":
+        return get_openai_image_model()
+
+    return get_gemini_image_model()
+
+
+def get_image_size():
+    if get_image_provider() == "openai":
+        return get_openai_image_size()
+
+    return get_gemini_image_size()
+
+
+def get_image_aspect_ratio():
+    if get_image_provider() == "openai":
+        size = get_openai_image_size()
+
+        if size == "1024x1536":
+            return "2:3"
+        if size == "1536x1024":
+            return "3:2"
+        return "1:1"
+
+    return get_gemini_aspect_ratio()
+
+
+def _selected_provider_configured():
+    if get_image_provider() == "openai":
+        return bool(
+            get_openai_api_key()
+        )
+
+    api_key, _ = get_api_key()
+    return bool(api_key)
+
+
+def _selected_key_source():
+    if get_image_provider() == "openai":
+        return (
+            "OPENAI_API_KEY"
+            if get_openai_api_key()
+            else None
+        )
+
+    _, key_source = get_api_key()
+    return key_source
 
 def get_batch_concurrency():
     raw = os.getenv(
@@ -151,28 +230,59 @@ def get_retry_base_seconds():
 
 
 def get_image_provider_status():
-    api_key, key_source = get_api_key()
+    provider = get_image_provider()
+
+    api_key, gemini_key_source = get_api_key()
+
+    gemini_status = {
+        "configured": bool(api_key),
+        "model": get_gemini_image_model(),
+        "image_size": get_gemini_image_size(),
+        "aspect_ratio": get_gemini_aspect_ratio(),
+        "key_source": gemini_key_source,
+    }
+
+    openai_status = get_openai_image_status()
+
+    if provider == "openai":
+        selected = {
+            **openai_status,
+            "aspect_ratio": get_image_aspect_ratio(),
+        }
+    else:
+        selected = {
+            "provider": "gemini",
+            **gemini_status,
+        }
 
     return {
-        "provider": "gemini",
-        "configured": bool(api_key),
-        "model": get_image_model(),
-        "image_size": get_image_size(),
-        "aspect_ratio": get_image_aspect_ratio(),
-        "key_source": key_source,
-        "billing_required": True,
-        "free_tier_available": False,
+        **selected,
+        "selected_provider": provider,
+        "providers": {
+            "gemini": gemini_status,
+            "openai": openai_status,
+        },
         "batch_concurrency": get_batch_concurrency(),
         "retry_attempts": get_retry_attempts(),
     }
 
 
 def _provider_label():
+    provider = get_image_provider()
+
+    if provider == "openai":
+        return (
+            "openai:"
+            f"{get_openai_image_model()}:"
+            f"{get_openai_image_quality()}:"
+            f"{get_openai_image_size()}"
+        )
+
     return (
         "gemini:"
-        f"{get_image_model()}:"
-        f"{get_image_size()}:"
-        f"{get_image_aspect_ratio()}"
+        f"{get_gemini_image_model()}:"
+        f"{get_gemini_image_size()}:"
+        f"{get_gemini_aspect_ratio()}"
     )
 
 
@@ -645,7 +755,7 @@ def _find_verified_package(
     )
 
 
-def _build_image_contents(
+def _build_gemini_image_contents(
     job: dict,
     package: dict,
 ):
@@ -691,6 +801,147 @@ def _build_image_contents(
     )
 
     return contents
+
+
+def _build_openai_image_prompt(
+    package: dict,
+    reference_count: int,
+):
+    return (
+        "Generate one new image using the uploaded reference "
+        "images as visual product references. Treat the uploaded "
+        "images in their exact upload order as Reference Image 1, "
+        "Reference Image 2, and so on. Preserve product identity, "
+        "geometry, materials, colors, branding, and visible details "
+        "whenever the source-verified prompt requires them.\n\n"
+        f"Reference image count: {reference_count}.\n\n"
+        "EXACT SOURCE-VERIFIED IMAGE PROMPT:\n"
+        f"{package['final_input']}"
+    )
+
+
+def _generate_gemini_image_bytes(
+    job: dict,
+    package: dict,
+):
+    client = create_gemini_client()
+
+    response = client.models.generate_content(
+        model=get_gemini_image_model(),
+        contents=_build_gemini_image_contents(
+            job,
+            package,
+        ),
+        config=types.GenerateContentConfig(
+            response_modalities=[
+                "IMAGE"
+            ],
+            image_config=types.ImageConfig(
+                aspect_ratio=get_gemini_aspect_ratio(),
+                image_size=get_gemini_image_size(),
+            ),
+        ),
+    )
+
+    image_bytes = _extract_generated_image_bytes(
+        response
+    )
+
+    if not image_bytes:
+        raise RuntimeError(
+            "Gemini returned no image data."
+        )
+
+    return image_bytes
+
+
+def _generate_openai_image_bytes(
+    job: dict,
+    package: dict,
+):
+    client = create_openai_client()
+
+    if client is None:
+        raise RuntimeError(
+            "OpenAI API key is not configured."
+        )
+
+    prompt = _build_openai_image_prompt(
+        package=package,
+        reference_count=len(
+            job["references"]
+        ),
+    )
+
+    with ExitStack() as stack:
+        files = [
+            stack.enter_context(
+                open(
+                    reference["absolute_path"],
+                    "rb",
+                )
+            )
+            for reference in job["references"]
+        ]
+
+        image_input = (
+            files[0]
+            if len(files) == 1
+            else files
+        )
+
+        result = client.images.edit(
+            model=get_openai_image_model(),
+            image=image_input,
+            prompt=prompt,
+            quality=get_openai_image_quality(),
+            size=get_openai_image_size(),
+            output_format=get_openai_output_format(),
+        )
+
+    if (
+        not result.data
+        or not result.data[0].b64_json
+    ):
+        raise RuntimeError(
+            "OpenAI returned no image data."
+        )
+
+    return base64.b64decode(
+        result.data[0].b64_json
+    )
+
+
+def _generate_provider_image_bytes(
+    job: dict,
+    package: dict,
+):
+    if get_image_provider() == "openai":
+        return _generate_openai_image_bytes(
+            job,
+            package,
+        )
+
+    return _generate_gemini_image_bytes(
+        job,
+        package,
+    )
+
+
+def _safe_provider_error_message(
+    error: Exception,
+):
+    if get_image_provider() == "openai":
+        return safe_openai_error_message(
+            error
+        )
+
+    api_key, _ = get_api_key()
+
+    return safe_error_message(
+        error,
+        api_key,
+    )
 
 
 def _media_type_from_bytes(
@@ -801,8 +1052,8 @@ def _generate_into_record(
     job: dict,
     package: dict,
 ):
-    api_key, _ = get_api_key()
     model = get_image_model()
+    provider = get_image_provider()
 
     _set_image_status(
         image_id,
@@ -818,39 +1069,12 @@ def _generate_into_record(
         attempts + 1,
     ):
         try:
-            client = create_gemini_client()
-
-            response = (
-                client.models.generate_content(
-                    model=model,
-                    contents=_build_image_contents(
-                        job,
-                        package,
-                    ),
-                    config=types.GenerateContentConfig(
-                        response_modalities=[
-                            "IMAGE"
-                        ],
-                        image_config=types.ImageConfig(
-                            aspect_ratio=
-                                get_image_aspect_ratio(),
-                            image_size=
-                                get_image_size(),
-                        ),
-                    ),
-                )
-            )
-
             image_bytes = (
-                _extract_generated_image_bytes(
-                    response
+                _generate_provider_image_bytes(
+                    job,
+                    package,
                 )
             )
-
-            if not image_bytes:
-                raise RuntimeError(
-                    "Gemini returned no image data."
-                )
 
             extension, _ = (
                 _media_type_from_bytes(
@@ -897,6 +1121,8 @@ def _generate_into_record(
 
             return {
                 "ok": True,
+                "provider": provider,
+                "model": model,
                 "image_id": image_id,
                 "prompt_id": package[
                     "prompt_id"
@@ -908,9 +1134,10 @@ def _generate_into_record(
             }
 
         except Exception as error:
-            safe_message = safe_error_message(
-                error,
-                api_key,
+            safe_message = (
+                _safe_provider_error_message(
+                    error
+                )
             )
 
             last_error = safe_message
@@ -938,6 +1165,8 @@ def _generate_into_record(
 
     return {
         "ok": False,
+        "provider": provider,
+        "model": model,
         "image_id": image_id,
         "prompt_id": package[
             "prompt_id"
@@ -949,18 +1178,20 @@ def _generate_into_record(
         "attempts": attempts,
     }
 
-
 def generate_prompt_image(
     job_id: int,
     prompt_id: int,
 ):
-    api_key, _ = get_api_key()
+    if not _selected_provider_configured():
+        provider = get_image_provider()
 
-    if not api_key:
         return {
             "ok": False,
-            "code": "gemini_not_configured",
-            "error": "Gemini API key is not configured.",
+            "code": "provider_not_configured",
+            "error": (
+                f"{provider.title()} image provider is not configured. "
+                "Add its API key to .env and restart FastAPI."
+            ),
         }
 
     package, package_error = (
@@ -1049,9 +1280,15 @@ def generate_prompt_image(
             ],
             "source_verified": True,
         },
+        "provider": get_image_provider(),
         "model": get_image_model(),
         "image_size": get_image_size(),
         "aspect_ratio": get_image_aspect_ratio(),
+        "quality": (
+            get_openai_image_quality()
+            if get_image_provider() == "openai"
+            else None
+        ),
     }
 
 
@@ -1059,13 +1296,16 @@ def generate_all_prompt_images(
     job_id: int,
     regenerate_completed: bool = False,
 ):
-    api_key, _ = get_api_key()
+    if not _selected_provider_configured():
+        provider = get_image_provider()
 
-    if not api_key:
         return {
             "ok": False,
-            "code": "gemini_not_configured",
-            "error": "Gemini API key is not configured.",
+            "code": "provider_not_configured",
+            "error": (
+                f"{provider.title()} image provider is not configured. "
+                "Add its API key to .env and restart FastAPI."
+            ),
         }
 
     packages = get_prompt_packages(
@@ -1250,9 +1490,10 @@ def generate_all_prompt_images(
                     future
                 ]
 
-                safe_message = safe_error_message(
-                    error,
-                    api_key,
+                safe_message = (
+                    _safe_provider_error_message(
+                        error
+                    )
                 )
 
                 _mark_image_failed(

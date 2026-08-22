@@ -245,6 +245,40 @@ const geminiTestResult =
     document.getElementById("geminiTestResult");
 
 
+const imageProviderName =
+    document.getElementById("imageProviderName");
+
+const imageProviderStatus =
+    document.getElementById("imageProviderStatus");
+
+const selectedImageProvider =
+    document.getElementById("selectedImageProvider");
+
+const selectedImageModel =
+    document.getElementById("selectedImageModel");
+
+const selectedImageQuality =
+    document.getElementById("selectedImageQuality");
+
+const selectedImageSize =
+    document.getElementById("selectedImageSize");
+
+const openaiImageKeyStatus =
+    document.getElementById("openaiImageKeyStatus");
+
+const geminiImageKeyStatus =
+    document.getElementById("geminiImageKeyStatus");
+
+const imageBatchConcurrency =
+    document.getElementById("imageBatchConcurrency");
+
+const testOpenAIButton =
+    document.getElementById("testOpenAIButton");
+
+const openaiTestResult =
+    document.getElementById("openaiTestResult");
+
+
 const newProfileModal =
     document.getElementById("newProfileModal");
 
@@ -362,7 +396,10 @@ navSettings.addEventListener(
 
         showView("settings");
 
-        await loadGeminiStatus();
+        await Promise.all([
+            loadGeminiStatus(),
+            loadImageProviderStatus(),
+        ]);
     }
 );
 
@@ -565,6 +602,174 @@ testGeminiButton.addEventListener(
 
             testGeminiButton.textContent =
                 "TEST GEMINI CONNECTION";
+        }
+    }
+);
+
+
+/* =========================================================
+   IMAGE PROVIDER SETTINGS
+========================================================= */
+
+async function loadImageProviderStatus() {
+    imageProviderStatus.textContent =
+        "CHECKING";
+
+    imageProviderStatus.classList.remove(
+        "ready"
+    );
+
+    try {
+        const response =
+            await fetch(
+                "/api/providers/image/status"
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(response)
+            );
+        }
+
+        const status =
+            await response.json();
+
+        const provider =
+            status.selected_provider
+            ||
+            status.provider
+            ||
+            "unknown";
+
+        imageProviderName.textContent =
+            provider === "openai"
+                ? "OpenAI GPT Image"
+                : "Google Gemini Image";
+
+        selectedImageProvider.textContent =
+            provider.toUpperCase();
+
+        selectedImageModel.textContent =
+            status.model
+            ||
+            "—";
+
+        selectedImageQuality.textContent =
+            status.quality
+            ||
+            (provider === "gemini"
+                ? "MODEL DEFAULT"
+                : "—");
+
+        selectedImageSize.textContent =
+            status.size
+            ||
+            status.image_size
+            ||
+            "—";
+
+        openaiImageKeyStatus.textContent =
+            status.providers?.openai?.configured
+                ? "CONFIGURED"
+                : "NOT CONFIGURED";
+
+        geminiImageKeyStatus.textContent =
+            status.providers?.gemini?.configured
+                ? "CONFIGURED"
+                : "NOT CONFIGURED";
+
+        imageBatchConcurrency.textContent =
+            String(
+                status.batch_concurrency
+                ??
+                "—"
+            );
+
+        imageProviderStatus.textContent =
+            status.configured
+                ? "READY"
+                : "NEEDS KEY";
+
+        imageProviderStatus.classList.toggle(
+            "ready",
+            Boolean(status.configured)
+        );
+
+    } catch (error) {
+        console.error(error);
+
+        imageProviderStatus.textContent =
+            "ERROR";
+
+        openaiTestResult.textContent =
+            error.message;
+    }
+}
+
+
+testOpenAIButton.addEventListener(
+    "click",
+    async () => {
+        testOpenAIButton.disabled =
+            true;
+
+        testOpenAIButton.textContent =
+            "TESTING OPENAI...";
+
+        openaiTestResult.classList.remove(
+            "success"
+        );
+
+        openaiTestResult.textContent =
+            "Checking OpenAI authentication and image-model access...";
+
+        try {
+            const response =
+                await fetch(
+                    "/api/providers/openai/test",
+                    {
+                        method: "POST"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(response)
+                );
+            }
+
+            const result =
+                await response.json();
+
+            openaiTestResult.classList.add(
+                "success"
+            );
+
+            openaiTestResult.textContent =
+                `OpenAI connection successful. Model accessible: ${result.model}`;
+
+            await loadImageProviderStatus();
+
+            showToast(
+                "OpenAI connection successful."
+            );
+
+        } catch (error) {
+            console.error(error);
+
+            openaiTestResult.textContent =
+                error.message;
+
+            showToast(
+                "OpenAI connection test failed."
+            );
+
+        } finally {
+            testOpenAIButton.disabled =
+                false;
+
+            testOpenAIButton.textContent =
+                "TEST OPENAI CONNECTION";
         }
     }
 );

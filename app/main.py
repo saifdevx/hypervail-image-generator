@@ -41,6 +41,10 @@ from app.gemini_service import (
     get_gemini_status,
     test_gemini_connection,
 )
+from app.openai_image_service import (
+    get_openai_image_status,
+    test_openai_connection,
+)
 from app.planner_service import (
     plan_job,
 )
@@ -150,7 +154,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.10.0",
+    version="0.10.1",
     lifespan=lifespan,
 )
 
@@ -226,12 +230,44 @@ def gemini_test():
 
 
 @app.get(
+    "/api/providers/image/status"
+)
+def image_provider_status():
+    return get_image_provider_status()
+
+
+@app.get(
     "/api/providers/gemini/image/status"
 )
 def gemini_image_status():
-    return (
-        get_image_provider_status()
-    )
+    status = get_image_provider_status()
+    return status["providers"]["gemini"]
+
+
+@app.get(
+    "/api/providers/openai/image/status"
+)
+def openai_image_status():
+    return get_openai_image_status()
+
+
+@app.post(
+    "/api/providers/openai/test"
+)
+def openai_test():
+    result = test_openai_connection()
+
+    if not result["ok"]:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                result.get("error")
+                or
+                "OpenAI connection test failed."
+            ),
+        )
+
+    return result
 
 
 # ============================================================
@@ -897,7 +933,7 @@ def job_plan(
 
     if code == "job_not_found":
         status_code = 404
-    elif code == "gemini_not_configured":
+    elif code == "provider_not_configured":
         status_code = 503
     else:
         status_code = 502
@@ -1019,7 +1055,7 @@ def prompt_generate_image(
         "no_references",
     }:
         status_code = 409
-    elif code == "gemini_not_configured":
+    elif code == "provider_not_configured":
         status_code = 503
     else:
         status_code = 502
@@ -1056,7 +1092,7 @@ def job_generate_all_images(
             "batch_in_progress",
         }:
             status_code = 409
-        elif code == "gemini_not_configured":
+        elif code == "provider_not_configured":
             status_code = 503
         else:
             status_code = 502
