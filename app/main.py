@@ -41,12 +41,19 @@ from app.gemini_service import (
     get_gemini_status,
     test_gemini_connection,
 )
-from app.planner_service import plan_job
+from app.planner_service import (
+    plan_job,
+)
 from app.normalizer_service import (
-    ensure_step8_schema,
     normalize_job,
     get_structured_prompts,
     get_prompt_packages,
+)
+from app.image_service import (
+    get_image_provider_status,
+    generate_prompt_image,
+    get_job_images,
+    get_generated_image_file,
 )
 
 
@@ -85,47 +92,63 @@ class ProfileVersionRequest(BaseModel):
     )
 
 
-def normalize_requested_count(value: str):
-    normalized = value.strip().lower()
+def normalize_requested_count(
+    value: str,
+):
+    normalized = (
+        value
+        .strip()
+        .lower()
+    )
 
     if normalized == "auto":
         return "auto"
 
     try:
-        number = int(normalized)
+        number = int(
+            normalized
+        )
     except ValueError:
         raise HTTPException(
             status_code=422,
             detail=(
-                "requested_count must be 'auto' "
-                "or a whole number."
+                "requested_count must be "
+                "'auto' or a whole number."
             ),
         )
 
-    if number < 1 or number > 16:
+    if (
+        number < 1
+        or number > 16
+    ):
         raise HTTPException(
             status_code=422,
             detail=(
-                "requested_count must be between "
-                "1 and 16."
+                "requested_count must be "
+                "between 1 and 16."
             ),
         )
 
-    return str(number)
+    return str(
+        number
+    )
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(
+    app: FastAPI,
+):
     init_database()
-    ensure_step8_schema()
     seed_default_profiles()
     yield
 
 
 app = FastAPI(
     title="Image Agent",
-    description="Custom AI product image generation agent",
-    version="0.8.1",
+    description=(
+        "Custom AI product image generation agent"
+    ),
+    version="0.9.0",
     lifespan=lifespan,
 )
 
@@ -133,7 +156,9 @@ app = FastAPI(
 app.mount(
     "/static",
     StaticFiles(
-        directory=str(STATIC_DIR)
+        directory=str(
+            STATIC_DIR
+        )
     ),
     name="static",
 )
@@ -145,16 +170,23 @@ app.mount(
 )
 def home():
     return FileResponse(
-        str(STATIC_DIR / "index.html")
+        str(
+            STATIC_DIR /
+            "index.html"
+        )
     )
 
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy"
+    }
 
 
-@app.get("/api/database/status")
+@app.get(
+    "/api/database/status"
+)
 def database_status():
     return get_database_status()
 
@@ -163,45 +195,71 @@ def database_status():
 # GEMINI PROVIDER
 # ============================================================
 
-@app.get("/api/providers/gemini/status")
+@app.get(
+    "/api/providers/gemini/status"
+)
 def gemini_status():
     return get_gemini_status()
 
 
-@app.post("/api/providers/gemini/test")
+@app.post(
+    "/api/providers/gemini/test"
+)
 def gemini_test():
-    result = test_gemini_connection()
+    result = (
+        test_gemini_connection()
+    )
 
     if not result["ok"]:
         raise HTTPException(
             status_code=503,
             detail=(
                 result.get("error")
-                or "Gemini connection test failed."
+                or
+                "Gemini connection test failed."
             ),
         )
 
     return result
 
 
+@app.get(
+    "/api/providers/gemini/image/status"
+)
+def gemini_image_status():
+    return (
+        get_image_provider_status()
+    )
+
+
 # ============================================================
 # PROFILES
 # ============================================================
 
-@app.get("/api/profiles")
+@app.get(
+    "/api/profiles"
+)
 def profiles_list(
     include_archived: bool = False,
 ):
     return {
-        "profiles": list_profiles(
-            include_inactive=include_archived
-        )
+        "profiles":
+            list_profiles(
+                include_inactive=
+                    include_archived
+            )
     }
 
 
-@app.get("/api/profiles/{profile_id}")
-def profile_details(profile_id: int):
-    profile = get_profile(profile_id)
+@app.get(
+    "/api/profiles/{profile_id}"
+)
+def profile_details(
+    profile_id: int,
+):
+    profile = get_profile(
+        profile_id
+    )
 
     if profile is None:
         raise HTTPException(
@@ -219,51 +277,85 @@ def profile_details(profile_id: int):
 def profile_create(
     request: ProfileCreateRequest,
 ):
-    name = request.name.strip()
-    instruction = request.system_instruction.strip()
+    name = (
+        request.name.strip()
+    )
+
+    instruction = (
+        request
+        .system_instruction
+        .strip()
+    )
 
     if not name:
         raise HTTPException(
             status_code=422,
-            detail="Profile name cannot be empty.",
+            detail=(
+                "Profile name cannot be empty."
+            ),
         )
 
     if not instruction:
         raise HTTPException(
             status_code=422,
-            detail="System instruction cannot be empty.",
+            detail=(
+                "System instruction cannot be empty."
+            ),
         )
 
     return create_profile(
         name=name,
-        description=request.description.strip(),
-        system_instruction=instruction,
+        description=
+            request
+            .description
+            .strip(),
+        system_instruction=
+            instruction,
     )
 
 
-@app.patch("/api/profiles/{profile_id}")
+@app.patch(
+    "/api/profiles/{profile_id}"
+)
 def profile_update(
     profile_id: int,
     request: ProfileUpdateRequest,
 ):
-    profile = update_profile_metadata(
-        profile_id=profile_id,
-        name=request.name.strip(),
-        description=request.description.strip(),
+    profile = (
+        update_profile_metadata(
+            profile_id=
+                profile_id,
+            name=
+                request
+                .name
+                .strip(),
+            description=
+                request
+                .description
+                .strip(),
+        )
     )
 
     if profile is None:
         raise HTTPException(
             status_code=404,
-            detail="Active profile not found.",
+            detail=(
+                "Active profile not found."
+            ),
         )
 
     return profile
 
 
-@app.get("/api/profiles/{profile_id}/versions")
-def profile_versions(profile_id: int):
-    profile = get_profile(profile_id)
+@app.get(
+    "/api/profiles/{profile_id}/versions"
+)
+def profile_versions(
+    profile_id: int,
+):
+    profile = get_profile(
+        profile_id
+    )
 
     if profile is None:
         raise HTTPException(
@@ -272,35 +364,44 @@ def profile_versions(profile_id: int):
         )
 
     return {
-        "profile_id": profile_id,
-        "active_version_number": profile[
-            "active_version_number"
-        ],
-        "latest_version_number": profile[
-            "latest_version_number"
-        ],
-        "versions": list_profile_versions(
-            profile_id
-        ),
+        "profile_id":
+            profile_id,
+        "active_version_number":
+            profile[
+                "active_version_number"
+            ],
+        "latest_version_number":
+            profile[
+                "latest_version_number"
+            ],
+        "versions":
+            list_profile_versions(
+                profile_id
+            ),
     }
 
 
 @app.get(
-    "/api/profiles/{profile_id}/versions/{version_number}"
+    "/api/profiles/{profile_id}"
+    "/versions/{version_number}"
 )
 def profile_version_details(
     profile_id: int,
     version_number: int,
 ):
-    profile = get_profile_version(
-        profile_id,
-        version_number,
+    profile = (
+        get_profile_version(
+            profile_id,
+            version_number,
+        )
     )
 
     if profile is None:
         raise HTTPException(
             status_code=404,
-            detail="Profile version not found",
+            detail=(
+                "Profile version not found"
+            ),
         )
 
     return profile
@@ -314,116 +415,166 @@ def profile_version_create(
     profile_id: int,
     request: ProfileVersionRequest,
 ):
-    instruction = request.system_instruction.strip()
+    instruction = (
+        request
+        .system_instruction
+        .strip()
+    )
 
     if not instruction:
         raise HTTPException(
             status_code=422,
-            detail="System instruction cannot be empty.",
+            detail=(
+                "System instruction cannot be empty."
+            ),
         )
 
-    profile = create_profile_version(
-        profile_id=profile_id,
-        system_instruction=instruction,
+    profile = (
+        create_profile_version(
+            profile_id=
+                profile_id,
+            system_instruction=
+                instruction,
+        )
     )
 
     if profile is None:
         raise HTTPException(
             status_code=404,
-            detail="Active profile not found.",
+            detail=(
+                "Active profile not found."
+            ),
         )
 
     return profile
 
 
 @app.post(
-    "/api/profiles/{profile_id}/versions/{version_number}/activate"
+    "/api/profiles/{profile_id}"
+    "/versions/{version_number}/activate"
 )
 def profile_version_activate(
     profile_id: int,
     version_number: int,
 ):
-    result = activate_profile_version(
-        profile_id,
-        version_number,
+    result = (
+        activate_profile_version(
+            profile_id,
+            version_number,
+        )
     )
 
-    if result["status"] == "not_found":
+    if (
+        result["status"]
+        ==
+        "not_found"
+    ):
         raise HTTPException(
             status_code=404,
-            detail="Active profile not found.",
+            detail=(
+                "Active profile not found."
+            ),
         )
 
-    if result["status"] == "version_not_found":
+    if (
+        result["status"]
+        ==
+        "version_not_found"
+    ):
         raise HTTPException(
             status_code=404,
-            detail="Profile version not found.",
+            detail=(
+                "Profile version not found."
+            ),
         )
 
     return result
 
 
 @app.delete(
-    "/api/profiles/{profile_id}/versions/{version_number}"
+    "/api/profiles/{profile_id}"
+    "/versions/{version_number}"
 )
 def profile_version_delete(
     profile_id: int,
     version_number: int,
 ):
-    result = delete_profile_version(
-        profile_id,
-        version_number,
+    result = (
+        delete_profile_version(
+            profile_id,
+            version_number,
+        )
     )
 
-    status = result["status"]
+    status = result[
+        "status"
+    ]
 
-    if status == "profile_not_found":
-        raise HTTPException(
-            status_code=404,
-            detail="Profile not found.",
-        )
-
-    if status == "version_not_found":
-        raise HTTPException(
-            status_code=404,
-            detail="Profile version not found.",
-        )
-
-    if status == "last_version":
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "You cannot delete the only "
-                "remaining version."
+    messages = {
+        "profile_not_found":
+            (
+                404,
+                "Profile not found.",
             ),
+        "version_not_found":
+            (
+                404,
+                "Profile version not found.",
+            ),
+        "last_version":
+            (
+                409,
+                (
+                    "You cannot delete the only "
+                    "remaining version."
+                ),
+            ),
+        "active_version":
+            (
+                409,
+                (
+                    "This version is currently used "
+                    "for Generate. Activate another "
+                    "version first."
+                ),
+            ),
+        "used_by_jobs":
+            (
+                409,
+                (
+                    "This version is used by "
+                    "generation history and cannot "
+                    "be deleted."
+                ),
+            ),
+    }
+
+    if status in messages:
+        code, message = (
+            messages[
+                status
+            ]
         )
 
-    if status == "active_version":
         raise HTTPException(
-            status_code=409,
-            detail=(
-                "This version is currently used for Generate. "
-                "Activate another version first."
-            ),
-        )
-
-    if status == "used_by_jobs":
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "This version is used by generation history "
-                "and cannot be deleted."
-            ),
+            status_code=code,
+            detail=message,
         )
 
     return result
 
 
-@app.delete("/api/profiles/{profile_id}")
-def profile_archive(profile_id: int):
-    profile = set_profile_active(
-        profile_id,
-        False,
+@app.delete(
+    "/api/profiles/{profile_id}"
+)
+def profile_archive(
+    profile_id: int,
+):
+    profile = (
+        set_profile_active(
+            profile_id,
+            False,
+        )
     )
 
     if profile is None:
@@ -438,11 +589,17 @@ def profile_archive(profile_id: int):
     }
 
 
-@app.post("/api/profiles/{profile_id}/restore")
-def profile_restore(profile_id: int):
-    profile = set_profile_active(
-        profile_id,
-        True,
+@app.post(
+    "/api/profiles/{profile_id}/restore"
+)
+def profile_restore(
+    profile_id: int,
+):
+    profile = (
+        set_profile_active(
+            profile_id,
+            True,
+        )
     )
 
     if profile is None:
@@ -457,24 +614,40 @@ def profile_restore(profile_id: int):
     }
 
 
-@app.delete("/api/profiles/{profile_id}/permanent")
-def profile_permanent_delete(profile_id: int):
-    result = permanently_delete_profile(
-        profile_id
+@app.delete(
+    "/api/profiles/{profile_id}/permanent"
+)
+def profile_permanent_delete(
+    profile_id: int,
+):
+    result = (
+        permanently_delete_profile(
+            profile_id
+        )
     )
 
-    if result["status"] == "not_found":
+    if (
+        result["status"]
+        ==
+        "not_found"
+    ):
         raise HTTPException(
             status_code=404,
             detail="Profile not found.",
         )
 
-    if result["status"] == "used_by_jobs":
+    if (
+        result["status"]
+        ==
+        "used_by_jobs"
+    ):
         raise HTTPException(
             status_code=409,
             detail=(
-                "This profile is used by generation history. "
-                "Archive it instead of permanently deleting it."
+                "This profile is used by "
+                "generation history. Archive "
+                "it instead of permanently "
+                "deleting it."
             ),
         )
 
@@ -492,30 +665,46 @@ def profile_permanent_delete(profile_id: int):
 async def job_create(
     profile_id: int = Form(...),
     description: str = Form(""),
-    requested_count: str = Form("auto"),
-    files: list[UploadFile] = File(...),
+    requested_count: str = Form(
+        "auto"
+    ),
+    files: list[
+        UploadFile
+    ] = File(...),
 ):
-    if len(files) < 1 or len(files) > 4:
+    if (
+        len(files) < 1
+        or len(files) > 4
+    ):
         raise HTTPException(
             status_code=422,
             detail=(
-                "Upload between 1 and 4 reference images."
+                "Upload between 1 and 4 "
+                "reference images."
             ),
         )
 
-    clean_description = description.strip()
+    clean_description = (
+        description.strip()
+    )
 
-    if len(clean_description) > 5000:
+    if (
+        len(clean_description)
+        >
+        5000
+    ):
         raise HTTPException(
             status_code=422,
             detail=(
-                "Creative direction must be 5000 "
-                "characters or fewer."
+                "Creative direction must be "
+                "5000 characters or fewer."
             ),
         )
 
-    clean_requested_count = normalize_requested_count(
-        requested_count
+    clean_requested_count = (
+        normalize_requested_count(
+            requested_count
+        )
     )
 
     validated_uploads = []
@@ -534,64 +723,99 @@ async def job_create(
         if not data:
             raise HTTPException(
                 status_code=422,
-                detail=f"Image {position} is empty.",
-            )
-
-        if len(data) > MAX_IMAGE_BYTES:
-            raise HTTPException(
-                status_code=413,
                 detail=(
-                    f"Image {position} is larger than 20 MB."
+                    f"Image {position} is empty."
                 ),
             )
 
-        detected = detect_image_type(data)
+        if (
+            len(data)
+            >
+            MAX_IMAGE_BYTES
+        ):
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"Image {position} is larger "
+                    "than 20 MB."
+                ),
+            )
+
+        detected = (
+            detect_image_type(
+                data
+            )
+        )
 
         if detected is None:
             raise HTTPException(
                 status_code=415,
                 detail=(
-                    f"Image {position} is not a valid "
-                    "PNG, JPG or WEBP file."
+                    f"Image {position} is not a "
+                    "valid PNG, JPG or WEBP file."
                 ),
             )
 
-        original_filename = (
-            upload.filename
-            or f"reference_{position}"
-        )
-
         validated_uploads.append(
             {
-                "original_filename": original_filename,
-                "data": data,
-                "extension": detected["extension"],
-                "media_type": detected["media_type"],
+                "original_filename":
+                    (
+                        upload.filename
+                        or
+                        f"reference_{position}"
+                    ),
+                "data":
+                    data,
+                "extension":
+                    detected[
+                        "extension"
+                    ],
+                "media_type":
+                    detected[
+                        "media_type"
+                    ],
             }
         )
 
-    result = create_prepared_job(
-        profile_id=profile_id,
-        description=clean_description,
-        requested_count=clean_requested_count,
-        uploads=validated_uploads,
+    result = (
+        create_prepared_job(
+            profile_id=
+                profile_id,
+            description=
+                clean_description,
+            requested_count=
+                clean_requested_count,
+            uploads=
+                validated_uploads,
+        )
     )
 
-    if result["status"] == "profile_unavailable":
+    if (
+        result["status"]
+        ==
+        "profile_unavailable"
+    ):
         raise HTTPException(
             status_code=409,
             detail=(
-                "The selected profile is archived, missing, "
-                "or has no active generation version."
+                "The selected profile is "
+                "archived, missing, or has no "
+                "active generation version."
             ),
         )
 
     return result["job"]
 
 
-@app.get("/api/jobs/{job_id}")
-def job_details(job_id: int):
-    job = get_job(job_id)
+@app.get(
+    "/api/jobs/{job_id}"
+)
+def job_details(
+    job_id: int,
+):
+    job = get_job(
+        job_id
+    )
 
     if job is None:
         raise HTTPException(
@@ -599,151 +823,262 @@ def job_details(job_id: int):
             detail="Job not found.",
         )
 
-    structured = get_structured_prompts(job_id)
+    structured = (
+        get_structured_prompts(
+            job_id
+        )
+    )
 
     if structured is not None:
-        job["structured"] = {
-            "status": structured.get("status"),
-            "normalizer_model": structured.get(
-                "normalizer_model"
-            ),
-            "normalizer_error": structured.get(
-                "normalizer_error"
-            ),
-            "normalized_at": structured.get(
-                "normalized_at"
-            ),
-            "prompt_count": structured.get(
-                "prompt_count",
-                0,
-            ),
-            "prompts": structured.get(
-                "prompts",
-                [],
-            ),
-        }
+        job["structured"] = (
+            structured
+        )
 
     return job
 
 
-@app.post("/api/jobs/{job_id}/plan")
-def job_plan(job_id: int):
-    result = plan_job(job_id)
-
-    if result["ok"]:
-        return result["job"]
-
-    code = result.get("code")
-
-    if code == "job_not_found":
-        raise HTTPException(
-            status_code=404,
-            detail=result["error"],
-        )
-
-    if code in {
-        "no_references",
-        "gemini_not_configured",
-    }:
-        raise HTTPException(
-            status_code=409,
-            detail=result["error"],
-        )
-
-    raise HTTPException(
-        status_code=502,
-        detail=result["error"],
-    )
-
-
-@app.post("/api/jobs/{job_id}/normalize")
-def job_normalize(job_id: int):
-    result = normalize_job(job_id)
-
-    if result["ok"]:
-        return result["result"]
-
-    code = result.get("code")
-
-    if code == "job_not_found":
-        raise HTTPException(
-            status_code=404,
-            detail=result["error"],
-        )
-
-    if code in {
-        "missing_raw_plan",
-        "gemini_not_configured",
-    }:
-        raise HTTPException(
-            status_code=409,
-            detail=result["error"],
-        )
-
-    raise HTTPException(
-        status_code=422,
-        detail=result["error"],
-    )
-
-
-@app.get("/api/jobs/{job_id}/prompts")
-def job_prompts(job_id: int):
-    result = get_structured_prompts(job_id)
-
-    if result is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Job not found.",
-        )
-
-    return result
-
-
-@app.get("/api/jobs/{job_id}/packages")
-def job_prompt_packages(job_id: int):
-    result = get_prompt_packages(job_id)
-
-    if result is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Job not found.",
-        )
-
-    if result.get("status") in {
-        "structured_invalid",
-        "structured_stale",
-    }:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Structured prompts are stale or failed source verification. "
-                "Run normalization again before image generation."
-            ),
-        )
-
-    return result
-
-
 @app.get(
-    "/api/jobs/{job_id}/references/{reference_id}/file",
+    "/api/jobs/{job_id}"
+    "/references/{reference_id}/file",
     include_in_schema=False,
 )
 def reference_image_file(
     job_id: int,
     reference_id: int,
 ):
-    reference = get_reference_file(
-        job_id,
-        reference_id,
+    reference = (
+        get_reference_file(
+            job_id,
+            reference_id,
+        )
     )
 
     if reference is None:
         raise HTTPException(
             status_code=404,
-            detail="Reference image not found.",
+            detail=(
+                "Reference image not found."
+            ),
         )
 
     return FileResponse(
-        path=str(reference["path"]),
-        media_type=reference["media_type"],
+        path=str(
+            reference["path"]
+        ),
+        media_type=
+            reference[
+                "media_type"
+            ],
+    )
+
+
+# ============================================================
+# PLANNER + STRUCTURED PROMPTS
+# ============================================================
+
+@app.post(
+    "/api/jobs/{job_id}/plan"
+)
+def job_plan(
+    job_id: int,
+):
+    result = plan_job(
+        job_id
+    )
+
+    if result["ok"]:
+        return result["job"]
+
+    code = result.get(
+        "code"
+    )
+
+    if code == "job_not_found":
+        status_code = 404
+    elif code == "gemini_not_configured":
+        status_code = 503
+    else:
+        status_code = 502
+
+    raise HTTPException(
+        status_code=status_code,
+        detail=result.get(
+            "error",
+            "Prompt planning failed.",
+        ),
+    )
+
+
+@app.post(
+    "/api/jobs/{job_id}/normalize"
+)
+def job_normalize(
+    job_id: int,
+):
+    result = normalize_job(
+        job_id
+    )
+
+    if result["ok"]:
+        return result[
+            "result"
+        ]
+
+    code = result.get(
+        "code"
+    )
+
+    if code == "job_not_found":
+        status_code = 404
+    elif code == "missing_raw_plan":
+        status_code = 409
+    else:
+        status_code = 502
+
+    raise HTTPException(
+        status_code=status_code,
+        detail=result.get(
+            "error",
+            "Prompt normalization failed.",
+        ),
+    )
+
+
+@app.get(
+    "/api/jobs/{job_id}/prompts"
+)
+def job_prompts(
+    job_id: int,
+):
+    result = (
+        get_structured_prompts(
+            job_id
+        )
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return result
+
+
+@app.get(
+    "/api/jobs/{job_id}/packages"
+)
+def job_prompt_packages(
+    job_id: int,
+):
+    result = get_prompt_packages(
+        job_id
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return result
+
+
+# ============================================================
+# STEP 9 — IMAGE GENERATION
+# ============================================================
+
+@app.post(
+    "/api/jobs/{job_id}"
+    "/prompts/{prompt_id}/generate-image"
+)
+def prompt_generate_image(
+    job_id: int,
+    prompt_id: int,
+):
+    result = (
+        generate_prompt_image(
+            job_id,
+            prompt_id,
+        )
+    )
+
+    if result["ok"]:
+        return result
+
+    code = result.get(
+        "code"
+    )
+
+    if code == "job_not_found":
+        status_code = 404
+    elif code in {
+        "package_invalid",
+        "no_references",
+    }:
+        status_code = 409
+    elif code == "gemini_not_configured":
+        status_code = 503
+    else:
+        status_code = 502
+
+    raise HTTPException(
+        status_code=status_code,
+        detail=result.get(
+            "error",
+            "Image generation failed.",
+        ),
+    )
+
+
+@app.get(
+    "/api/jobs/{job_id}/images"
+)
+def job_generated_images(
+    job_id: int,
+):
+    job = get_job(
+        job_id
+    )
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found.",
+        )
+
+    return get_job_images(
+        job_id
+    )
+
+
+@app.get(
+    "/api/images/{image_id}/file",
+    include_in_schema=False,
+)
+def generated_image_file(
+    image_id: int,
+):
+    image = (
+        get_generated_image_file(
+            image_id
+        )
+    )
+
+    if image is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Generated image not found."
+            ),
+        )
+
+    return FileResponse(
+        path=str(
+            image["path"]
+        ),
+        media_type=
+            image[
+                "media_type"
+            ],
     )
