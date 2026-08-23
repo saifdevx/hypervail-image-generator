@@ -5794,3 +5794,196 @@ input:checked
 #historyDetailModal {
     z-index: 190;
 }
+
+
+/* =========================================================
+   STEP 13 PHASE 1 — PRIVATE BUILT-INS + RATIO
+========================================================= */
+
+.ratio-block {
+    margin-bottom: 17px;
+}
+
+.ratio-label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--muted);
+
+    font-size: 7px;
+    font-weight: 950;
+
+    letter-spacing: 0.08em;
+}
+
+.ratio-selector {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 6px;
+}
+
+.ratio-button {
+    min-width: 48px;
+    min-height: 34px;
+
+    padding:
+        0
+        10px;
+
+    border:
+        1px solid
+        rgba(246, 246, 246, 0.16);
+
+    background: var(--black);
+    color: var(--white);
+
+    font-size: 8px;
+    font-weight: 850;
+}
+
+.ratio-button:hover {
+    border-color: var(--orange);
+}
+
+.ratio-button.selected {
+    border-color: var(--orange);
+
+    background: var(--orange);
+    color: var(--black);
+}
+
+.ratio-help {
+    display: block;
+
+    margin-top: 7px;
+
+    color: var(--muted-dark);
+
+    font-size: 7px;
+
+    line-height: 1.45;
+}
+
+.profile-card.private-workflow {
+    border-color:
+        rgba(255, 68, 0, 0.42);
+}
+
+.profile-card.private-workflow
+.profile-icon {
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(0, 0, 0, 0.18);
+}
+
+.profile-private-badge {
+    display: inline-flex;
+    align-items: center;
+
+    width: max-content;
+
+    margin-top: 6px;
+
+    padding:
+        4px
+        6px;
+
+    background:
+        rgba(255, 68, 0, 0.12);
+
+    border:
+        1px solid
+        rgba(255, 68, 0, 0.35);
+
+    color: var(--orange);
+
+    font-size: 6px;
+    font-weight: 950;
+
+    letter-spacing: 0.08em;
+}
+
+.active-profile
+.profile-private-badge {
+    background:
+        rgba(0, 0, 0, 0.08);
+
+    border-color:
+        rgba(0, 0, 0, 0.22);
+
+    color: var(--black);
+}
+
+.manager-profile-item.private-workflow {
+    border-color:
+        rgba(255, 68, 0, 0.24);
+}
+
+.manager-profile-item.private-workflow
+.manager-profile-status {
+    color: var(--orange);
+}
+
+.private-workflow-notice {
+    margin-bottom: 12px;
+
+    padding: 13px;
+
+    border:
+        1px solid
+        rgba(255, 68, 0, 0.45);
+
+    background:
+        rgba(255, 68, 0, 0.08);
+}
+
+.private-workflow-notice strong {
+    display: block;
+
+    color: var(--orange);
+
+    font-size: 7px;
+    font-weight: 950;
+
+    letter-spacing: 0.08em;
+}
+
+.private-workflow-notice span {
+    display: block;
+
+    margin-top: 6px;
+
+    color:
+        rgba(0, 0, 0, 0.62);
+
+    font-size: 9px;
+
+    line-height: 1.55;
+}
+
+.profile-editor
+.private-workflow-notice
++
+.instruction-editor {
+    min-height: 140px;
+}
+
+@media
+(max-width: 720px) {
+    .ratio-selector {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                4,
+                1fr
+            );
+    }
+
+    .ratio-button {
+        width: 100%;
+        min-width: 0;
+    }
+}

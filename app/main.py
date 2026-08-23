@@ -32,6 +32,8 @@ from app.profile_store import (
 )
 from app.job_store import (
     MAX_IMAGE_BYTES,
+    SUPPORTED_JOB_ASPECT_RATIOS,
+    ensure_job_schema,
     detect_image_type,
     create_prepared_job,
     get_job,
@@ -80,6 +82,14 @@ from app.history_service import (
     get_history_detail,
     set_job_favorite,
     set_image_favorite,
+)
+from app.builtin_workflows import (
+    sync_builtin_workflows,
+    sanitize_profile,
+    sanitize_profile_version,
+    is_builtin_profile_id,
+    is_builtin_workflow_name,
+    get_builtin_file_status,
 )
 
 
@@ -149,6 +159,63 @@ class FavoriteRequest(BaseModel):
     favorite: bool
 
 
+def normalize_requested_aspect_ratio(
+    value: str,
+):
+    normalized = (
+        value
+        .strip()
+    )
+
+    if (
+        normalized
+        not in
+        SUPPORTED_JOB_ASPECT_RATIOS
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Unsupported aspect ratio. "
+                "Choose one of: "
+                + ", ".join(
+                    sorted(
+                        SUPPORTED_JOB_ASPECT_RATIOS
+                    )
+                )
+            ),
+        )
+
+    return normalized
+
+
+def require_editable_profile(
+    profile_id: int,
+):
+    profile = get_profile(
+        profile_id
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found.",
+        )
+
+    if is_builtin_profile_id(
+        profile_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This is a built-in private workflow. "
+                "It can be used for generation, but it "
+                "cannot be edited, archived, or deleted."
+            ),
+        )
+
+    return profile
+
+
 def normalize_requested_count(
     value: str,
 ):
@@ -198,7 +265,9 @@ async def lifespan(
     init_database()
     ensure_settings_schema()
     ensure_history_schema()
+    ensure_job_schema()
     seed_default_profiles()
+    sync_builtin_workflows()
     yield
 
 
@@ -207,7 +276,7 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.12.0",
+    version="0.13.0-phase1",
     lifespan=lifespan,
 )
 
@@ -248,6 +317,16 @@ def health():
 )
 def database_status():
     return get_database_status()
+
+
+@app.get(
+    "/api/builtin-workflows/status"
+)
+def builtin_workflow_status():
+    return {
+        "files":
+            get_builtin_file_status()
+    }
 
 
 # ============================================================
@@ -541,11 +620,16 @@ def profiles_list(
     include_archived: bool = False,
 ):
     return {
-        "profiles":
-            list_profiles(
+        "profiles": [
+            sanitize_profile(
+                profile
+            )
+            for profile
+            in list_profiles(
                 include_inactive=
                     include_archived
             )
+        ]
     }
 
 
@@ -565,7 +649,9 @@ def profile_details(
             detail="Profile not found",
         )
 
-    return profile
+    return sanitize_profile(
+        profile
+    )
 
 
 @app.post(
@@ -601,6 +687,17 @@ def profile_create(
             ),
         )
 
+    if is_builtin_workflow_name(
+        name
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "That workflow name is reserved "
+                "for a built-in private workflow."
+            ),
+        )
+
     return create_profile(
         name=name,
         description=
@@ -619,6 +716,10 @@ def profile_update(
     profile_id: int,
     request: ProfileUpdateRequest,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     profile = (
         update_profile_metadata(
             profile_id=
@@ -652,6 +753,10 @@ def profile_instruction_save(
     profile_id: int,
     request: ProfileVersionRequest,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     instruction = (
         request
         .system_instruction
@@ -702,6 +807,12 @@ def profile_versions(
             detail="Profile not found",
         )
 
+    versions = (
+        list_profile_versions(
+            profile_id
+        )
+    )
+
     return {
         "profile_id":
             profile_id,
@@ -713,10 +824,14 @@ def profile_versions(
             profile[
                 "latest_version_number"
             ],
-        "versions":
-            list_profile_versions(
-                profile_id
-            ),
+        "versions": [
+            sanitize_profile_version(
+                profile_id,
+                version,
+            )
+            for version
+            in versions
+        ],
     }
 
 
@@ -743,7 +858,10 @@ def profile_version_details(
             ),
         )
 
-    return profile
+    return sanitize_profile_version(
+        profile_id,
+        profile,
+    )
 
 
 @app.post(
@@ -754,6 +872,10 @@ def profile_version_create(
     profile_id: int,
     request: ProfileVersionRequest,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     instruction = (
         request
         .system_instruction
@@ -796,6 +918,10 @@ def profile_version_activate(
     profile_id: int,
     version_number: int,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     result = (
         activate_profile_version(
             profile_id,
@@ -838,6 +964,10 @@ def profile_version_delete(
     profile_id: int,
     version_number: int,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     result = (
         delete_profile_version(
             profile_id,
@@ -909,6 +1039,10 @@ def profile_version_delete(
 def profile_archive(
     profile_id: int,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     profile = (
         set_profile_active(
             profile_id,
@@ -934,6 +1068,10 @@ def profile_archive(
 def profile_restore(
     profile_id: int,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     profile = (
         set_profile_active(
             profile_id,
@@ -959,6 +1097,10 @@ def profile_restore(
 def profile_permanent_delete(
     profile_id: int,
 ):
+    require_editable_profile(
+        profile_id
+    )
+
     result = (
         permanently_delete_profile(
             profile_id
@@ -1007,6 +1149,9 @@ async def job_create(
     requested_count: str = Form(
         "auto"
     ),
+    aspect_ratio: str = Form(
+        "1:1"
+    ),
     files: list[
         UploadFile
     ] = File(...),
@@ -1043,6 +1188,12 @@ async def job_create(
     clean_requested_count = (
         normalize_requested_count(
             requested_count
+        )
+    )
+
+    clean_aspect_ratio = (
+        normalize_requested_aspect_ratio(
+            aspect_ratio
         )
     )
 
@@ -1124,6 +1275,10 @@ async def job_create(
                 clean_description,
             requested_count=
                 clean_requested_count,
+            aspect_ratio=
+                clean_aspect_ratio,
+            runtime_settings=
+                get_runtime_settings(),
             uploads=
                 validated_uploads,
         )
@@ -1140,6 +1295,21 @@ async def job_create(
                 "The selected profile is "
                 "archived, missing, or has no "
                 "active generation version."
+            ),
+        )
+
+    if (
+        result["status"]
+        ==
+        "builtin_instruction_missing"
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The private instruction file for "
+                f"{result.get('profile_name', 'this workflow')} "
+                "is missing. Add the private .txt file under "
+                "profiles/private/ and retry."
             ),
         )
 

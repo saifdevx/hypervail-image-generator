@@ -36,7 +36,7 @@ from app.gemini_service import (
 #   + exact shared_negative (when present)
 # ============================================================
 
-LOCAL_NORMALIZER_NAME = "local-lossless-parser-v1"
+LOCAL_NORMALIZER_NAME = "local-lossless-parser-v2"
 
 
 # ============================================================
@@ -431,14 +431,32 @@ def mark_job_normalization_failed(
 # Supports:
 #   PROMPT 1 — TITLE
 #   **PROMPT 1 — TITLE**
+#   ### PROMPT 1 — TITLE
+#   ### **PROMPT 1 — TITLE**
 #   Prompt 1: Title
+#   - Prompt 1: Title
+#   > Prompt 1: Title
 #   FINAL PROMPT 1 - Title
 #   IMAGE PROMPT 1: Title
-PROMPT_HEADING_RE = re.compile(
-    r"""
-    ^[ \t]*
+#
+# Step 13's universal workflow instructions can cause planners
+# to use richer Markdown headings.  v2 accepts those headings
+# while still preserving prompt text losslessly.
+
+MARKDOWN_PREFIX = r"""
+    [ \t]*
+    (?:\#{1,6}[ \t]+)?
+    (?:>[ \t]*)?
+    (?:[-*+][ \t]+)?
     (?:\*\*)?
     [ \t]*
+"""
+
+
+PROMPT_HEADING_RE = re.compile(
+    rf"""
+    ^
+    {MARKDOWN_PREFIX}
     (?:(?:FINAL|IMAGE)[ \t]+)?
     PROMPT
     [ \t]+
@@ -459,11 +477,28 @@ PROMPT_HEADING_RE = re.compile(
 )
 
 
-SHARED_NEGATIVE_HEADING_RE = re.compile(
-    r"""
-    ^[ \t]*
-    (?:\*\*)?
+FINAL_PROMPTS_HEADING_RE = re.compile(
+    rf"""
+    ^
+    {MARKDOWN_PREFIX}
+    (?:\d+[.)][ \t]*)?
+    FINAL
+    [ \t]+
+    PROMPTS?
     [ \t]*
+    (?:\*\*)?
+    [ \t]*$
+    """,
+    re.IGNORECASE
+    | re.MULTILINE
+    | re.VERBOSE,
+)
+
+
+SHARED_NEGATIVE_HEADING_RE = re.compile(
+    rf"""
+    ^
+    {MARKDOWN_PREFIX}
     (?:\d+[.)][ \t]*)?
     (?:
         UNIVERSAL[ \t]+NEGATIVE(?:[ \t]+CONSTRAINTS)?
@@ -473,6 +508,8 @@ SHARED_NEGATIVE_HEADING_RE = re.compile(
         NEGATIVE[ \t]+CONSTRAINTS
         |
         UNIVERSAL[ \t]+NEGATIVE[ \t]+LINE
+        |
+        NEGATIVE[ \t]+LINE
     )
     [ \t]*
     (?:\*\*)?
@@ -485,10 +522,9 @@ SHARED_NEGATIVE_HEADING_RE = re.compile(
 
 
 TAIL_SECTION_HEADING_RE = re.compile(
-    r"""
-    ^[ \t]*
-    (?:\*\*)?
-    [ \t]*
+    rf"""
+    ^
+    {MARKDOWN_PREFIX}
     (?:\d+[.)][ \t]*)?
     (?:
         UNIVERSAL[ \t]+NEGATIVE(?:[ \t]+CONSTRAINTS)?
@@ -498,6 +534,8 @@ TAIL_SECTION_HEADING_RE = re.compile(
         NEGATIVE[ \t]+CONSTRAINTS
         |
         UNIVERSAL[ \t]+NEGATIVE[ \t]+LINE
+        |
+        NEGATIVE[ \t]+LINE
         |
         REGEN[ \t]+FIX[ \t]+LIBRARY
         |
@@ -620,12 +658,71 @@ def _extract_prompt_text_from_block(
     return prompt_text
 
 
+def _get_final_prompt_search_region(
+    raw_output: str
+) -> tuple[str, int]:
+    """
+    Prefer parsing only inside the planner's FINAL PROMPTS section.
+
+    This prevents lines from SHORT ANALYSIS / Angle Plan such as
+    "Prompt 2: side angle" from being mistaken for a real final prompt.
+
+    Returns:
+        (region_text, region_start_offset)
+    """
+    section = (
+        FINAL_PROMPTS_HEADING_RE.search(
+            raw_output
+        )
+    )
+
+    if not section:
+        return (
+            raw_output,
+            0,
+        )
+
+    start = section.end()
+
+    tail = (
+        TAIL_SECTION_HEADING_RE.search(
+            raw_output,
+            start,
+        )
+    )
+
+    end = (
+        tail.start()
+        if tail
+        else
+        len(
+            raw_output
+        )
+    )
+
+    return (
+        raw_output[
+            start:end
+        ],
+        start,
+    )
+
+
 def _extract_local_prompts(
     raw_output: str
 ) -> list[dict]:
+    (
+        search_region,
+        region_offset,
+    ) = (
+        _get_final_prompt_search_region(
+            raw_output
+        )
+    )
+
     matches = list(
         PROMPT_HEADING_RE.finditer(
-            raw_output
+            search_region
         )
     )
 
@@ -643,31 +740,55 @@ def _extract_local_prompts(
             )
         )
 
-        start = match.end()
+        # Work with absolute source indexes so every extracted
+        # string remains an exact slice of planner_raw_output.
+        start = (
+            region_offset
+            +
+            match.end()
+        )
 
         if (
             index + 1
             <
             len(matches)
         ):
-            end = matches[
-                index + 1
-            ].start()
+            end = (
+                region_offset
+                +
+                matches[
+                    index + 1
+                ].start()
+            )
 
         else:
-            tail_match = (
-                TAIL_SECTION_HEADING_RE.search(
-                    raw_output,
-                    start
+            if region_offset:
+                # When a FINAL PROMPTS section was isolated,
+                # its region already ends before negative / QA.
+                end = (
+                    region_offset
+                    +
+                    len(
+                        search_region
+                    )
                 )
-            )
 
-            end = (
-                tail_match.start()
-                if tail_match
-                else
-                len(raw_output)
-            )
+            else:
+                tail_match = (
+                    TAIL_SECTION_HEADING_RE.search(
+                        raw_output,
+                        start
+                    )
+                )
+
+                end = (
+                    tail_match.start()
+                    if tail_match
+                    else
+                    len(
+                        raw_output
+                    )
+                )
 
         block = raw_output[
             start:end
@@ -695,12 +816,15 @@ def _extract_local_prompts(
             )
         )
 
-        # Only record metadata if it is explicitly written
-        # in the source block. Never infer metadata from title.
         scene_type = (
             _extract_explicit_field(
                 block,
                 "Scene Type"
+            )
+            or
+            _extract_explicit_field(
+                block,
+                "Mode"
             )
         )
 
@@ -713,8 +837,10 @@ def _extract_local_prompts(
 
         prompts.append(
             {
-                "position": number,
-                "title": title,
+                "position":
+                    number,
+                "title":
+                    title,
                 "prompt_text":
                     prompt_text,
                 "scene_type":
@@ -729,24 +855,41 @@ def _extract_local_prompts(
             item["position"]
     )
 
-    # Avoid accidentally accepting duplicate or skipped IDs.
     positions = [
         item["position"]
         for item in prompts
     ]
 
+    # Duplicate prompt IDs are never safe.
+    if (
+        len(
+            positions
+        )
+        !=
+        len(
+            set(
+                positions
+            )
+        )
+    ):
+        return []
+
     expected = list(
         range(
             1,
-            len(prompts) + 1
+            len(
+                prompts
+            )
+            +
+            1
         )
     )
 
+    # v1 raised here immediately.  v2 returns zero prompts instead,
+    # which safely activates the existing structured-extraction
+    # fallback instead of failing the user's job with a 502.
     if positions != expected:
-        raise RuntimeError(
-            "Local parser found non-sequential prompt positions. "
-            f"Got {positions}; expected {expected}."
-        )
+        return []
 
     return prompts
 

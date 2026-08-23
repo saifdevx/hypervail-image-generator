@@ -232,6 +232,177 @@ def get_image_provider_status():
     }
 
 
+def _job_image_provider(
+    job: dict,
+):
+    return (
+        job.get(
+            "image_provider_snapshot"
+        )
+        or
+        get_image_provider()
+    ).strip()
+
+
+def _job_image_model(
+    job: dict,
+):
+    provider = (
+        _job_image_provider(
+            job
+        )
+    )
+
+    if provider == "openai":
+        return (
+            job.get(
+                "image_model_snapshot"
+            )
+            or
+            get_openai_image_model()
+        )
+
+    return (
+        job.get(
+            "image_model_snapshot"
+        )
+        or
+        get_gemini_image_model()
+    )
+
+
+def _job_aspect_ratio(
+    job: dict,
+):
+    return (
+        job.get(
+            "aspect_ratio"
+        )
+        or
+        get_image_aspect_ratio()
+        or
+        "1:1"
+    )
+
+
+def _job_openai_quality(
+    job: dict,
+):
+    return (
+        job.get(
+            "image_quality_snapshot"
+        )
+        or
+        get_openai_image_quality()
+    )
+
+
+def _job_openai_size(
+    job: dict,
+):
+    return (
+        job.get(
+            "image_size_snapshot"
+        )
+        or
+        get_openai_image_size()
+    )
+
+
+def _job_openai_output_format(
+    job: dict,
+):
+    return (
+        job.get(
+            "image_output_format_snapshot"
+        )
+        or
+        get_openai_output_format()
+    )
+
+
+def _job_gemini_size(
+    job: dict,
+):
+    return (
+        job.get(
+            "image_size_snapshot"
+        )
+        or
+        get_gemini_image_size()
+    )
+
+
+def _job_batch_concurrency(
+    job: dict,
+):
+    value = (
+        job.get(
+            "batch_concurrency_snapshot"
+        )
+    )
+
+    if value is None:
+        return get_batch_concurrency()
+
+    try:
+        value = int(
+            value
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return get_batch_concurrency()
+
+    return max(
+        1,
+        min(
+            value,
+            4,
+        ),
+    )
+
+
+def _provider_is_configured(
+    provider: str,
+):
+    if provider == "openai":
+        return bool(
+            get_openai_api_key()
+        )
+
+    api_key, _ = get_api_key()
+    return bool(
+        api_key
+    )
+
+
+def _job_provider_label(
+    job: dict,
+):
+    provider = (
+        _job_image_provider(
+            job
+        )
+    )
+
+    if provider == "openai":
+        return (
+            "openai:"
+            f"{_job_image_model(job)}:"
+            f"{_job_openai_quality(job)}:"
+            f"{_job_openai_size(job)}"
+        )
+
+    return (
+        "gemini:"
+        f"{_job_image_model(job)}:"
+        f"{_job_gemini_size(job)}:"
+        f"{_job_aspect_ratio(job)}"
+    )
+
+
 def _provider_label():
     provider = get_image_provider()
 
@@ -256,6 +427,7 @@ def _create_image_record(
     prompt_id: int,
     status: str = "queued",
     generation_note: str = "",
+    job: dict | None = None,
 ):
     connection = get_connection()
 
@@ -274,7 +446,14 @@ def _create_image_record(
             (
                 job_id,
                 prompt_id,
-                _provider_label(),
+                (
+                    _job_provider_label(
+                        job
+                    )
+                    if job is not None
+                    else
+                    _provider_label()
+                ),
                 status,
                 generation_note.strip(),
             ),
@@ -817,7 +996,10 @@ def _generate_gemini_image_bytes(
     client = create_gemini_client()
 
     response = client.models.generate_content(
-        model=get_gemini_image_model(),
+        model=
+            _job_image_model(
+                job
+            ),
         contents=_build_gemini_image_contents(
             job,
             package,
@@ -828,8 +1010,14 @@ def _generate_gemini_image_bytes(
                 "IMAGE"
             ],
             image_config=types.ImageConfig(
-                aspect_ratio=get_gemini_aspect_ratio(),
-                image_size=get_gemini_image_size(),
+                aspect_ratio=
+                    _job_aspect_ratio(
+                        job
+                    ),
+                image_size=
+                    _job_gemini_size(
+                        job
+                    ),
             ),
         ),
     )
@@ -884,12 +1072,24 @@ def _generate_openai_image_bytes(
         )
 
         result = client.images.edit(
-            model=get_openai_image_model(),
+            model=
+                _job_image_model(
+                    job
+                ),
             image=image_input,
             prompt=prompt,
-            quality=get_openai_image_quality(),
-            size=get_openai_image_size(),
-            output_format=get_openai_output_format(),
+            quality=
+                _job_openai_quality(
+                    job
+                ),
+            size=
+                _job_openai_size(
+                    job
+                ),
+            output_format=
+                _job_openai_output_format(
+                    job
+                ),
         )
 
     if (
@@ -910,24 +1110,39 @@ def _generate_provider_image_bytes(
     package: dict,
     extra_direction: str = "",
 ):
-    if get_image_provider() == "openai":
+    if (
+        _job_image_provider(
+            job
+        )
+        ==
+        "openai"
+    ):
         return _generate_openai_image_bytes(
             job,
             package,
-            extra_direction=extra_direction,
+            extra_direction=
+                extra_direction,
         )
 
     return _generate_gemini_image_bytes(
         job,
         package,
-        extra_direction=extra_direction,
+        extra_direction=
+            extra_direction,
     )
 
 
 def _safe_provider_error_message(
     error: Exception,
+    provider: str | None = None,
 ):
-    if get_image_provider() == "openai":
+    provider = (
+        provider
+        or
+        get_image_provider()
+    )
+
+    if provider == "openai":
         return safe_openai_error_message(
             error
         )
@@ -1049,8 +1264,17 @@ def _generate_into_record(
     package: dict,
     extra_direction: str = "",
 ):
-    model = get_image_model()
-    provider = get_image_provider()
+    model = (
+        _job_image_model(
+            job
+        )
+    )
+
+    provider = (
+        _job_image_provider(
+            job
+        )
+    )
 
     _set_image_status(
         image_id,
@@ -1134,7 +1358,8 @@ def _generate_into_record(
         except Exception as error:
             safe_message = (
                 _safe_provider_error_message(
-                    error
+                    error,
+                    provider,
                 )
             )
 
@@ -1181,15 +1406,35 @@ def generate_prompt_image(
     prompt_id: int,
     extra_direction: str = "",
 ):
-    if not _selected_provider_configured():
-        provider = get_image_provider()
+    job = get_job_for_planning(
+        job_id
+    )
 
+    if job is None:
         return {
             "ok": False,
-            "code": "provider_not_configured",
+            "code":
+                "job_not_found",
+            "error":
+                "Job not found.",
+        }
+
+    provider = (
+        _job_image_provider(
+            job
+        )
+    )
+
+    if not _provider_is_configured(
+        provider
+    ):
+        return {
+            "ok": False,
+            "code":
+                "provider_not_configured",
             "error": (
-                f"{provider.title()} image provider is not configured. "
-                "Add its API key to .env and restart FastAPI."
+                f"{provider.title()} image provider "
+                "is not configured."
             ),
         }
 
@@ -1203,19 +1448,10 @@ def generate_prompt_image(
     if package is None:
         return {
             "ok": False,
-            "code": "package_invalid",
-            "error": package_error,
-        }
-
-    job = get_job_for_planning(
-        job_id
-    )
-
-    if job is None:
-        return {
-            "ok": False,
-            "code": "job_not_found",
-            "error": "Job not found.",
+            "code":
+                "package_invalid",
+            "error":
+                package_error,
         }
 
     if not job.get(
@@ -1231,7 +1467,9 @@ def generate_prompt_image(
         job_id,
         prompt_id,
         status="queued",
-        generation_note=extra_direction,
+        generation_note=
+            extra_direction,
+        job=job,
     )
 
     result = _generate_into_record(
@@ -1249,7 +1487,10 @@ def generate_prompt_image(
                 "error"
             ),
             "image_id": image_id,
-            "model": get_image_model(),
+            "model":
+                _job_image_model(
+                    job
+                ),
         }
 
     images = get_job_images(
@@ -1281,14 +1522,37 @@ def generate_prompt_image(
             ],
             "source_verified": True,
         },
-        "provider": get_image_provider(),
-        "model": get_image_model(),
-        "image_size": get_image_size(),
-        "aspect_ratio": get_image_aspect_ratio(),
+        "provider":
+            provider,
+        "model":
+            _job_image_model(
+                job
+            ),
+        "image_size": (
+            _job_openai_size(
+                job
+            )
+            if provider
+            ==
+            "openai"
+            else
+            _job_gemini_size(
+                job
+            )
+        ),
+        "aspect_ratio":
+            _job_aspect_ratio(
+                job
+            ),
         "quality": (
-            get_openai_image_quality()
-            if get_image_provider() == "openai"
-            else None
+            _job_openai_quality(
+                job
+            )
+            if provider
+            ==
+            "openai"
+            else
+            None
         ),
     }
 
@@ -1297,15 +1561,35 @@ def generate_all_prompt_images(
     job_id: int,
     regenerate_completed: bool = False,
 ):
-    if not _selected_provider_configured():
-        provider = get_image_provider()
+    job = get_job_for_planning(
+        job_id
+    )
 
+    if job is None:
         return {
             "ok": False,
-            "code": "provider_not_configured",
+            "code":
+                "job_not_found",
+            "error":
+                "Job not found.",
+        }
+
+    provider = (
+        _job_image_provider(
+            job
+        )
+    )
+
+    if not _provider_is_configured(
+        provider
+    ):
+        return {
+            "ok": False,
+            "code":
+                "provider_not_configured",
             "error": (
-                f"{provider.title()} image provider is not configured. "
-                "Add its API key to .env and restart FastAPI."
+                f"{provider.title()} image provider "
+                "is not configured."
             ),
         }
 
@@ -1342,17 +1626,6 @@ def generate_all_prompt_images(
             "ok": False,
             "code": "package_invalid",
             "error": "No prompt packages were found.",
-        }
-
-    job = get_job_for_planning(
-        job_id
-    )
-
-    if job is None:
-        return {
-            "ok": False,
-            "code": "job_not_found",
-            "error": "Job not found.",
         }
 
     if not job.get(
@@ -1423,6 +1696,7 @@ def generate_all_prompt_images(
             job_id,
             prompt_id,
             status="queued",
+            job=job,
         )
 
         tasks.append(
@@ -1457,7 +1731,9 @@ def generate_all_prompt_images(
     )
 
     concurrency = min(
-        get_batch_concurrency(),
+        _job_batch_concurrency(
+            job
+        ),
         len(tasks),
     )
 
@@ -1493,7 +1769,8 @@ def generate_all_prompt_images(
 
                 safe_message = (
                     _safe_provider_error_message(
-                        error
+                        error,
+                        provider,
                     )
                 )
 
