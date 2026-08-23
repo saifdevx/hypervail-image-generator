@@ -287,6 +287,78 @@
                                 </div>
                             </div>
 
+                            <div class="ratio-block">
+                                <span class="ratio-label">
+                                    ASPECT RATIO
+                                </span>
+
+                                <div
+                                    class="ratio-selector"
+                                    id="ratioSelector"
+                                >
+                                    <button
+                                        class="ratio-button selected"
+                                        data-ratio="1:1"
+                                        type="button"
+                                    >
+                                        1:1
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="4:5"
+                                        type="button"
+                                    >
+                                        4:5
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="3:4"
+                                        type="button"
+                                    >
+                                        3:4
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="9:16"
+                                        type="button"
+                                    >
+                                        9:16
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="16:9"
+                                        type="button"
+                                    >
+                                        16:9
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="4:3"
+                                        type="button"
+                                    >
+                                        4:3
+                                    </button>
+
+                                    <button
+                                        class="ratio-button"
+                                        data-ratio="3:2"
+                                        type="button"
+                                    >
+                                        3:2
+                                    </button>
+                                </div>
+
+                                <small class="ratio-help">
+                                    OpenAI uses the nearest supported canvas;
+                                    Gemini uses the selected ratio directly.
+                                </small>
+                            </div>
+
                             <div class="count-selector">
                                 <button
                                     class="count-button selected"
@@ -726,6 +798,13 @@
                             </strong>
                         </div>
 
+                        <div>
+                            <span>RATIO</span>
+                            <strong id="summaryRatio">
+                                1:1
+                            </strong>
+                        </div>
+
                         <!-- compatibility only -->
                         <div class="hidden-element">
                             <strong id="summaryVersion">—</strong>
@@ -906,6 +985,18 @@
                                         instruction used by new jobs.
                                     </p>
                                 </div>
+                            </div>
+
+                            <div
+                                class="private-workflow-notice hidden-element"
+                                id="privateProfileNotice"
+                            >
+                                <strong>PRIVATE BUILT-IN WORKFLOW</strong>
+                                <span>
+                                    You can use this workflow for generation,
+                                    but its full system instruction is kept
+                                    private and is not exposed by the app.
+                                </span>
                             </div>
 
                             <textarea
@@ -1794,6 +1885,11 @@ GEMINI_API_KEY=...</pre>
                 <div>
                     <span>OUTPUTS</span>
                     <strong id="historyDetailOutputs">—</strong>
+                </div>
+
+                <div>
+                    <span>RATIO</span>
+                    <strong id="historyDetailRatio">—</strong>
                 </div>
 
             </section>

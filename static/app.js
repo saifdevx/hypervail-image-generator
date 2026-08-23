@@ -36,6 +36,7 @@ const description = $("description");
 const characterCount = $("characterCount");
 
 const autoGenerateImages = $("autoGenerateImages");
+const ratioSelector = $("ratioSelector");
 
 const generateButton = $("generateButton");
 const generateButtonLabel = $("generateButtonLabel");
@@ -91,6 +92,7 @@ const summaryPlanner = $("summaryPlanner");
 const summaryImageEngine = $("summaryImageEngine");
 const summaryImages = $("summaryImages");
 const summaryCount = $("summaryCount");
+const summaryRatio = $("summaryRatio");
 const summaryVersion = $("summaryVersion");
 
 const historyCountLabel = $("historyCountLabel");
@@ -128,6 +130,7 @@ const saveVersionButton = $("saveVersionButton");
 const archiveProfileButton = $("archiveProfileButton");
 const restoreProfileButton = $("restoreProfileButton");
 const deleteProfileButton = $("deleteProfileButton");
+const privateProfileNotice = $("privateProfileNotice");
 
 
 /* Settings */
@@ -231,6 +234,7 @@ const historyDetailWorkflow = $("historyDetailWorkflow");
 const historyDetailPlanner = $("historyDetailPlanner");
 const historyDetailImageEngine = $("historyDetailImageEngine");
 const historyDetailOutputs = $("historyDetailOutputs");
+const historyDetailRatio = $("historyDetailRatio");
 const historyDetailReferenceCount = $("historyDetailReferenceCount");
 const historyDetailReferences = $("historyDetailReferences");
 const historyDetailDirection = $("historyDetailDirection");
@@ -256,6 +260,7 @@ let replaceTargetIndex = null;
 let draggedReferenceIndex = null;
 
 let selectedCount = "auto";
+let selectedAspectRatio = "1:1";
 
 let editingProfileId = null;
 let editingProfileName = null;
@@ -288,6 +293,68 @@ let regenerateJobId = null;
 let advancedOpen = false;
 
 let toastTimer = null;
+
+
+function isBuiltinProfile(
+    profile
+) {
+    return Boolean(
+        profile
+        &&
+        profile.is_builtin
+    );
+}
+
+
+function setSelectedAspectRatio(
+    ratio
+) {
+    selectedAspectRatio =
+        ratio
+        ||
+        "1:1";
+
+    document
+        .querySelectorAll(
+            ".ratio-button"
+        )
+        .forEach(
+            button => {
+                button.classList.toggle(
+                    "selected",
+                    button.dataset.ratio
+                    ===
+                    selectedAspectRatio
+                );
+            }
+        );
+
+    if (summaryRatio) {
+        summaryRatio.textContent =
+            selectedAspectRatio;
+    }
+}
+
+
+if (ratioSelector) {
+    ratioSelector.addEventListener(
+        "click",
+        event => {
+            const button =
+                event.target.closest(
+                    ".ratio-button"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            setSelectedAspectRatio(
+                button.dataset.ratio
+            );
+        }
+    );
+}
 
 
 /* =========================================================
@@ -1558,6 +1625,16 @@ function createGenerateProfileCard(
     card.className =
         "profile-card";
 
+    if (
+        isBuiltinProfile(
+            profile
+        )
+    ) {
+        card.classList.add(
+            "private-workflow"
+        );
+    }
+
     card.dataset.profileId =
         String(
             profile.id
@@ -1613,6 +1690,23 @@ function createGenerateProfileCard(
         ||
         "Custom image-generation workflow";
 
+    const privateBadge =
+        document.createElement(
+            "span"
+        );
+
+    if (
+        isBuiltinProfile(
+            profile
+        )
+    ) {
+        privateBadge.className =
+            "profile-private-badge";
+
+        privateBadge.textContent =
+            "BUILT-IN · PRIVATE";
+    }
+
     const check =
         document.createElement(
             "span"
@@ -1625,7 +1719,20 @@ function createGenerateProfileCard(
         "●";
 
     text.append(
-        title,
+        title
+    );
+
+    if (
+        isBuiltinProfile(
+            profile
+        )
+    ) {
+        text.append(
+            privateBadge
+        );
+    }
+
+    text.append(
         desc
     );
 
@@ -1699,11 +1806,19 @@ function selectGenerateProfile(
         profile.name;
 
     summaryVersion.textContent =
-        profile.active_version_number
+        isBuiltinProfile(
+            profile
+        )
             ?
-            `v${profile.active_version_number}`
+            "private"
             :
-            "current";
+            (
+                profile.active_version_number
+                    ?
+                    `v${profile.active_version_number}`
+                    :
+                    "current"
+            );
 }
 
 
@@ -2306,6 +2421,11 @@ async function runCreateJob() {
         selectedCount
     );
 
+    formData.append(
+        "aspect_ratio",
+        selectedAspectRatio
+    );
+
     selectedImages.forEach(
         file => {
             formData.append(
@@ -2566,6 +2686,29 @@ function renderPreparedJob(
             "Auto"
             :
             job.requested_count;
+
+    summaryRatio.textContent =
+        job.aspect_ratio
+        ||
+        selectedAspectRatio;
+
+    if (
+        job.planner_provider_snapshot
+        &&
+        job.planner_model_snapshot
+    ) {
+        summaryPlanner.textContent =
+            `${capitalize(job.planner_provider_snapshot)} · ${job.planner_model_snapshot}`;
+    }
+
+    if (
+        job.image_provider_snapshot
+        &&
+        job.image_model_snapshot
+    ) {
+        summaryImageEngine.textContent =
+            `${capitalize(job.image_provider_snapshot)} · ${job.image_model_snapshot}`;
+    }
 
     storedReferenceGrid.innerHTML =
         "";
@@ -5476,6 +5619,11 @@ function renderHistoryDetail(
     historyDetailOutputs.textContent =
         `${detail.batch?.complete_count || 0}/${detail.batch?.total_prompts || 0}`;
 
+    historyDetailRatio.textContent =
+        detail.aspect_ratio
+        ||
+        "1:1";
+
     historyDetailDirection.textContent =
         detail.description
         ||
@@ -6147,6 +6295,12 @@ async function duplicateHistoryJob(
             "auto"
         );
 
+        setSelectedAspectRatio(
+            detail.aspect_ratio
+            ||
+            "1:1"
+        );
+
         const files = [];
 
         for (
@@ -6477,6 +6631,16 @@ function renderManagerProfiles() {
                 "manager-profile-item";
 
             if (
+                isBuiltinProfile(
+                    profile
+                )
+            ) {
+                button.classList.add(
+                    "private-workflow"
+                );
+            }
+
+            if (
                 Number(profile.id)
                 ===
                 Number(editingProfileId)
@@ -6531,15 +6695,23 @@ function renderManagerProfiles() {
                 "manager-profile-status";
 
             status.textContent =
-                Number(
-                    profile.is_active
+                isBuiltinProfile(
+                    profile
                 )
-                ===
-                1
                     ?
-                    "ACTIVE"
+                    "BUILT-IN · PRIVATE"
                     :
-                    "ARCHIVED";
+                    (
+                        Number(
+                            profile.is_active
+                        )
+                        ===
+                        1
+                            ?
+                            "ACTIVE"
+                            :
+                            "ARCHIVED"
+                    );
 
             button.append(
                 row,
@@ -6616,13 +6788,33 @@ async function openProfileEditor(
             ||
             "";
 
+        const builtIn =
+            isBuiltinProfile(
+                profile
+            );
+
         profileInstructionEditor.value =
-            profile.system_instruction
-            ||
-            "";
+            builtIn
+                ?
+                ""
+                :
+                (
+                    profile.system_instruction
+                    ||
+                    ""
+                );
 
         instructionCharacterCount.textContent =
-            `${formatNumber(profileInstructionEditor.value.length)} characters`;
+            builtIn
+                ?
+                "Private instruction"
+                :
+                `${formatNumber(profileInstructionEditor.value.length)} characters`;
+
+        privateProfileNotice.classList.toggle(
+            "hidden-element",
+            !builtIn
+        );
 
         const active =
             Number(
@@ -6632,20 +6824,35 @@ async function openProfileEditor(
             1;
 
         profileStateBadge.textContent =
-            active
+            builtIn
                 ?
-                "ACTIVE"
+                "BUILT-IN · PRIVATE"
                 :
-                "ARCHIVED";
+                (
+                    active
+                        ?
+                        "ACTIVE"
+                        :
+                        "ARCHIVED"
+                );
 
         archiveProfileButton.classList.toggle(
             "hidden-element",
             !active
+            ||
+            builtIn
         );
 
         restoreProfileButton.classList.toggle(
             "hidden-element",
             active
+            ||
+            builtIn
+        );
+
+        deleteProfileButton.classList.toggle(
+            "hidden-element",
+            builtIn
         );
 
         [
@@ -6657,9 +6864,18 @@ async function openProfileEditor(
         ].forEach(
             item => {
                 item.disabled =
-                    !active;
+                    !active
+                    ||
+                    builtIn;
             }
         );
+
+        profileInstructionEditor.placeholder =
+            builtIn
+                ?
+                "Private built-in workflow instruction."
+                :
+                "";
 
         renderManagerProfiles();
 
@@ -7493,6 +7709,10 @@ function showToast(
 async function startApplication() {
     showView(
         "generate"
+    );
+
+    setSelectedAspectRatio(
+        selectedAspectRatio
     );
 
     await Promise.all([

@@ -43,6 +43,14 @@ def build_runtime_instruction(
         "auto"
     ).strip()
 
+    aspect_ratio = (
+        job.get(
+            "aspect_ratio"
+        )
+        or
+        "1:1"
+    ).strip()
+
     if requested_count == "auto":
         count_instruction = (
             "Output count setting: AUTO. "
@@ -77,6 +85,9 @@ Preserve that ordering when applying the reference-role rules in
 the system instruction.
 
 {count_instruction}
+
+Output aspect ratio: {aspect_ratio}.
+Treat this as an explicit user lock for every generated prompt.
 
 {direction_instruction}
 
@@ -135,6 +146,7 @@ def _build_gemini_contents(
 
 def _run_gemini_planner(
     job: dict,
+    model: str | None = None,
 ):
     settings = (
         get_runtime_settings()
@@ -161,6 +173,8 @@ def _run_gemini_planner(
         }
 
     model = (
+        model
+        or
         settings[
             "gemini_planner_model"
         ]
@@ -419,6 +433,10 @@ def plan_job(
     )
 
     provider = (
+        job.get(
+            "planner_provider_snapshot"
+        )
+        or
         settings[
             "planner_provider"
         ]
@@ -431,12 +449,20 @@ def plan_job(
 
     if provider == "openai":
         preliminary_model = (
+            job.get(
+                "planner_model_snapshot"
+            )
+            or
             settings[
                 "openai_planner_model"
             ]
         )
     else:
         preliminary_model = (
+            job.get(
+                "planner_model_snapshot"
+            )
+            or
             settings[
                 "gemini_planner_model"
             ]
@@ -455,12 +481,26 @@ def plan_job(
                 build_runtime_instruction(
                     job
                 ),
+                model=
+                    preliminary_model,
+                reasoning=
+                    (
+                        job.get(
+                            "planner_reasoning_snapshot"
+                        )
+                        or
+                        settings[
+                            "openai_planner_reasoning"
+                        ]
+                    ),
             )
         )
     else:
         result = (
             _run_gemini_planner(
-                job
+                job,
+                model=
+                    preliminary_model,
             )
         )
 

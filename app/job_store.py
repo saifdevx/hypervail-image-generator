@@ -3,6 +3,10 @@ import shutil
 import uuid
 
 from app.database import get_connection
+from app.builtin_workflows import (
+    is_builtin_workflow_name,
+    load_builtin_instruction,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,6 +14,18 @@ DATA_DIR = BASE_DIR / "data"
 UPLOADS_DIR = DATA_DIR / "uploads"
 
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
+
+SUPPORTED_JOB_ASPECT_RATIOS = {
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+}
 
 
 def detect_image_type(data: bytes):
@@ -50,13 +66,259 @@ def media_type_for_path(path: Path):
     )
 
 
+def normalize_job_aspect_ratio(
+    value: str | None,
+):
+    normalized = (
+        value
+        or
+        "1:1"
+    ).strip()
+
+    if (
+        normalized
+        not in
+        SUPPORTED_JOB_ASPECT_RATIOS
+    ):
+        return "1:1"
+
+    return normalized
+
+
+def resolve_openai_size_for_ratio(
+    aspect_ratio: str,
+):
+    portrait = {
+        "2:3",
+        "3:4",
+        "4:5",
+        "9:16",
+    }
+
+    landscape = {
+        "3:2",
+        "4:3",
+        "5:4",
+        "16:9",
+    }
+
+    if aspect_ratio in portrait:
+        return "1024x1536"
+
+    if aspect_ratio in landscape:
+        return "1536x1024"
+
+    return "1024x1024"
+
+
+def build_generation_snapshot(
+    runtime_settings: dict,
+    aspect_ratio: str,
+):
+    aspect_ratio = (
+        normalize_job_aspect_ratio(
+            aspect_ratio
+        )
+    )
+
+    planner_provider = (
+        runtime_settings.get(
+            "planner_provider",
+            "gemini",
+        )
+    )
+
+    image_provider = (
+        runtime_settings.get(
+            "image_provider",
+            "openai",
+        )
+    )
+
+    if planner_provider == "openai":
+        planner_model = (
+            runtime_settings.get(
+                "openai_planner_model",
+                "gpt-5.6-luna",
+            )
+        )
+
+        planner_reasoning = (
+            runtime_settings.get(
+                "openai_planner_reasoning",
+                "low",
+            )
+        )
+
+    else:
+        planner_model = (
+            runtime_settings.get(
+                "gemini_planner_model",
+                "gemini-3.6-flash",
+            )
+        )
+
+        planner_reasoning = None
+
+    if image_provider == "openai":
+        image_model = (
+            runtime_settings.get(
+                "openai_image_model",
+                "gpt-image-2",
+            )
+        )
+
+        image_quality = (
+            runtime_settings.get(
+                "openai_image_quality",
+                "low",
+            )
+        )
+
+        image_size = (
+            resolve_openai_size_for_ratio(
+                aspect_ratio
+            )
+        )
+
+        image_output_format = (
+            runtime_settings.get(
+                "openai_image_output_format",
+                "jpeg",
+            )
+        )
+
+    else:
+        image_model = (
+            runtime_settings.get(
+                "gemini_image_model",
+                "gemini-3.1-flash-image",
+            )
+        )
+
+        image_quality = None
+
+        image_size = (
+            runtime_settings.get(
+                "gemini_image_size",
+                "1K",
+            )
+        )
+
+        image_output_format = None
+
+    try:
+        batch_concurrency = int(
+            runtime_settings.get(
+                "batch_concurrency",
+                2,
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        batch_concurrency = 2
+
+    batch_concurrency = max(
+        1,
+        min(
+            batch_concurrency,
+            4,
+        ),
+    )
+
+    return {
+        "aspect_ratio":
+            aspect_ratio,
+        "planner_provider_snapshot":
+            planner_provider,
+        "planner_model_snapshot":
+            planner_model,
+        "planner_reasoning_snapshot":
+            planner_reasoning,
+        "image_provider_snapshot":
+            image_provider,
+        "image_model_snapshot":
+            image_model,
+        "image_quality_snapshot":
+            image_quality,
+        "image_size_snapshot":
+            image_size,
+        "image_output_format_snapshot":
+            image_output_format,
+        "batch_concurrency_snapshot":
+            batch_concurrency,
+    }
+
+
+def ensure_job_schema():
+    connection = get_connection()
+
+    try:
+        columns = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA table_info(generation_jobs)"
+            ).fetchall()
+        }
+
+        additions = {
+            "aspect_ratio":
+                "TEXT",
+            "planner_provider_snapshot":
+                "TEXT",
+            "planner_model_snapshot":
+                "TEXT",
+            "planner_reasoning_snapshot":
+                "TEXT",
+            "image_provider_snapshot":
+                "TEXT",
+            "image_model_snapshot":
+                "TEXT",
+            "image_quality_snapshot":
+                "TEXT",
+            "image_size_snapshot":
+                "TEXT",
+            "image_output_format_snapshot":
+                "TEXT",
+            "batch_concurrency_snapshot":
+                "INTEGER",
+        }
+
+        for name, type_name in (
+            additions.items()
+        ):
+            if name in columns:
+                continue
+
+            connection.execute(
+                f"""
+                ALTER TABLE generation_jobs
+                ADD COLUMN {name} {type_name}
+                """
+            )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
 def create_prepared_job(
     profile_id: int,
     description: str,
     requested_count: str,
     uploads: list[dict],
+    aspect_ratio: str = "1:1",
+    runtime_settings: dict | None = None,
 ):
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_job_schema()
+
+    UPLOADS_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     connection = get_connection()
     job_directory = None
@@ -81,7 +343,43 @@ def create_prepared_job(
         ).fetchone()
 
         if profile is None:
-            return {"status": "profile_unavailable"}
+            return {
+                "status":
+                    "profile_unavailable"
+            }
+
+        if is_builtin_workflow_name(
+            profile["name"]
+        ):
+            system_instruction = (
+                load_builtin_instruction(
+                    profile["name"]
+                )
+            )
+
+            if not system_instruction:
+                return {
+                    "status":
+                        "builtin_instruction_missing",
+                    "profile_name":
+                        profile["name"],
+                }
+
+        else:
+            system_instruction = (
+                profile[
+                    "system_instruction"
+                ]
+            )
+
+        snapshots = (
+            build_generation_snapshot(
+                runtime_settings
+                or
+                {},
+                aspect_ratio,
+            )
+        )
 
         cursor = connection.execute(
             """
@@ -90,38 +388,106 @@ def create_prepared_job(
                 profile_version_id,
                 description,
                 requested_count,
+                aspect_ratio,
+                planner_provider_snapshot,
+                planner_model_snapshot,
+                planner_reasoning_snapshot,
+                image_provider_snapshot,
+                image_model_snapshot,
+                image_quality_snapshot,
+                image_size_snapshot,
+                image_output_format_snapshot,
+                batch_concurrency_snapshot,
                 status,
                 system_instruction_snapshot
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?
+            )
             """,
             (
                 profile_id,
-                profile["active_version_id"],
+                profile[
+                    "active_version_id"
+                ],
                 description,
                 requested_count,
+                snapshots[
+                    "aspect_ratio"
+                ],
+                snapshots[
+                    "planner_provider_snapshot"
+                ],
+                snapshots[
+                    "planner_model_snapshot"
+                ],
+                snapshots[
+                    "planner_reasoning_snapshot"
+                ],
+                snapshots[
+                    "image_provider_snapshot"
+                ],
+                snapshots[
+                    "image_model_snapshot"
+                ],
+                snapshots[
+                    "image_quality_snapshot"
+                ],
+                snapshots[
+                    "image_size_snapshot"
+                ],
+                snapshots[
+                    "image_output_format_snapshot"
+                ],
+                snapshots[
+                    "batch_concurrency_snapshot"
+                ],
                 "prepared",
-                profile["system_instruction"],
+                system_instruction,
             ),
         )
 
         job_id = cursor.lastrowid
-        job_directory = UPLOADS_DIR / f"job_{job_id:06d}"
-        job_directory.mkdir(parents=True, exist_ok=True)
 
-        for position, upload in enumerate(uploads, start=1):
+        job_directory = (
+            UPLOADS_DIR
+            /
+            f"job_{job_id:06d}"
+        )
+
+        job_directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        for position, upload in enumerate(
+            uploads,
+            start=1,
+        ):
             stored_filename = (
                 f"{position:02d}_"
                 f"{uuid.uuid4().hex[:12]}"
                 f"{upload['extension']}"
             )
 
-            stored_path = job_directory / stored_filename
-            stored_path.write_bytes(upload["data"])
+            stored_path = (
+                job_directory
+                /
+                stored_filename
+            )
+
+            stored_path.write_bytes(
+                upload["data"]
+            )
 
             relative_path = (
                 stored_path
-                .relative_to(BASE_DIR)
+                .relative_to(
+                    BASE_DIR
+                )
                 .as_posix()
             )
 
@@ -139,7 +505,9 @@ def create_prepared_job(
                 (
                     job_id,
                     position,
-                    upload["original_filename"],
+                    upload[
+                        "original_filename"
+                    ],
                     stored_filename,
                     relative_path,
                 ),
@@ -150,8 +518,14 @@ def create_prepared_job(
     except Exception:
         connection.rollback()
 
-        if job_directory is not None and job_directory.exists():
-            shutil.rmtree(job_directory, ignore_errors=True)
+        if (
+            job_directory is not None
+            and job_directory.exists()
+        ):
+            shutil.rmtree(
+                job_directory,
+                ignore_errors=True,
+            )
 
         raise
 
@@ -160,11 +534,16 @@ def create_prepared_job(
 
     return {
         "status": "created",
-        "job": get_job(job_id),
+        "job": get_job(
+            job_id
+        ),
     }
 
 
-def get_job(job_id: int):
+def get_job(
+    job_id: int,
+):
+    ensure_job_schema()
     connection = get_connection()
 
     try:
@@ -176,6 +555,16 @@ def get_job(job_id: int):
                 gj.profile_version_id,
                 gj.description,
                 gj.requested_count,
+                gj.aspect_ratio,
+                gj.planner_provider_snapshot,
+                gj.planner_model_snapshot,
+                gj.planner_reasoning_snapshot,
+                gj.image_provider_snapshot,
+                gj.image_model_snapshot,
+                gj.image_quality_snapshot,
+                gj.image_size_snapshot,
+                gj.image_output_format_snapshot,
+                gj.batch_concurrency_snapshot,
                 gj.status,
                 gj.planner_provider,
                 gj.planner_model,
@@ -185,14 +574,18 @@ def get_job(job_id: int):
                 gj.created_at,
                 gj.updated_at,
                 gp.name AS profile_name,
-                pv.version_number AS profile_version_number,
-                LENGTH(gj.system_instruction_snapshot)
+                pv.version_number
+                    AS profile_version_number,
+                LENGTH(
+                    gj.system_instruction_snapshot
+                )
                     AS system_instruction_characters
             FROM generation_jobs gj
             JOIN generation_profiles gp
                 ON gp.id = gj.profile_id
             JOIN profile_versions pv
-                ON pv.id = gj.profile_version_id
+                ON pv.id =
+                    gj.profile_version_id
             WHERE gj.id = ?
             """,
             (job_id,),
@@ -217,27 +610,44 @@ def get_job(job_id: int):
             (job_id,),
         ).fetchall()
 
-        result = dict(job)
+        result = dict(
+            job
+        )
 
-        result["references"] = [
+        result[
+            "references"
+        ] = [
             {
-                **dict(reference),
+                **dict(
+                    reference
+                ),
                 "file_url": (
                     f"/api/jobs/{job_id}"
-                    f"/references/{reference['id']}/file"
+                    f"/references/"
+                    f"{reference['id']}/file"
                 ),
             }
             for reference in references
         ]
 
-        result["reference_count"] = len(result["references"])
+        result[
+            "reference_count"
+        ] = len(
+            result[
+                "references"
+            ]
+        )
+
         return result
 
     finally:
         connection.close()
 
 
-def get_job_for_planning(job_id: int):
+def get_job_for_planning(
+    job_id: int,
+):
+    ensure_job_schema()
     connection = get_connection()
 
     try:
@@ -249,6 +659,16 @@ def get_job_for_planning(job_id: int):
                 profile_version_id,
                 description,
                 requested_count,
+                aspect_ratio,
+                planner_provider_snapshot,
+                planner_model_snapshot,
+                planner_reasoning_snapshot,
+                image_provider_snapshot,
+                image_model_snapshot,
+                image_quality_snapshot,
+                image_size_snapshot,
+                image_output_format_snapshot,
+                batch_concurrency_snapshot,
                 status,
                 system_instruction_snapshot
             FROM generation_jobs
@@ -274,15 +694,33 @@ def get_job_for_planning(job_id: int):
             (job_id,),
         ).fetchall()
 
-        result = dict(job)
-        result["references"] = []
+        result = dict(
+            job
+        )
 
-        uploads_root = UPLOADS_DIR.resolve()
+        result[
+            "references"
+        ] = []
+
+        uploads_root = (
+            UPLOADS_DIR.resolve()
+        )
 
         for reference in references:
-            path = (BASE_DIR / reference["file_path"]).resolve()
+            path = (
+                BASE_DIR
+                /
+                reference[
+                    "file_path"
+                ]
+            ).resolve()
 
-            if path != uploads_root and uploads_root not in path.parents:
+            if (
+                path != uploads_root
+                and
+                uploads_root
+                not in path.parents
+            ):
                 raise RuntimeError(
                     "Reference path escaped uploads directory."
                 )
@@ -293,11 +731,19 @@ def get_job_for_planning(job_id: int):
                     f"{reference['original_filename']}"
                 )
 
-            result["references"].append(
+            result[
+                "references"
+            ].append(
                 {
-                    **dict(reference),
-                    "absolute_path": path,
-                    "media_type": media_type_for_path(path),
+                    **dict(
+                        reference
+                    ),
+                    "absolute_path":
+                        path,
+                    "media_type":
+                        media_type_for_path(
+                            path
+                        ),
                 }
             )
 
@@ -332,6 +778,7 @@ def mark_job_planning(
                 job_id,
             ),
         )
+
         connection.commit()
 
     finally:
@@ -367,6 +814,7 @@ def mark_job_planned(
                 job_id,
             ),
         )
+
         connection.commit()
 
     finally:
@@ -396,17 +844,23 @@ def mark_job_planning_failed(
             (
                 provider,
                 model,
-                error_message[:2000],
+                error_message[
+                    :2000
+                ],
                 job_id,
             ),
         )
+
         connection.commit()
 
     finally:
         connection.close()
 
 
-def get_reference_file(job_id: int, reference_id: int):
+def get_reference_file(
+    job_id: int,
+    reference_id: int,
+):
     connection = get_connection()
 
     try:
@@ -423,25 +877,49 @@ def get_reference_file(job_id: int, reference_id: int):
                 ri.id = ?
                 AND ri.job_id = ?
             """,
-            (reference_id, job_id),
+            (
+                reference_id,
+                job_id,
+            ),
         ).fetchone()
 
         if row is None:
             return None
 
-        path = (BASE_DIR / row["file_path"]).resolve()
-        uploads_root = UPLOADS_DIR.resolve()
+        path = (
+            BASE_DIR
+            /
+            row[
+                "file_path"
+            ]
+        ).resolve()
 
-        if path != uploads_root and uploads_root not in path.parents:
+        uploads_root = (
+            UPLOADS_DIR.resolve()
+        )
+
+        if (
+            path != uploads_root
+            and
+            uploads_root
+            not in path.parents
+        ):
             return None
 
         if not path.exists():
             return None
 
         return {
-            "path": path,
-            "media_type": media_type_for_path(path),
-            "original_filename": row["original_filename"],
+            "path":
+                path,
+            "media_type":
+                media_type_for_path(
+                    path
+                ),
+            "original_filename":
+                row[
+                    "original_filename"
+                ],
         }
 
     finally:

@@ -104,6 +104,8 @@ def build_openai_content(
 def run_openai_planner(
     job: dict,
     runtime_instruction: str,
+    model: str | None = None,
+    reasoning: str | None = None,
 ):
     api_key = get_openai_api_key()
 
@@ -120,7 +122,15 @@ def run_openai_planner(
         }
 
     model = (
+        model
+        or
         get_openai_planner_model()
+    )
+
+    reasoning = (
+        reasoning
+        or
+        get_openai_planner_reasoning()
     )
 
     try:
@@ -148,7 +158,7 @@ def run_openai_planner(
                 ],
                 reasoning={
                     "effort":
-                        get_openai_planner_reasoning()
+                        reasoning
                 },
                 store=False,
             )
