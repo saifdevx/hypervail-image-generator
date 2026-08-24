@@ -162,6 +162,20 @@ const imageTestResult = $("imageTestResult");
 const openaiConnectedBadge = $("openaiConnectedBadge");
 const geminiConnectedBadge = $("geminiConnectedBadge");
 
+const openaiApiKeyInput = $("openaiApiKeyInput");
+const geminiApiKeyInput = $("geminiApiKeyInput");
+const saveOpenaiKeyButton = $("saveOpenaiKeyButton");
+const saveGeminiKeyButton = $("saveGeminiKeyButton");
+const removeOpenaiKeyButton = $("removeOpenaiKeyButton");
+const removeGeminiKeyButton = $("removeGeminiKeyButton");
+const openaiKeyConnectionText = $("openaiKeyConnectionText");
+const geminiKeyConnectionText = $("geminiKeyConnectionText");
+const providerKeyResult = $("providerKeyResult");
+
+const confirmBatchOverSelect = $("confirmBatchOverSelect");
+const maxOutputCountSelect = $("maxOutputCountSelect");
+const draftAutosaveCheckbox = $("draftAutosaveCheckbox");
+
 
 /* New Profile Modal */
 
@@ -241,6 +255,14 @@ const historyDetailDirection = $("historyDetailDirection");
 const historyDetailImageCount = $("historyDetailImageCount");
 const historyDetailImages = $("historyDetailImages");
 const historyDetailPrompts = $("historyDetailPrompts");
+const historyDeleteJobButton = $("historyDeleteJobButton");
+
+const mobileNavCreate = $("mobileNavCreate");
+const mobileNavProfiles = $("mobileNavProfiles");
+const mobileNavHistory = $("mobileNavHistory");
+const mobileNavSettings = $("mobileNavSettings");
+const mobileGenerateButton = $("mobileGenerateButton");
+const mobileGenerateDock = $("mobileGenerateDock");
 
 const toast = $("toast");
 
@@ -270,6 +292,13 @@ let currentPromptPackages = [];
 let activeFinalPackage = null;
 
 let settingsPayload = null;
+let providerConnections = null;
+
+const CREATE_DRAFT_KEY =
+    "imageAgentCreateDraftV1";
+
+const LAST_JOB_KEY =
+    "imageAgentLastJobV1";
 
 let imageBatchPollTimer = null;
 let imageBatchRequestRunning = false;
@@ -352,8 +381,345 @@ if (ratioSelector) {
             setSelectedAspectRatio(
                 button.dataset.ratio
             );
+
+            saveCreateDraft();
         }
     );
+}
+
+
+/* =========================================================
+   CREATE DRAFT / RECOVERY
+========================================================= */
+
+function autosaveEnabled() {
+    return (
+        settingsPayload
+            ?.settings
+            ?.draft_autosave
+        !==
+        false
+    );
+}
+
+
+function saveCreateDraft() {
+    if (!autosaveEnabled()) {
+        return;
+    }
+
+    const payload = {
+        profile_id:
+            selectedProfileId,
+        description:
+            description.value,
+        requested_count:
+            selectedCount,
+        aspect_ratio:
+            selectedAspectRatio,
+        auto_generate:
+            autoGenerateImages.checked,
+        saved_at:
+            new Date().toISOString(),
+    };
+
+    localStorage.setItem(
+        CREATE_DRAFT_KEY,
+        JSON.stringify(
+            payload
+        )
+    );
+}
+
+
+function restoreCreateDraft() {
+    if (!autosaveEnabled()) {
+        return false;
+    }
+
+    const raw =
+        localStorage.getItem(
+            CREATE_DRAFT_KEY
+        );
+
+    if (!raw) {
+        return false;
+    }
+
+    try {
+        const draft =
+            JSON.parse(
+                raw
+            );
+
+        if (
+            draft.profile_id
+            &&
+            profiles.some(
+                profile =>
+                    Number(
+                        profile.id
+                    )
+                    ===
+                    Number(
+                        draft.profile_id
+                    )
+            )
+        ) {
+            selectGenerateProfile(
+                draft.profile_id,
+                false
+            );
+        }
+
+        description.value =
+            draft.description
+            ||
+            "";
+
+        characterCount.textContent =
+            `${description.value.length} characters`;
+
+        setCreateOutputCount(
+            draft.requested_count
+            ||
+            "auto",
+            false
+        );
+
+        setSelectedAspectRatio(
+            draft.aspect_ratio
+            ||
+            "1:1"
+        );
+
+        autoGenerateImages.checked =
+            draft.auto_generate
+            !==
+            false;
+
+        return true;
+
+    } catch {
+        return false;
+    }
+}
+
+
+function shouldConfirmGeneration() {
+    if (!settingsPayload) {
+        return false;
+    }
+
+    const settings =
+        settingsPayload.settings;
+
+    const count =
+        selectedCount
+        ===
+        "auto"
+            ?
+            null
+            :
+            Number(
+                selectedCount
+            );
+
+    const threshold =
+        Number(
+            settings.confirm_batch_over
+            ||
+            4
+        );
+
+    const highQuality =
+        settings.image_provider
+        ===
+        "openai"
+        &&
+        settings.openai_image_quality
+        ===
+        "high";
+
+    return (
+        (
+            count
+            &&
+            count > threshold
+        )
+        ||
+        highQuality
+    );
+}
+
+
+function confirmGenerationSafety() {
+    if (!shouldConfirmGeneration()) {
+        return true;
+    }
+
+    const provider =
+        settingsPayload.settings
+            .image_provider
+            .toUpperCase();
+
+    const quality =
+        settingsPayload.settings
+            .image_provider
+        ===
+        "openai"
+            ?
+            ` · ${capitalize(settingsPayload.settings.openai_image_quality)}`
+            :
+            "";
+
+    const count =
+        selectedCount
+        ===
+        "auto"
+            ?
+            "Auto"
+            :
+            selectedCount;
+
+    return window.confirm(
+        `Generate ${count} output(s) with ${provider}${quality}?\n\n`
+        +
+        "This may use paid provider credits."
+    );
+}
+
+
+async function restoreLastJob() {
+    const raw =
+        localStorage.getItem(
+            LAST_JOB_KEY
+        );
+
+    const jobId =
+        Number(
+            raw
+        );
+
+    if (!jobId) {
+        return false;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/jobs/${jobId}`
+            );
+
+        if (!response.ok) {
+            localStorage.removeItem(
+                LAST_JOB_KEY
+            );
+
+            return false;
+        }
+
+        currentJob =
+            await response.json();
+
+        localStorage.setItem(
+            LAST_JOB_KEY,
+            String(
+                currentJob.id
+            )
+        );
+
+        renderPreparedJob(
+            currentJob
+        );
+
+        showPipeline(
+            currentJob.id
+        );
+
+        setPipelineStep(
+            pipelineReferences,
+            "complete",
+            `${currentJob.reference_count || 0} saved`
+        );
+
+        if (
+            currentJob.planner_raw_output
+        ) {
+            renderPlannerResult(
+                currentJob
+            );
+
+            setPipelineStep(
+                pipelinePlanner,
+                "complete",
+                "Plan ready"
+            );
+        }
+
+        const packageResponse =
+            await fetch(
+                `/api/jobs/${jobId}/packages`
+            );
+
+        if (
+            packageResponse.ok
+        ) {
+            const packages =
+                await packageResponse.json();
+
+            if (
+                packages.source_verified
+            ) {
+                renderPromptPackages(
+                    packages
+                );
+
+                setPipelineStep(
+                    pipelineVerify,
+                    "complete",
+                    `${packages.package_count} verified`
+                );
+            }
+        }
+
+        const batchResponse =
+            await fetch(
+                `/api/jobs/${jobId}/image-batch`
+            );
+
+        if (
+            batchResponse.ok
+        ) {
+            const batch =
+                await batchResponse.json();
+
+            renderImageBatch(
+                batch
+            );
+
+            if (
+                batch.status
+                ===
+                "generating"
+            ) {
+                setPipelineStep(
+                    pipelineImages,
+                    "active",
+                    "Running / reconnecting"
+                );
+
+                startImageBatchPolling(
+                    jobId
+                );
+            }
+        }
+
+        return true;
+
+    } catch {
+        return false;
+    }
 }
 
 
@@ -405,6 +771,39 @@ function showView(
         "active",
         view === "settings"
     );
+
+    const mobileMap = {
+        generate:
+            mobileNavCreate,
+        profiles:
+            mobileNavProfiles,
+        history:
+            mobileNavHistory,
+        settings:
+            mobileNavSettings,
+    };
+
+    Object.entries(
+        mobileMap
+    ).forEach(
+        ([name, element]) => {
+            if (!element) {
+                return;
+            }
+
+            element.classList.toggle(
+                "active",
+                name === view
+            );
+        }
+    );
+
+    if (mobileGenerateDock) {
+        mobileGenerateDock.classList.toggle(
+            "hidden-element",
+            view !== "generate"
+        );
+    }
 }
 
 
@@ -478,6 +877,36 @@ openSettingsFromCreate.addEventListener(
         await loadSettings();
     }
 );
+
+
+if (mobileNavCreate) {
+    mobileNavCreate.addEventListener(
+        "click",
+        () => navGenerate.click()
+    );
+
+    mobileNavProfiles.addEventListener(
+        "click",
+        () => navProfiles.click()
+    );
+
+    mobileNavHistory.addEventListener(
+        "click",
+        () => navHistory.click()
+    );
+
+    mobileNavSettings.addEventListener(
+        "click",
+        () => navSettings.click()
+    );
+}
+
+if (mobileGenerateButton) {
+    mobileGenerateButton.addEventListener(
+        "click",
+        () => generateButton.click()
+    );
+}
 
 
 /* =========================================================
@@ -573,7 +1002,7 @@ function friendlyError(
         return (
             "Provider authentication failed. "
             +
-            "Check the API key saved in .env."
+            "Check the connected provider key in Settings."
         );
     }
 
@@ -644,6 +1073,8 @@ async function loadSettings() {
 
         renderSettings();
         renderCreateProviderSummary();
+
+        await loadProviderConnections();
 
     } catch (error) {
         console.error(
@@ -750,9 +1181,26 @@ function renderSettings() {
         settings.batch_concurrency
     );
 
+    fillSelect(
+        confirmBatchOverSelect,
+        catalog.confirm_batch_over,
+        settings.confirm_batch_over
+    );
+
+    fillSelect(
+        maxOutputCountSelect,
+        catalog.max_output_count,
+        settings.max_output_count
+    );
+
     autoGenerateImages.checked =
         Boolean(
             settings.auto_generate_images
+        );
+
+    draftAutosaveCheckbox.checked =
+        Boolean(
+            settings.draft_autosave
         );
 
     renderConnectionBadges();
@@ -1004,7 +1452,7 @@ function renderPlannerSettingsState() {
             ?
             `${provider.toUpperCase()} credential is configured.`
             :
-            `${provider.toUpperCase()} key is missing from .env.`;
+            `${provider.toUpperCase()} is not connected. Add a key in Provider Connections.`;
 }
 
 
@@ -1052,7 +1500,7 @@ function renderImageSettingsState() {
             ?
             `${provider.toUpperCase()} credential is configured.`
             :
-            `${provider.toUpperCase()} key is missing from .env.`;
+            `${provider.toUpperCase()} is not connected. Add a key in Provider Connections.`;
 }
 
 
@@ -1125,6 +1573,21 @@ async function saveSettings() {
 
         auto_generate_images:
             autoGenerateImages.checked,
+
+        confirm_batch_over:
+            Number(
+                confirmBatchOverSelect
+                    .value
+            ),
+
+        max_output_count:
+            Number(
+                maxOutputCountSelect
+                    .value
+            ),
+
+        draft_autosave:
+            draftAutosaveCheckbox.checked,
     };
 
     if (
@@ -1352,6 +1815,290 @@ testImageProviderButton.addEventListener(
                 false;
         }
     }
+);
+
+
+/* =========================================================
+   PROVIDER CONNECTIONS
+========================================================= */
+
+async function loadProviderConnections() {
+    try {
+        const response =
+            await fetch(
+                "/api/provider-connections",
+                {
+                    cache: "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        providerConnections =
+            await response.json();
+
+        renderProviderConnections();
+
+    } catch (error) {
+        providerKeyResult.className =
+            "connection-result error";
+
+        providerKeyResult.textContent =
+            error.message;
+    }
+}
+
+
+function renderProviderConnections() {
+    if (!providerConnections) {
+        return;
+    }
+
+    renderProviderConnectionLine(
+        "openai",
+        openaiKeyConnectionText,
+        removeOpenaiKeyButton
+    );
+
+    renderProviderConnectionLine(
+        "gemini",
+        geminiKeyConnectionText,
+        removeGeminiKeyButton
+    );
+}
+
+
+function renderProviderConnectionLine(
+    provider,
+    textElement,
+    removeButton
+) {
+    const item =
+        providerConnections[
+            provider
+        ]
+        ||
+        {};
+
+    if (item.saved) {
+        textElement.textContent =
+            `Saved ·••••${item.key_suffix || ""}`;
+
+        removeButton.disabled =
+            false;
+
+        return;
+    }
+
+    if (item.configured) {
+        textElement.textContent =
+            item.source
+            ===
+            "saved_connection"
+                ?
+                "Connected"
+                :
+                "Using server fallback key";
+
+        removeButton.disabled =
+            true;
+
+        return;
+    }
+
+    textElement.textContent =
+        "Not connected";
+
+    removeButton.disabled =
+        true;
+}
+
+
+async function saveProviderKey(
+    provider,
+    input,
+    button
+) {
+    const apiKey =
+        input
+        .value
+        .trim();
+
+    if (!apiKey) {
+        showToast(
+            `Paste a ${provider} API key first.`
+        );
+
+        return;
+    }
+
+    button.disabled =
+        true;
+
+    const original =
+        button.textContent;
+
+    button.textContent =
+        "Testing…";
+
+    providerKeyResult.className =
+        "connection-result";
+
+    providerKeyResult.textContent =
+        `Testing ${provider.toUpperCase()}…`;
+
+    try {
+        const response =
+            await fetch(
+                `/api/provider-connections/${provider}`,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    body:
+                        JSON.stringify({
+                            api_key:
+                                apiKey,
+                        }),
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        input.value =
+            "";
+
+        providerKeyResult.className =
+            "connection-result success";
+
+        providerKeyResult.textContent =
+            `${provider.toUpperCase()} connected and encrypted.`;
+
+        await loadSettings();
+
+    } catch (error) {
+        providerKeyResult.className =
+            "connection-result error";
+
+        providerKeyResult.textContent =
+            error.message;
+
+    } finally {
+        button.disabled =
+            false;
+
+        button.textContent =
+            original;
+    }
+}
+
+
+async function removeProviderKey(
+    provider
+) {
+    const confirmed =
+        window.confirm(
+            `Disconnect the saved ${provider.toUpperCase()} key?`
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/provider-connections/${provider}`,
+                {
+                    method:
+                        "DELETE",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        providerKeyResult.className =
+            "connection-result success";
+
+        providerKeyResult.textContent =
+            `${provider.toUpperCase()} saved key disconnected.`;
+
+        await loadSettings();
+
+    } catch (error) {
+        providerKeyResult.className =
+            "connection-result error";
+
+        providerKeyResult.textContent =
+            error.message;
+    }
+}
+
+
+saveOpenaiKeyButton.addEventListener(
+    "click",
+    () =>
+        saveProviderKey(
+            "openai",
+            openaiApiKeyInput,
+            saveOpenaiKeyButton
+        )
+);
+
+
+saveGeminiKeyButton.addEventListener(
+    "click",
+    () =>
+        saveProviderKey(
+            "gemini",
+            geminiApiKeyInput,
+            saveGeminiKeyButton
+        )
+);
+
+
+removeOpenaiKeyButton.addEventListener(
+    "click",
+    () =>
+        removeProviderKey(
+            "openai"
+        )
+);
+
+
+removeGeminiKeyButton.addEventListener(
+    "click",
+    () =>
+        removeProviderKey(
+            "gemini"
+        )
 );
 
 
@@ -1609,7 +2356,8 @@ function renderGenerateProfiles(
     }
 
     selectGenerateProfile(
-        selected.id
+        selected.id,
+        false
     );
 }
 
@@ -1757,7 +2505,8 @@ function createGenerateProfileCard(
 
 
 function selectGenerateProfile(
-    profileId
+    profileId,
+    saveDraft = true
 ) {
     const profile =
         profiles.find(
@@ -1819,6 +2568,10 @@ function selectGenerateProfile(
                     :
                     "current"
             );
+
+    if (saveDraft) {
+        saveCreateDraft();
+    }
 }
 
 
@@ -2236,6 +2989,8 @@ description.addEventListener(
     () => {
         characterCount.textContent =
             `${description.value.length} characters`;
+
+        saveCreateDraft();
     }
 );
 
@@ -2275,10 +3030,18 @@ document
                             selectedCount;
 
                     updateCreateCostEstimate();
+                    saveCreateDraft();
                 }
             );
         }
     );
+
+
+
+autoGenerateImages.addEventListener(
+    "change",
+    saveCreateDraft
+);
 
 
 /* =========================================================
@@ -2368,6 +3131,12 @@ async function runCreateJob() {
             "Add at least one product reference."
         );
 
+        return;
+    }
+
+    if (
+        !confirmGenerationSafety()
+    ) {
         return;
     }
 
@@ -2646,6 +3415,18 @@ function setGenerateBusy(
             "…"
             :
             "→";
+
+    if (mobileGenerateButton) {
+        mobileGenerateButton.disabled =
+            busy;
+
+        mobileGenerateButton.innerHTML =
+            busy
+                ?
+                `${label}<span>…</span>`
+                :
+                `GENERATE<span>→</span>`;
+    }
 }
 
 
@@ -3782,6 +4563,234 @@ function stopImageBatchPolling() {
 
 
 /* =========================================================
+   DELETE / CLEANUP
+========================================================= */
+
+async function deleteGeneratedImageFromApp(
+    imageId,
+    jobId
+) {
+    const confirmed =
+        window.confirm(
+            "Delete this generated image? This cannot be undone."
+        );
+
+    if (!confirmed) {
+        return false;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/images/${imageId}`,
+                {
+                    method:
+                        "DELETE",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        if (
+            currentJob
+            &&
+            Number(
+                currentJob.id
+            )
+            ===
+            Number(
+                jobId
+            )
+        ) {
+            await refreshImageBatch(
+                currentJob.id
+            );
+        }
+
+        if (
+            historyDetail
+            &&
+            Number(
+                historyDetail.id
+            )
+            ===
+            Number(
+                jobId
+            )
+        ) {
+            await openHistoryJob(
+                historyDetail.id,
+                {
+                    preserveModal:
+                        true,
+                }
+            );
+        }
+
+        if (
+            !historyView.classList.contains(
+                "hidden-view"
+            )
+        ) {
+            await loadHistory();
+        }
+
+        showToast(
+            "Image deleted."
+        );
+
+        return true;
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return false;
+    }
+}
+
+
+function resetCurrentJobView() {
+    stopImageBatchPolling();
+
+    currentJob =
+        null;
+
+    currentPromptPackages =
+        [];
+
+    selectedCompareIds.clear();
+
+    localStorage.removeItem(
+        LAST_JOB_KEY
+    );
+
+    jobSavedState.classList.add(
+        "hidden-element"
+    );
+
+    jobEmptyState.classList.remove(
+        "hidden-element"
+    );
+
+    jobPanelStatus.textContent =
+        "DRAFT";
+
+    pipelineSection.classList.add(
+        "hidden-element"
+    );
+
+    imageBatchSection.classList.add(
+        "hidden-element"
+    );
+
+    resultsSection.classList.add(
+        "hidden-element"
+    );
+
+    plannerResultSection.classList.add(
+        "hidden-element"
+    );
+
+    promptPackagesSection.classList.add(
+        "hidden-element"
+    );
+}
+
+
+async function deleteJobFromApp(
+    jobId
+) {
+    const confirmed =
+        window.confirm(
+            `Delete Job #${jobId} and its saved references/images? This cannot be undone.`
+        );
+
+    if (!confirmed) {
+        return false;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/jobs/${jobId}`,
+                {
+                    method:
+                        "DELETE",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        if (
+            currentJob
+            &&
+            Number(
+                currentJob.id
+            )
+            ===
+            Number(
+                jobId
+            )
+        ) {
+            resetCurrentJobView();
+        }
+
+        if (
+            historyDetail
+            &&
+            Number(
+                historyDetail.id
+            )
+            ===
+            Number(
+                jobId
+            )
+        ) {
+            historyDetail =
+                null;
+
+            closeModal(
+                historyDetailModal
+            );
+        }
+
+        await loadHistory();
+
+        showToast(
+            "Job deleted."
+        );
+
+        return true;
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+
+        return false;
+    }
+}
+
+
+/* =========================================================
    RESULTS GALLERY
 ========================================================= */
 
@@ -4177,10 +5186,32 @@ function createResultCard(
     download.textContent =
         "Download";
 
+    const remove =
+        document.createElement(
+            "button"
+        );
+
+    remove.type =
+        "button";
+
+    remove.className =
+        "result-delete-button";
+
+    remove.textContent =
+        "Delete";
+
+    remove.onclick =
+        () =>
+            deleteGeneratedImageFromApp(
+                item.image.id,
+                currentJob?.id
+            );
+
     actions.append(
         view,
         regenerate,
-        download
+        download,
+        remove
     );
 
     body.append(
@@ -5986,10 +7017,32 @@ function createHistoryOutputCard(
     download.textContent =
         "Download";
 
+    const remove =
+        document.createElement(
+            "button"
+        );
+
+    remove.type =
+        "button";
+
+    remove.className =
+        "result-delete-button";
+
+    remove.textContent =
+        "Delete";
+
+    remove.onclick =
+        () =>
+            deleteGeneratedImageFromApp(
+                item.image.id,
+                detail.id
+            );
+
     actions.append(
         view,
         prompt,
-        download
+        download,
+        remove
     );
 
     body.append(
@@ -6245,6 +7298,20 @@ historyDuplicateButton.addEventListener(
 );
 
 
+historyDeleteJobButton.addEventListener(
+    "click",
+    async () => {
+        if (!historyDetail) {
+            return;
+        }
+
+        await deleteJobFromApp(
+            historyDetail.id
+        );
+    }
+);
+
+
 async function duplicateHistoryJob(
     detail
 ) {
@@ -6387,7 +7454,8 @@ async function duplicateHistoryJob(
 
 
 function setCreateOutputCount(
-    value
+    value,
+    saveDraft = true
 ) {
     const normalized =
         String(
@@ -6452,6 +7520,10 @@ function setCreateOutputCount(
             selectedCount;
 
     updateCreateCostEstimate();
+
+    if (saveDraft) {
+        saveCreateDraft();
+    }
 }
 
 
@@ -7720,7 +8792,46 @@ async function startApplication() {
         loadProfiles(),
     ]);
 
+    const restoredDraft =
+        restoreCreateDraft();
+
     renderReferenceCards();
+
+    const restoredJob =
+        await restoreLastJob();
+
+    if (
+        restoredDraft
+        &&
+        !selectedImages.length
+    ) {
+        showToast(
+            "Draft restored. Re-add reference images when ready."
+        );
+    } else if (restoredJob) {
+        showToast(
+            "Last job restored."
+        );
+    }
+
+    if (
+        "serviceWorker"
+        in
+        navigator
+    ) {
+        navigator
+            .serviceWorker
+            .register(
+                "/static/service-worker.js"
+            )
+            .catch(
+                error =>
+                    console.warn(
+                        "Service worker registration failed:",
+                        error
+                    )
+            );
+    }
 }
 
 

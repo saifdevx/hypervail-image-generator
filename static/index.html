@@ -8,6 +8,17 @@
         content="width=device-width, initial-scale=1.0"
     >
     <title>Image Agent Studio</title>
+
+    <meta
+        name="theme-color"
+        content="#070707"
+    >
+
+    <link
+        rel="manifest"
+        href="/static/manifest.webmanifest"
+    >
+
     <link
         rel="stylesheet"
         href="/static/styles.css"
@@ -1232,9 +1243,9 @@
                     <h1>Settings.</h1>
 
                     <p>
-                        Select which provider plans prompts and which
-                        provider generates images. API keys remain in
-                        your server-side .env file.
+                        Connect your own AI providers, choose the
+                        planner and image engine, and control generation
+                        safety. Saved keys are encrypted server-side.
                     </p>
                 </div>
 
@@ -1251,6 +1262,107 @@
             <div class="settings-layout">
 
                 <div class="settings-stack">
+
+                    <!-- PROVIDER CONNECTIONS -->
+
+                    <section class="settings-card provider-key-card">
+
+                        <header class="settings-card-header">
+                            <div>
+                                <span class="settings-provider-label">
+                                    PROVIDER CONNECTIONS
+                                </span>
+
+                                <h2>
+                                    Bring your own API keys
+                                </h2>
+                            </div>
+
+                            <span class="provider-status ready">
+                                ENCRYPTED
+                            </span>
+                        </header>
+
+                        <div class="provider-key-grid">
+
+                            <article class="provider-key-item">
+
+                                <div class="provider-key-copy">
+                                    <strong>OpenAI</strong>
+                                    <span id="openaiKeyConnectionText">
+                                        Checking…
+                                    </span>
+                                </div>
+
+                                <input
+                                    id="openaiApiKeyInput"
+                                    type="password"
+                                    autocomplete="off"
+                                    placeholder="Paste OpenAI API key"
+                                >
+
+                                <div class="provider-key-actions">
+                                    <button
+                                        id="saveOpenaiKeyButton"
+                                        type="button"
+                                    >
+                                        Test & save
+                                    </button>
+
+                                    <button
+                                        id="removeOpenaiKeyButton"
+                                        type="button"
+                                    >
+                                        Disconnect
+                                    </button>
+                                </div>
+
+                            </article>
+
+
+                            <article class="provider-key-item">
+
+                                <div class="provider-key-copy">
+                                    <strong>Gemini</strong>
+                                    <span id="geminiKeyConnectionText">
+                                        Checking…
+                                    </span>
+                                </div>
+
+                                <input
+                                    id="geminiApiKeyInput"
+                                    type="password"
+                                    autocomplete="off"
+                                    placeholder="Paste Gemini API key"
+                                >
+
+                                <div class="provider-key-actions">
+                                    <button
+                                        id="saveGeminiKeyButton"
+                                        type="button"
+                                    >
+                                        Test & save
+                                    </button>
+
+                                    <button
+                                        id="removeGeminiKeyButton"
+                                        type="button"
+                                    >
+                                        Disconnect
+                                    </button>
+                                </div>
+
+                            </article>
+
+                        </div>
+
+                        <div class="connection-result" id="providerKeyResult">
+                            Saved keys are encrypted and are never returned
+                            to the browser after saving.
+                        </div>
+
+                    </section>
+
 
                     <!-- PLANNER -->
 
@@ -1402,6 +1514,49 @@
 
                     </section>
 
+
+                    <!-- SAFETY -->
+
+                    <section class="settings-card">
+
+                        <header class="settings-card-header">
+                            <div>
+                                <span class="settings-provider-label">
+                                    GENERATION SAFETY
+                                </span>
+
+                                <h2>
+                                    Prevent accidental spend
+                                </h2>
+                            </div>
+                        </header>
+
+                        <div class="settings-form-grid">
+
+                            <label>
+                                <span>Confirm batch above</span>
+                                <select id="confirmBatchOverSelect"></select>
+                            </label>
+
+                            <label>
+                                <span>Maximum outputs per job</span>
+                                <select id="maxOutputCountSelect"></select>
+                            </label>
+
+                            <label class="settings-checkbox-row">
+                                <input
+                                    id="draftAutosaveCheckbox"
+                                    type="checkbox"
+                                >
+                                <span>
+                                    Autosave Create drafts
+                                </span>
+                            </label>
+
+                        </div>
+
+                    </section>
+
                 </div>
 
 
@@ -1432,14 +1587,17 @@
                     </div>
 
                     <p>
-                        Keep secrets in <strong>.env</strong>.
-                        Provider/model/quality choices are now saved
-                        in SQLite and can be changed here without
-                        editing the file or restarting FastAPI.
+                        For local development, server-side .env keys can
+                        still be used as a fallback. For real users, use
+                        the Provider Connections card so each account can
+                        bring its own key later.
                     </p>
 
-                    <pre>OPENAI_API_KEY=...
-GEMINI_API_KEY=...</pre>
+                    <pre>Production server:
+APP_ENCRYPTION_KEY=...
+
+Users:
+Connect key inside Settings</pre>
 
                     <div class="settings-tip">
                         <strong>Recommended test setup</strong>
@@ -1853,6 +2011,14 @@ GEMINI_API_KEY=...</pre>
                 Duplicate in Create
             </button>
 
+            <button
+                class="history-delete-button"
+                id="historyDeleteJobButton"
+                type="button"
+            >
+                Delete job
+            </button>
+
             <a
                 id="historyDownloadAllButton"
                 href="#"
@@ -1957,6 +2123,60 @@ GEMINI_API_KEY=...</pre>
         </div>
 
     </div>
+</div>
+
+
+<!-- =========================================================
+     MOBILE CONTROLS
+========================================================= -->
+
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+
+    <button
+        id="mobileNavCreate"
+        type="button"
+        class="active"
+    >
+        Create
+    </button>
+
+    <button
+        id="mobileNavProfiles"
+        type="button"
+    >
+        Profiles
+    </button>
+
+    <button
+        id="mobileNavHistory"
+        type="button"
+    >
+        History
+    </button>
+
+    <button
+        id="mobileNavSettings"
+        type="button"
+    >
+        Settings
+    </button>
+
+</nav>
+
+
+<div
+    class="mobile-generate-dock"
+    id="mobileGenerateDock"
+>
+
+    <button
+        id="mobileGenerateButton"
+        type="button"
+    >
+        GENERATE
+        <span>→</span>
+    </button>
+
 </div>
 
 

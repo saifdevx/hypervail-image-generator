@@ -5987,3 +5987,406 @@ input:checked
         min-width: 0;
     }
 }
+
+
+/* =========================================================
+   STEP 13 PHASE 2 — BYOK / SAFETY / MOBILE
+========================================================= */
+
+.provider-key-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    gap: 12px;
+
+    padding:
+        19px
+        20px
+        0;
+}
+
+.provider-key-item {
+    padding: 14px;
+
+    border:
+        1px solid
+        rgba(0, 0, 0, 0.14);
+
+    background: var(--white);
+}
+
+.provider-key-copy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+}
+
+.provider-key-copy strong {
+    font-size: 11px;
+}
+
+.provider-key-copy span {
+    color:
+        rgba(0, 0, 0, 0.55);
+
+    font-size: 7px;
+    font-weight: 800;
+
+    text-align: right;
+}
+
+.provider-key-item input {
+    width: 100%;
+    height: 39px;
+
+    margin-top: 12px;
+
+    padding:
+        0
+        10px;
+
+    border:
+        1px solid
+        rgba(0, 0, 0, 0.2);
+
+    background: var(--cream);
+    color: var(--black);
+
+    font-size: 9px;
+}
+
+.provider-key-item input:focus {
+    border-color: var(--orange);
+}
+
+.provider-key-actions {
+    display: flex;
+
+    gap: 6px;
+
+    margin-top: 8px;
+}
+
+.provider-key-actions button {
+    min-height: 32px;
+
+    flex: 1;
+
+    padding:
+        0
+        9px;
+
+    border:
+        1px solid
+        rgba(0, 0, 0, 0.18);
+
+    background: var(--black);
+    color: var(--white);
+
+    font-size: 7px;
+    font-weight: 900;
+}
+
+.provider-key-actions button:last-child {
+    background: transparent;
+    color: var(--black);
+}
+
+.provider-key-actions
+button:hover {
+    border-color: var(--orange);
+}
+
+.settings-checkbox-row {
+    display: flex !important;
+    align-items: center;
+
+    gap: 9px;
+
+    min-height: 40px;
+
+    padding:
+        0
+        10px;
+
+    border:
+        1px solid
+        rgba(0, 0, 0, 0.16);
+
+    background: var(--white);
+}
+
+.settings-checkbox-row input {
+    accent-color: var(--orange);
+}
+
+.history-delete-button {
+    border-color:
+        rgba(255, 89, 100, 0.45)
+        !important;
+
+    color: var(--danger)
+        !important;
+}
+
+.result-delete-button {
+    border-color:
+        rgba(255, 89, 100, 0.35)
+        !important;
+
+    color: var(--danger)
+        !important;
+}
+
+
+/* Mobile controls are hidden on desktop. */
+
+.mobile-bottom-nav,
+.mobile-generate-dock {
+    display: none;
+}
+
+
+@media
+(max-width: 720px) {
+
+    body {
+        padding-bottom: 128px;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .app-view {
+        padding-bottom: 120px;
+    }
+
+    .page-header,
+    .create-shell,
+    .manager-layout,
+    .settings-layout,
+    .history-shell,
+    .history-placeholder {
+        width:
+            calc(100% - 24px);
+    }
+
+    .page-header {
+        padding-top: 24px;
+        padding-bottom: 22px;
+    }
+
+    .provider-key-grid {
+        grid-template-columns: 1fr;
+
+        padding:
+            14px
+            14px
+            0;
+    }
+
+    .provider-key-item {
+        padding: 12px;
+    }
+
+    .settings-card-header {
+        padding:
+            15px
+            14px;
+    }
+
+    .settings-form-grid {
+        padding:
+            14px;
+    }
+
+    .provider-connection-strip {
+        margin:
+            0
+            14px;
+    }
+
+    .connection-result {
+        margin:
+            10px
+            14px
+            14px;
+    }
+
+    .result-actions {
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+
+    .history-output-actions {
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+
+    .mobile-bottom-nav {
+        position: fixed;
+
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        z-index: 320;
+
+        min-height: 62px;
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                4,
+                1fr
+            );
+
+        padding:
+            8px
+            max(
+                8px,
+                env(safe-area-inset-right)
+            )
+            max(
+                8px,
+                env(safe-area-inset-bottom)
+            )
+            max(
+                8px,
+                env(safe-area-inset-left)
+            );
+
+        border-top:
+            1px solid
+            rgba(246, 246, 246, 0.12);
+
+        background:
+            rgba(7, 7, 7, 0.96);
+
+        backdrop-filter:
+            blur(18px);
+    }
+
+    .mobile-bottom-nav button {
+        min-height: 44px;
+
+        background: transparent;
+        color: var(--muted);
+
+        font-size: 8px;
+        font-weight: 900;
+    }
+
+    .mobile-bottom-nav
+    button.active {
+        background: var(--orange);
+        color: var(--black);
+    }
+
+    .mobile-generate-dock {
+        position: fixed;
+
+        left: 12px;
+        right: 12px;
+        bottom:
+            calc(
+                70px
+                +
+                env(safe-area-inset-bottom)
+            );
+
+        z-index: 310;
+
+        display: block;
+
+        pointer-events: none;
+    }
+
+    .mobile-generate-dock button {
+        width: 100%;
+        min-height: 50px;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        padding:
+            0
+            16px;
+
+        background: var(--orange);
+        color: var(--black);
+
+        border:
+            1px solid
+            rgba(0, 0, 0, 0.2);
+
+        box-shadow:
+            0
+            14px
+            35px
+            rgba(0, 0, 0, 0.35);
+
+        font-size: 9px;
+        font-weight: 950;
+
+        pointer-events: auto;
+    }
+
+    .mobile-generate-dock
+    button:disabled {
+        opacity: 0.5;
+    }
+
+    .reference-card-footer button,
+    .result-actions button,
+    .result-actions a,
+    .history-card-actions button,
+    .history-card-actions a,
+    .history-output-actions button,
+    .history-output-actions a {
+        min-height: 44px;
+    }
+}
+
+
+/* Four actions after adding Delete in Phase 2. */
+.result-actions,
+.history-output-actions {
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+}
+
+@media
+(max-width: 720px) {
+    .result-actions,
+    .history-output-actions {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+}

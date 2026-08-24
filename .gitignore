@@ -1,18 +1,25 @@
-# Python
+# Secrets
+.env
+*.env
+!.env.example
+
+# Virtual environments
 .venv/
+venv/
+env/
+
+# Python
 __pycache__/
 *.py[cod]
 
-# Secrets
-.env
-
-# Local application data
-data/*.db
-data/uploads/
-data/outputs/
+# Local encrypted credential master key
+data/.credential_key
 profiles/private/
 
-# OS / editor
+# Editors / OS
+.vscode/
 .DS_Store
 Thumbs.db
-.vscode/
+
+
+

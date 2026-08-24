@@ -6,3 +6,4 @@ google-genai
 python-dotenv
 python-multipart
 fastapi
+cryptography>=42

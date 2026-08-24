@@ -56,6 +56,9 @@ DEFAULTS = {
         "2"
     ),
     "auto_generate_images": "true",
+    "confirm_batch_over": "4",
+    "max_output_count": "8",
+    "draft_autosave": "true",
 }
 
 
@@ -160,6 +163,19 @@ CATALOG = {
         2,
         3,
         4,
+    ],
+    "confirm_batch_over": [
+        1,
+        4,
+        6,
+        8,
+    ],
+    "max_output_count": [
+        4,
+        6,
+        8,
+        12,
+        16,
     ],
 }
 
@@ -298,14 +314,60 @@ def get_runtime_settings():
         min(concurrency, 4)
     )
 
+    try:
+        confirm_batch_over = int(
+            raw[
+                "confirm_batch_over"
+            ]
+        )
+    except (
+        ValueError,
+        TypeError,
+    ):
+        confirm_batch_over = 4
+
+    try:
+        max_output_count = int(
+            raw[
+                "max_output_count"
+            ]
+        )
+    except (
+        ValueError,
+        TypeError,
+    ):
+        max_output_count = 8
+
     return {
         **raw,
         "batch_concurrency":
             concurrency,
+        "confirm_batch_over":
+            max(
+                1,
+                min(
+                    confirm_batch_over,
+                    16,
+                ),
+            ),
+        "max_output_count":
+            max(
+                1,
+                min(
+                    max_output_count,
+                    16,
+                ),
+            ),
         "auto_generate_images":
             _bool_value(
                 raw[
                     "auto_generate_images"
+                ]
+            ),
+        "draft_autosave":
+            _bool_value(
+                raw[
+                    "draft_autosave"
                 ]
             ),
     }
@@ -470,11 +532,78 @@ def _validate(
             "Batch concurrency must be between 1 and 4."
         )
 
+    try:
+        merged[
+            "confirm_batch_over"
+        ] = max(
+            1,
+            min(
+                int(
+                    merged[
+                        "confirm_batch_over"
+                    ]
+                ),
+                16,
+            ),
+        )
+    except (
+        ValueError,
+        TypeError,
+    ):
+        raise ValueError(
+            "Confirm batch threshold must be between 1 and 16."
+        )
+
+    try:
+        merged[
+            "max_output_count"
+        ] = max(
+            1,
+            min(
+                int(
+                    merged[
+                        "max_output_count"
+                    ]
+                ),
+                16,
+            ),
+        )
+    except (
+        ValueError,
+        TypeError,
+    ):
+        raise ValueError(
+            "Maximum output count must be between 1 and 16."
+        )
+
+    if (
+        merged[
+            "confirm_batch_over"
+        ]
+        >
+        merged[
+            "max_output_count"
+        ]
+    ):
+        merged[
+            "confirm_batch_over"
+        ] = merged[
+            "max_output_count"
+        ]
+
     merged[
         "auto_generate_images"
     ] = _bool_value(
         merged[
             "auto_generate_images"
+        ]
+    )
+
+    merged[
+        "draft_autosave"
+    ] = _bool_value(
+        merged[
+            "draft_autosave"
         ]
     )
 

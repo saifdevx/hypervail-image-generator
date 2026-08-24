@@ -8,6 +8,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
 
+from app.credential_store import (
+    get_saved_provider_api_key,
+)
+
 
 BASE_DIR = (
     Path(__file__)
@@ -27,6 +31,18 @@ DEFAULT_MODEL = "gemini-3.6-flash"
 
 
 def get_api_key():
+    saved = (
+        get_saved_provider_api_key(
+            "gemini"
+        )
+    )
+
+    if saved:
+        return (
+            saved,
+            "saved_connection",
+        )
+
     gemini_key = os.getenv(
         "GEMINI_API_KEY"
     )
@@ -92,8 +108,11 @@ def get_sdk_version():
         return "unknown"
 
 
-def create_gemini_client():
-    api_key, _ = get_api_key()
+def create_gemini_client(
+    api_key: str | None = None,
+):
+    if not api_key:
+        api_key, _ = get_api_key()
 
     if not api_key:
         return None
@@ -135,10 +154,21 @@ def get_gemini_status():
     }
 
 
-def test_gemini_connection():
-    api_key, key_source = (
-        get_api_key()
-    )
+def test_gemini_connection(
+    api_key_override: str | None = None,
+):
+    if api_key_override:
+        api_key = (
+            api_key_override
+            .strip()
+        )
+        key_source = (
+            "provided_for_test"
+        )
+    else:
+        api_key, key_source = (
+            get_api_key()
+        )
 
     model = get_prompt_model()
 
@@ -155,7 +185,9 @@ def test_gemini_connection():
         }
 
     try:
-        client = create_gemini_client()
+        client = create_gemini_client(
+            api_key
+        )
 
         response = client.models.generate_content(
             model=model,
