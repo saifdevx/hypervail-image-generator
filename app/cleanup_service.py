@@ -1,0 +1,364 @@
+import shutil
+from pathlib import Path
+
+from app.database import get_connection
+from app.job_store import (
+    BASE_DIR,
+    DATA_DIR,
+    UPLOADS_DIR,
+)
+
+
+OUTPUTS_DIR = DATA_DIR / "outputs"
+
+
+def _safe_delete_file(
+    path_value: str | None,
+    allowed_root: Path,
+):
+    if not path_value:
+        return False
+
+    path = (
+        BASE_DIR
+        /
+        path_value
+    ).resolve()
+
+    root = (
+        allowed_root
+        .resolve()
+    )
+
+    if (
+        path != root
+        and
+        root not in path.parents
+    ):
+        return False
+
+    if not path.exists():
+        return False
+
+    if path.is_file():
+        path.unlink(
+            missing_ok=True
+        )
+
+        return True
+
+    return False
+
+
+def delete_generated_image(
+    image_id: int,
+):
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT
+                id,
+                job_id,
+                file_path
+            FROM generated_images
+            WHERE id = ?
+            """,
+            (
+                image_id,
+            ),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            DELETE FROM generated_images
+            WHERE id = ?
+            """,
+            (
+                image_id,
+            ),
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    deleted_file = (
+        _safe_delete_file(
+            row[
+                "file_path"
+            ],
+            OUTPUTS_DIR,
+        )
+    )
+
+    return {
+        "image_id":
+            image_id,
+        "job_id":
+            row[
+                "job_id"
+            ],
+        "deleted":
+            True,
+        "file_deleted":
+            deleted_file,
+    }
+
+
+def delete_job(
+    job_id: int,
+):
+    connection = get_connection()
+
+    try:
+        job = connection.execute(
+            """
+            SELECT id
+            FROM generation_jobs
+            WHERE id = ?
+            """,
+            (
+                job_id,
+            ),
+        ).fetchone()
+
+        if job is None:
+            return None
+
+        connection.execute(
+            """
+            DELETE FROM generated_images
+            WHERE job_id = ?
+            """,
+            (
+                job_id,
+            ),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM generated_prompts
+            WHERE job_id = ?
+            """,
+            (
+                job_id,
+            ),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM reference_images
+            WHERE job_id = ?
+            """,
+            (
+                job_id,
+            ),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM generation_jobs
+            WHERE id = ?
+            """,
+            (
+                job_id,
+            ),
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    upload_dir = (
+        UPLOADS_DIR
+        /
+        f"job_{job_id:06d}"
+    )
+
+    output_dir = (
+        OUTPUTS_DIR
+        /
+        f"job_{job_id:06d}"
+    )
+
+    shutil.rmtree(
+        upload_dir,
+        ignore_errors=True,
+    )
+
+    shutil.rmtree(
+        output_dir,
+        ignore_errors=True,
+    )
+
+    return {
+        "job_id":
+            job_id,
+        "deleted":
+            True,
+    }
+
+
+def recover_stale_generations(
+    stale_minutes: int = 30,
+):
+    stale_minutes = max(
+        5,
+        min(
+            int(
+                stale_minutes
+            ),
+            1440,
+        ),
+    )
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE generated_images
+            SET
+                status = 'failed',
+                error_message = ?
+            WHERE
+                status IN (
+                    'queued',
+                    'generating'
+                )
+                AND datetime(created_at)
+                    <
+                    datetime(
+                        'now',
+                        ?
+                    )
+            """,
+            (
+                (
+                    "Generation was interrupted or stale. "
+                    "Retry this image."
+                ),
+                f"-{stale_minutes} minutes",
+            ),
+        )
+
+        recovered = (
+            cursor.rowcount
+        )
+
+        connection.execute(
+            """
+            UPDATE generation_jobs
+            SET
+                status = 'images_partial_failed',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE
+                status = 'images_generating'
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM generated_images gi
+                    WHERE
+                        gi.job_id =
+                            generation_jobs.id
+                        AND gi.status IN (
+                            'queued',
+                            'generating'
+                        )
+                )
+            """
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    return {
+        "stale_images_marked_failed":
+            recovered,
+    }
+
+
+def cleanup_orphan_directories():
+    connection = get_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT id
+            FROM generation_jobs
+            """
+        ).fetchall()
+
+    finally:
+        connection.close()
+
+    known = {
+        int(
+            row[
+                "id"
+            ]
+        )
+        for row in rows
+    }
+
+    removed = []
+
+    for root in (
+        UPLOADS_DIR,
+        OUTPUTS_DIR,
+    ):
+        if not root.exists():
+            continue
+
+        for child in root.iterdir():
+            if not child.is_dir():
+                continue
+
+            name = child.name
+
+            if not name.startswith(
+                "job_"
+            ):
+                continue
+
+            try:
+                job_id = int(
+                    name[
+                        4:
+                    ]
+                )
+            except ValueError:
+                continue
+
+            if job_id in known:
+                continue
+
+            shutil.rmtree(
+                child,
+                ignore_errors=True,
+            )
+
+            removed.append(
+                child
+                .relative_to(
+                    BASE_DIR
+                )
+                .as_posix()
+            )
+
+    return {
+        "removed_count":
+            len(
+                removed
+            ),
+        "removed":
+            removed,
+    }

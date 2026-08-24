@@ -4,6 +4,9 @@ from importlib.metadata import PackageNotFoundError, version
 from openai import OpenAI
 
 from app.settings_store import get_runtime_settings
+from app.credential_store import (
+    get_saved_provider_api_key,
+)
 
 
 DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-2"
@@ -26,6 +29,15 @@ SUPPORTED_OUTPUT_FORMATS = {
 
 
 def get_openai_api_key():
+    saved = (
+        get_saved_provider_api_key(
+            "openai"
+        )
+    )
+
+    if saved:
+        return saved
+
     value = os.getenv(
         "OPENAI_API_KEY"
     )
@@ -80,8 +92,14 @@ def get_openai_sdk_version():
         return "unknown"
 
 
-def create_openai_client():
-    api_key = get_openai_api_key()
+def create_openai_client(
+    api_key: str | None = None,
+):
+    api_key = (
+        api_key
+        or
+        get_openai_api_key()
+    )
 
     if not api_key:
         return None
@@ -93,12 +111,17 @@ def create_openai_client():
 
 def safe_openai_error_message(
     error: Exception,
+    api_key: str | None = None,
 ):
     message = str(
         error
     )
 
-    api_key = get_openai_api_key()
+    api_key = (
+        api_key
+        or
+        get_openai_api_key()
+    )
 
     if api_key:
         message = message.replace(
@@ -120,16 +143,29 @@ def get_openai_image_status():
         "size": get_openai_image_size(),
         "output_format": get_openai_output_format(),
         "key_source": (
-            "OPENAI_API_KEY"
-            if get_openai_api_key()
-            else None
+            "saved_connection"
+            if get_saved_provider_api_key(
+                "openai"
+            )
+            else (
+                "OPENAI_API_KEY"
+                if os.getenv(
+                    "OPENAI_API_KEY"
+                )
+                else
+                None
+            )
         ),
         "sdk_version": get_openai_sdk_version(),
     }
 
 
-def test_openai_connection():
-    client = create_openai_client()
+def test_openai_connection(
+    api_key_override: str | None = None,
+):
+    client = create_openai_client(
+        api_key_override
+    )
 
     if client is None:
         return {
@@ -164,6 +200,7 @@ def test_openai_connection():
             "provider": "openai",
             "model": model,
             "error": safe_openai_error_message(
-                error
+                error,
+                api_key_override,
             ),
         }

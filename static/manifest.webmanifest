@@ -1,0 +1,9 @@
+{
+  "name": "Image Agent Studio",
+  "short_name": "Image Agent",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070707",
+  "theme_color": "#070707",
+  "description": "AI product image creative studio."
+}

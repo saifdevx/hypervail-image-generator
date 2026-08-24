@@ -7,6 +7,7 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    Request,
 )
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -91,6 +92,18 @@ from app.builtin_workflows import (
     is_builtin_workflow_name,
     get_builtin_file_status,
 )
+from app.credential_store import (
+    ensure_credential_schema,
+    save_provider_api_key,
+    remove_provider_api_key,
+    get_saved_connection_status,
+)
+from app.cleanup_service import (
+    delete_generated_image,
+    delete_job,
+    recover_stale_generations,
+    cleanup_orphan_directories,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -153,6 +166,16 @@ class SettingsUpdateRequest(BaseModel):
 
     batch_concurrency: int | None = None
     auto_generate_images: bool | None = None
+    confirm_batch_over: int | None = None
+    max_output_count: int | None = None
+    draft_autosave: bool | None = None
+
+
+class ProviderKeyRequest(BaseModel):
+    api_key: str = Field(
+        min_length=8,
+        max_length=1000,
+    )
 
 
 class FavoriteRequest(BaseModel):
@@ -266,8 +289,12 @@ async def lifespan(
     ensure_settings_schema()
     ensure_history_schema()
     ensure_job_schema()
+    ensure_credential_schema()
     seed_default_profiles()
     sync_builtin_workflows()
+    recover_stale_generations(
+        stale_minutes=30
+    )
     yield
 
 
@@ -276,9 +303,64 @@ app = FastAPI(
     description=(
         "Custom AI product image generation agent"
     ),
-    version="0.13.0-phase1",
+    version="0.13.0-phase2",
     lifespan=lifespan,
 )
+
+
+@app.middleware(
+    "http"
+)
+async def security_headers(
+    request: Request,
+    call_next,
+):
+    response = await call_next(
+        request
+    )
+
+    response.headers[
+        "X-Content-Type-Options"
+    ] = "nosniff"
+
+    response.headers[
+        "X-Frame-Options"
+    ] = "DENY"
+
+    response.headers[
+        "Referrer-Policy"
+    ] = "strict-origin-when-cross-origin"
+
+    response.headers[
+        "Permissions-Policy"
+    ] = (
+        "camera=(self), "
+        "microphone=(), "
+        "geolocation=()"
+    )
+
+    response.headers[
+        "Content-Security-Policy"
+    ] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+
+    if request.url.path.startswith(
+        "/api/provider-connections"
+    ):
+        response.headers[
+            "Cache-Control"
+        ] = "no-store"
+
+    return response
 
 
 app.mount(
@@ -327,6 +409,178 @@ def builtin_workflow_status():
         "files":
             get_builtin_file_status()
     }
+
+
+# ============================================================
+# PROVIDER CONNECTIONS / USER-OWNED API KEYS
+# ============================================================
+
+@app.get(
+    "/api/provider-connections"
+)
+def provider_connections():
+    saved = (
+        get_saved_connection_status()
+    )
+
+    openai_status = (
+        get_openai_image_status()
+    )
+
+    gemini_status = (
+        get_gemini_status()
+    )
+
+    return {
+        "openai": {
+            **saved[
+                "openai"
+            ],
+            "configured":
+                bool(
+                    openai_status.get(
+                        "configured"
+                    )
+                ),
+            "source":
+                openai_status.get(
+                    "key_source"
+                ),
+        },
+        "gemini": {
+            **saved[
+                "gemini"
+            ],
+            "configured":
+                bool(
+                    gemini_status.get(
+                        "configured"
+                    )
+                ),
+            "source":
+                gemini_status.get(
+                    "key_source"
+                ),
+        },
+    }
+
+
+@app.post(
+    "/api/provider-connections/{provider}"
+)
+def provider_connection_save(
+    provider: str,
+    request: ProviderKeyRequest,
+):
+    provider = (
+        provider
+        .strip()
+        .lower()
+    )
+
+    api_key = (
+        request
+        .api_key
+        .strip()
+    )
+
+    if provider == "openai":
+        test = (
+            test_openai_connection(
+                api_key_override=
+                    api_key
+            )
+        )
+
+    elif provider == "gemini":
+        test = (
+            test_gemini_connection(
+                api_key_override=
+                    api_key
+            )
+        )
+
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Unsupported provider."
+            ),
+        )
+
+    if not test.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                test.get(
+                    "error"
+                )
+                or
+                "The API key could not be verified."
+            ),
+        )
+
+    try:
+        saved = (
+            save_provider_api_key(
+                provider,
+                api_key,
+            )
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(
+                error
+            ),
+        )
+
+    return {
+        "ok": True,
+        "connection":
+            saved,
+        "test": {
+            "provider":
+                test.get(
+                    "provider",
+                    provider,
+                ),
+            "model":
+                test.get(
+                    "model"
+                ),
+        },
+    }
+
+
+@app.delete(
+    "/api/provider-connections/{provider}"
+)
+def provider_connection_delete(
+    provider: str,
+):
+    provider = (
+        provider
+        .strip()
+        .lower()
+    )
+
+    if provider not in {
+        "openai",
+        "gemini",
+    }:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Unsupported provider."
+            ),
+        )
+
+    return remove_provider_api_key(
+        provider
+    )
 
 
 # ============================================================
@@ -1197,6 +1451,33 @@ async def job_create(
         )
     )
 
+    runtime_settings = (
+        get_runtime_settings()
+    )
+
+    if (
+        clean_requested_count
+        !=
+        "auto"
+        and
+        int(
+            clean_requested_count
+        )
+        >
+        int(
+            runtime_settings[
+                "max_output_count"
+            ]
+        )
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Requested output count is above "
+                "your configured safety limit."
+            ),
+        )
+
     validated_uploads = []
 
     for position, upload in enumerate(
@@ -1278,7 +1559,7 @@ async def job_create(
             aspect_ratio=
                 clean_aspect_ratio,
             runtime_settings=
-                get_runtime_settings(),
+                runtime_settings,
             uploads=
                 validated_uploads,
         )
@@ -1675,6 +1956,64 @@ def job_generated_images(
     return get_job_images(
         job_id
     )
+
+
+@app.delete(
+    "/api/images/{image_id}"
+)
+def generated_image_delete(
+    image_id: int,
+):
+    result = (
+        delete_generated_image(
+            image_id
+        )
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Generated image not found."
+            ),
+        )
+
+    return result
+
+
+@app.delete(
+    "/api/jobs/{job_id}"
+)
+def generation_job_delete(
+    job_id: int,
+):
+    result = delete_job(
+        job_id
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Job not found."
+            ),
+        )
+
+    return result
+
+
+@app.post(
+    "/api/maintenance/cleanup"
+)
+def maintenance_cleanup():
+    return {
+        "stale":
+            recover_stale_generations(
+                stale_minutes=30
+            ),
+        "orphans":
+            cleanup_orphan_directories(),
+    }
 
 
 @app.get(
