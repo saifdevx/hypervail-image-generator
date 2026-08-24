@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import re
 
 from fastapi import (
     FastAPI,
@@ -9,13 +10,18 @@ from fastapi import (
     Form,
     Request,
 )
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    Response,
+    JSONResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.database import (
     init_database,
     get_database_status,
+    get_connection,
 )
 from app.profile_store import (
     seed_default_profiles,
@@ -104,6 +110,52 @@ from app.cleanup_service import (
     recover_stale_generations,
     cleanup_orphan_directories,
 )
+from app.auth_service import (
+    get_auth_provider,
+    get_auth_public_config,
+    sign_up,
+    sign_in,
+    resolve_request_session,
+    apply_session_cookies,
+    clear_session_cookies,
+)
+from app.request_context import (
+    set_current_user,
+    reset_current_user,
+    get_current_owner_id,
+    get_current_owner_email,
+)
+from app.account_service import (
+    claim_local_data,
+)
+from app.user_service import (
+    ensure_user_schema,
+    ensure_user,
+    get_user,
+    user_is_admin,
+    update_user_access,
+)
+from app.model_registry import (
+    ensure_model_registry_schema,
+    list_models,
+    update_model,
+)
+from app.feature_flags import (
+    ensure_feature_flag_schema,
+    list_feature_flags,
+    set_feature_flag,
+)
+from app.usage_service import (
+    ensure_usage_schema,
+    record_usage,
+    user_usage_summary,
+)
+from app.admin_service import (
+    get_admin_dashboard,
+)
+from app.platform.queue_backend import (
+    get_generation_queue,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -178,6 +230,35 @@ class ProviderKeyRequest(BaseModel):
     )
 
 
+class AuthCredentialsRequest(BaseModel):
+    email: str = Field(
+        min_length=3,
+        max_length=320,
+    )
+    password: str = Field(
+        min_length=6,
+        max_length=200,
+    )
+
+
+class AdminModelUpdateRequest(BaseModel):
+    model_id: str | None = None
+    display_name: str | None = None
+    note: str | None = None
+    enabled: bool | None = None
+    sort_order: int | None = None
+    config: dict | None = None
+
+
+class AdminUserUpdateRequest(BaseModel):
+    role: str | None = None
+    status: str | None = None
+
+
+class FeatureFlagUpdateRequest(BaseModel):
+    enabled: bool
+
+
 class FavoriteRequest(BaseModel):
     favorite: bool
 
@@ -239,6 +320,26 @@ def require_editable_profile(
     return profile
 
 
+def require_admin():
+    owner_id = (
+        get_current_owner_id()
+    )
+
+    if not user_is_admin(
+        owner_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Administrator access required."
+            ),
+        )
+
+    return get_user(
+        owner_id
+    )
+
+
 def normalize_requested_count(
     value: str,
 ):
@@ -290,8 +391,16 @@ async def lifespan(
     ensure_history_schema()
     ensure_job_schema()
     ensure_credential_schema()
+    ensure_user_schema()
+    ensure_model_registry_schema()
+    ensure_feature_flag_schema()
+    ensure_usage_schema()
     seed_default_profiles()
     sync_builtin_workflows()
+    ensure_user(
+        "local",
+        "local@hyperex.dev",
+    )
     recover_stale_generations(
         stale_minutes=30
     )
@@ -299,11 +408,11 @@ async def lifespan(
 
 
 app = FastAPI(
-    title="Image Agent",
+    title="Hyperex",
     description=(
-        "Custom AI product image generation agent"
+        "Hyperex AI product image studio"
     ),
-    version="0.13.0-phase2",
+    version="0.14.0-phase1-platform",
     lifespan=lifespan,
 )
 
@@ -311,13 +420,227 @@ app = FastAPI(
 @app.middleware(
     "http"
 )
-async def security_headers(
+async def auth_and_security(
     request: Request,
     call_next,
 ):
-    response = await call_next(
-        request
+    path = request.url.path
+
+    public_api = (
+        path.startswith(
+            "/api/auth/"
+        )
+        or
+        path == "/health"
     )
+
+    should_authenticate = (
+        path.startswith(
+            "/api/"
+        )
+        and
+        not public_api
+    )
+
+    session = None
+    context_tokens = None
+
+    if should_authenticate:
+        session = (
+            await
+            resolve_request_session(
+                request
+            )
+        )
+
+        if not session.authenticated:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail":
+                        "Authentication required."
+                },
+            )
+
+        app_user = ensure_user(
+            session.user_id
+            or
+            "",
+            session.email,
+        )
+
+        if (
+            not app_user
+            or
+            app_user.get(
+                "status"
+            )
+            !=
+            "active"
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail":
+                        "This Hyperex account is suspended."
+                },
+            )
+
+        # Central ownership guard for all existing job/image routes.
+        # Service-level filters remain as defense in depth.
+        job_match = re.match(
+            r"^/api/jobs/(\d+)",
+            path,
+        )
+
+        history_match = re.match(
+            r"^/api/history/(\d+)",
+            path,
+        )
+
+        image_match = re.match(
+            r"^/api/images/(\d+)",
+            path,
+        )
+
+        connection = None
+
+        try:
+            if job_match:
+                connection = (
+                    get_connection()
+                )
+
+                row = connection.execute(
+                    """
+                    SELECT id
+                    FROM generation_jobs
+                    WHERE
+                        id = ?
+                        AND owner_id = ?
+                    """,
+                    (
+                        int(
+                            job_match.group(
+                                1
+                            )
+                        ),
+                        session.user_id,
+                    ),
+                ).fetchone()
+
+                if row is None:
+                    return JSONResponse(
+                        status_code=404,
+                        content={
+                            "detail":
+                                "Job not found."
+                        },
+                    )
+
+            elif history_match:
+                connection = (
+                    get_connection()
+                )
+
+                row = connection.execute(
+                    """
+                    SELECT id
+                    FROM generation_jobs
+                    WHERE
+                        id = ?
+                        AND owner_id = ?
+                    """,
+                    (
+                        int(
+                            history_match.group(
+                                1
+                            )
+                        ),
+                        session.user_id,
+                    ),
+                ).fetchone()
+
+                if row is None:
+                    return JSONResponse(
+                        status_code=404,
+                        content={
+                            "detail":
+                                "Job not found."
+                        },
+                    )
+
+            elif image_match:
+                connection = (
+                    get_connection()
+                )
+
+                row = connection.execute(
+                    """
+                    SELECT gi.id
+                    FROM generated_images gi
+
+                    JOIN generation_jobs gj
+                        ON gj.id =
+                            gi.job_id
+
+                    WHERE
+                        gi.id = ?
+                        AND gj.owner_id = ?
+                    """,
+                    (
+                        int(
+                            image_match.group(
+                                1
+                            )
+                        ),
+                        session.user_id,
+                    ),
+                ).fetchone()
+
+                if row is None:
+                    return JSONResponse(
+                        status_code=404,
+                        content={
+                            "detail":
+                                "Image not found."
+                        },
+                    )
+
+        finally:
+            if connection is not None:
+                connection.close()
+
+        context_tokens = (
+            set_current_user(
+                session.user_id
+                or
+                "",
+                session.email,
+            )
+        )
+
+    try:
+        response = await call_next(
+            request
+        )
+
+    finally:
+        if context_tokens is not None:
+            reset_current_user(
+                context_tokens
+            )
+
+    if (
+        session is not None
+        and
+        session.refreshed
+    ):
+        apply_session_cookies(
+            response,
+            session,
+            request,
+        )
 
     response.headers[
         "X-Content-Type-Options"
@@ -353,8 +676,14 @@ async def security_headers(
         "form-action 'self'"
     )
 
-    if request.url.path.startswith(
-        "/api/provider-connections"
+    if (
+        path.startswith(
+            "/api/provider-connections"
+        )
+        or
+        path.startswith(
+            "/api/auth/"
+        )
     ):
         response.headers[
             "Cache-Control"
@@ -392,6 +721,440 @@ def health():
     return {
         "status": "healthy"
     }
+
+
+# ============================================================
+# AUTHENTICATION
+# ============================================================
+
+@app.get(
+    "/api/auth/config"
+)
+def auth_config():
+    return get_auth_public_config()
+
+
+@app.get(
+    "/api/auth/session"
+)
+async def auth_session(
+    request: Request,
+):
+    session = (
+        await
+        resolve_request_session(
+            request
+        )
+    )
+
+    app_user = (
+        ensure_user(
+            session.user_id
+            or
+            "",
+            session.email,
+        )
+        if session.authenticated
+        else
+        None
+    )
+
+    response = JSONResponse(
+        content={
+            "authenticated":
+                bool(
+                    session.authenticated
+                ),
+            "provider":
+                get_auth_provider(),
+            "user": (
+                {
+                    "id":
+                        session.user_id,
+                    "email":
+                        session.email,
+                    "role":
+                        (
+                            app_user.get(
+                                "role"
+                            )
+                            if app_user
+                            else
+                            "user"
+                        ),
+                    "status":
+                        (
+                            app_user.get(
+                                "status"
+                            )
+                            if app_user
+                            else
+                            "active"
+                        ),
+                }
+                if session.authenticated
+                else
+                None
+            ),
+        }
+    )
+
+    if (
+        session.authenticated
+        and
+        session.refreshed
+    ):
+        apply_session_cookies(
+            response,
+            session,
+            request,
+        )
+
+    return response
+
+
+@app.post(
+    "/api/auth/signup"
+)
+async def auth_signup(
+    request: Request,
+    payload: AuthCredentialsRequest,
+):
+    result = await sign_up(
+        payload.email.strip(),
+        payload.password,
+    )
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Sign up failed."
+            ),
+        )
+
+    session = result.get(
+        "session"
+    )
+
+    if (
+        session
+        and
+        session.authenticated
+    ):
+        ensure_user(
+            session.user_id
+            or
+            "",
+            session.email,
+        )
+
+    response = JSONResponse(
+        content={
+            "ok":
+                True,
+            "needs_confirmation":
+                bool(
+                    result.get(
+                        "needs_confirmation"
+                    )
+                ),
+            "authenticated":
+                bool(
+                    session
+                    and
+                    session.authenticated
+                ),
+        }
+    )
+
+    if (
+        session
+        and
+        session.authenticated
+    ):
+        apply_session_cookies(
+            response,
+            session,
+            request,
+        )
+
+    return response
+
+
+@app.post(
+    "/api/auth/login"
+)
+async def auth_login(
+    request: Request,
+    payload: AuthCredentialsRequest,
+):
+    result = await sign_in(
+        payload.email.strip(),
+        payload.password,
+    )
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Login failed."
+            ),
+        )
+
+    session = result[
+        "session"
+    ]
+
+    app_user = ensure_user(
+        session.user_id
+        or
+        "",
+        session.email,
+    )
+
+    response = JSONResponse(
+        content={
+            "ok":
+                True,
+            "user": {
+                "id":
+                    session.user_id,
+                "email":
+                    session.email,
+                "role":
+                    (
+                        app_user.get(
+                            "role"
+                        )
+                        if app_user
+                        else
+                        "user"
+                    ),
+            },
+        }
+    )
+
+    apply_session_cookies(
+        response,
+        session,
+        request,
+    )
+
+    return response
+
+
+@app.post(
+    "/api/auth/logout"
+)
+def auth_logout():
+    response = JSONResponse(
+        content={
+            "ok": True
+        }
+    )
+
+    clear_session_cookies(
+        response
+    )
+
+    return response
+
+
+@app.get(
+    "/api/account"
+)
+def account_details():
+    owner_id = (
+        get_current_owner_id()
+    )
+
+    user = (
+        ensure_user(
+            owner_id,
+            get_current_owner_email(),
+        )
+        or
+        {}
+    )
+
+    return {
+        "id":
+            owner_id,
+        "email":
+            get_current_owner_email(),
+        "auth_provider":
+            get_auth_provider(),
+        "role":
+            user.get(
+                "role",
+                "user",
+            ),
+        "status":
+            user.get(
+                "status",
+                "active",
+            ),
+        "usage":
+            user_usage_summary(
+                owner_id
+            ),
+    }
+
+
+@app.post(
+    "/api/account/claim-local-data"
+)
+def account_claim_local_data():
+    return claim_local_data()
+
+
+# ============================================================
+# FEATURE FLAGS
+# ============================================================
+
+@app.get(
+    "/api/features"
+)
+def feature_flags_public():
+    return {
+        "features":
+            list_feature_flags()
+    }
+
+
+# ============================================================
+# ADMIN
+# ============================================================
+
+@app.get(
+    "/api/admin/dashboard"
+)
+def admin_dashboard():
+    require_admin()
+
+    return get_admin_dashboard()
+
+
+@app.get(
+    "/api/admin/models"
+)
+def admin_models():
+    require_admin()
+
+    return {
+        "models":
+            list_models()
+    }
+
+
+@app.patch(
+    "/api/admin/models/{registry_id}"
+)
+def admin_model_update(
+    registry_id: int,
+    request: AdminModelUpdateRequest,
+):
+    require_admin()
+
+    values = (
+        request.model_dump(
+            exclude_none=True
+        )
+    )
+
+    result = update_model(
+        registry_id,
+        values,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Model registry item not found.",
+        )
+
+    return result
+
+
+@app.get(
+    "/api/admin/features"
+)
+def admin_features():
+    require_admin()
+
+    return {
+        "features":
+            list_feature_flags()
+    }
+
+
+@app.patch(
+    "/api/admin/features/{key}"
+)
+def admin_feature_update(
+    key: str,
+    request: FeatureFlagUpdateRequest,
+):
+    require_admin()
+
+    result = set_feature_flag(
+        key,
+        request.enabled,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Feature flag not found.",
+        )
+
+    return result
+
+
+@app.patch(
+    "/api/admin/users/{user_id}"
+)
+def admin_user_update(
+    user_id: str,
+    request: AdminUserUpdateRequest,
+):
+    require_admin()
+
+    try:
+        result = update_user_access(
+            user_id,
+            role=request.role,
+            status=request.status,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(
+                error
+            ),
+        )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    return result
 
 
 @app.get(
@@ -952,15 +1715,24 @@ def profile_create(
             ),
         )
 
-    return create_profile(
-        name=name,
-        description=
-            request
-            .description
-            .strip(),
-        system_instruction=
-            instruction,
-    )
+    try:
+        return create_profile(
+            name=name,
+            description=
+                request
+                .description
+                .strip(),
+            system_instruction=
+                instruction,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(
+                error
+            ),
+        )
 
 
 @app.patch(
@@ -974,20 +1746,29 @@ def profile_update(
         profile_id
     )
 
-    profile = (
-        update_profile_metadata(
-            profile_id=
-                profile_id,
-            name=
-                request
-                .name
-                .strip(),
-            description=
-                request
-                .description
-                .strip(),
+    try:
+        profile = (
+            update_profile_metadata(
+                profile_id=
+                    profile_id,
+                name=
+                    request
+                    .name
+                    .strip(),
+                description=
+                    request
+                    .description
+                    .strip(),
+            )
         )
-    )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(
+                error
+            ),
+        )
 
     if profile is None:
         raise HTTPException(
@@ -1594,7 +2375,30 @@ async def job_create(
             ),
         )
 
-    return result["job"]
+    job = result[
+        "job"
+    ]
+
+    record_usage(
+        "job_created",
+        job_id=
+            job[
+                "id"
+            ],
+        quantity=1,
+        metadata={
+            "requested_count":
+                job.get(
+                    "requested_count"
+                ),
+            "aspect_ratio":
+                job.get(
+                    "aspect_ratio"
+                ),
+        },
+    )
+
+    return job
 
 
 @app.get(
@@ -1677,7 +2481,25 @@ def job_plan(
     )
 
     if result["ok"]:
-        return result["job"]
+        job = result[
+            "job"
+        ]
+
+        record_usage(
+            "planner_completed",
+            job_id=
+                job_id,
+            provider=
+                job.get(
+                    "planner_provider"
+                ),
+            model=
+                job.get(
+                    "planner_model"
+                ),
+        )
+
+        return job
 
     code = result.get(
         "code"
@@ -1786,14 +2608,31 @@ def prompt_generate_image(
     job_id: int,
     prompt_id: int,
 ):
-    result = (
-        generate_prompt_image(
-            job_id,
-            prompt_id,
-        )
+    queue = (
+        get_generation_queue()
+    )
+
+    result = queue.run(
+        generate_prompt_image,
+        job_id,
+        prompt_id,
     )
 
     if result["ok"]:
+        record_usage(
+            "image_generated",
+            job_id=
+                job_id,
+            provider=
+                result.get(
+                    "provider"
+                ),
+            model=
+                result.get(
+                    "model"
+                ),
+        )
+
         return result
 
     code = result.get(
@@ -1830,18 +2669,35 @@ def prompt_regenerate_image(
     prompt_id: int,
     request: RegenerateImageRequest,
 ):
-    result = (
-        generate_prompt_image(
-            job_id,
-            prompt_id,
-            extra_direction=
-                request
-                .extra_direction
-                .strip(),
-        )
+    queue = (
+        get_generation_queue()
+    )
+
+    result = queue.run(
+        generate_prompt_image,
+        job_id,
+        prompt_id,
+        extra_direction=
+            request
+            .extra_direction
+            .strip(),
     )
 
     if result["ok"]:
+        record_usage(
+            "image_regenerated",
+            job_id=
+                job_id,
+            provider=
+                result.get(
+                    "provider"
+                ),
+            model=
+                result.get(
+                    "model"
+                ),
+        )
+
         return result
 
     code = result.get(
@@ -1876,9 +2732,15 @@ def job_generate_all_images(
     job_id: int,
     regenerate_completed: bool = False,
 ):
-    result = generate_all_prompt_images(
+    queue = (
+        get_generation_queue()
+    )
+
+    result = queue.run(
+        generate_all_prompt_images,
         job_id=job_id,
-        regenerate_completed=regenerate_completed,
+        regenerate_completed=
+            regenerate_completed,
     )
 
     if result.get("code"):
@@ -1903,6 +2765,41 @@ def job_generate_all_images(
                 "error",
                 "Batch image generation failed.",
             ),
+        )
+
+    successful = [
+        item
+        for item
+        in result.get(
+            "results",
+            []
+        )
+        if item.get(
+            "ok"
+        )
+    ]
+
+    if successful:
+        first = successful[
+            0
+        ]
+
+        record_usage(
+            "image_generated",
+            job_id=
+                job_id,
+            provider=
+                first.get(
+                    "provider"
+                ),
+            model=
+                first.get(
+                    "model"
+                ),
+            quantity=
+                len(
+                    successful
+                ),
         )
 
     return result
@@ -2006,6 +2903,15 @@ def generation_job_delete(
     "/api/maintenance/cleanup"
 )
 def maintenance_cleanup():
+    if get_auth_provider() != "local":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Global maintenance is disabled "
+                "for normal user accounts."
+            ),
+        )
+
     return {
         "stale":
             recover_stale_generations(
