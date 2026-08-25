@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: hyperex
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: AUTH_PROVIDER
+        value: firebase
+      - key: DATABASE_PROVIDER
+        value: turso
+      - key: STORAGE_PROVIDER
+        value: r2
+      - key: QUEUE_PROVIDER
+        value: local
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: FIREBASE_WEB_API_KEY
+        sync: false
+      - key: HYPEREX_ADMIN_UID
+        sync: false
+      - key: APP_ENCRYPTION_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_QUEUE_ID
+        sync: false
+      - key: CLOUDFLARE_QUEUE_API_TOKEN
+        sync: false
+      - key: HYPEREX_QUEUE_SHARED_SECRET
+        sync: false
+      - key: HERO_WORKFLOW_PATH
+        value: /etc/secrets/hero_images.txt
+      - key: UGC_WORKFLOW_PATH
+        value: /etc/secrets/ugc_images.txt

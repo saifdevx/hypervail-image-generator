@@ -1,5 +1,4 @@
 from pathlib import Path
-import shutil
 import uuid
 
 from app.database import get_connection
@@ -13,6 +12,7 @@ from app.request_context import (
 )
 from app.platform.storage_backend import (
     get_storage_backend,
+    media_type_for_filename,
 )
 
 
@@ -66,16 +66,12 @@ def detect_image_type(data: bytes):
     return None
 
 
-def media_type_for_path(path: Path):
-    return {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".webp": "image/webp",
-    }.get(
-        path.suffix.lower(),
-        "application/octet-stream",
-    )
+def media_type_for_storage(
+    storage_ref: str,
+    original_filename: str = "",
+):
+    name = original_filename or storage_ref
+    return media_type_for_filename(name)
 
 
 def normalize_job_aspect_ratio(
@@ -340,13 +336,7 @@ def create_prepared_job(
 ):
     ensure_job_schema()
 
-    UPLOADS_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
     connection = get_connection()
-    job_directory = None
 
     owner_id = (
         get_current_owner_id()
@@ -496,17 +486,6 @@ def create_prepared_job(
 
         job_id = cursor.lastrowid
 
-        job_directory = (
-            STORAGE.job_upload_dir(
-                job_id
-            )
-        )
-
-        job_directory.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
         for position, upload in enumerate(
             uploads,
             start=1,
@@ -517,22 +496,12 @@ def create_prepared_job(
                 f"{upload['extension']}"
             )
 
-            stored_path = (
-                job_directory
-                /
-                stored_filename
-            )
-
-            stored_path.write_bytes(
-                upload["data"]
-            )
-
-            relative_path = (
-                stored_path
-                .relative_to(
-                    BASE_DIR
-                )
-                .as_posix()
+            storage_ref = STORAGE.write_reference(
+                owner_id=owner_id,
+                job_id=job_id,
+                filename=stored_filename,
+                data=upload["data"],
+                media_type=upload["media_type"],
             )
 
             connection.execute(
@@ -549,11 +518,9 @@ def create_prepared_job(
                 (
                     job_id,
                     position,
-                    upload[
-                        "original_filename"
-                    ],
+                    upload["original_filename"],
                     stored_filename,
-                    relative_path,
+                    storage_ref,
                 ),
             )
 
@@ -562,14 +529,14 @@ def create_prepared_job(
     except Exception:
         connection.rollback()
 
-        if (
-            job_directory is not None
-            and job_directory.exists()
-        ):
-            shutil.rmtree(
-                job_directory,
-                ignore_errors=True,
-            )
+        try:
+            if "job_id" in locals():
+                STORAGE.delete_job_objects(
+                    owner_id,
+                    job_id,
+                )
+        except Exception:
+            pass
 
         raise
 
@@ -671,9 +638,11 @@ def get_job(
             "references"
         ] = [
             {
-                **dict(
-                    reference
-                ),
+                "id": reference["id"],
+                "position": reference["position"],
+                "original_filename": reference["original_filename"],
+                "stored_filename": reference["stored_filename"],
+                "created_at": reference["created_at"],
                 "file_url": (
                     f"/api/jobs/{job_id}"
                     f"/references/"
@@ -764,50 +733,28 @@ def get_job_for_planning(
             "references"
         ] = []
 
-        uploads_root = (
-            UPLOADS_DIR.resolve()
-        )
-
         for reference in references:
-            path = (
-                BASE_DIR
-                /
-                reference[
-                    "file_path"
-                ]
-            ).resolve()
+            storage_ref = reference["file_path"]
 
-            if (
-                path != uploads_root
-                and
-                uploads_root
-                not in path.parents
-            ):
-                raise RuntimeError(
-                    "Reference path escaped uploads directory."
-                )
-
-            if not path.exists():
+            if not STORAGE.exists(storage_ref):
                 raise FileNotFoundError(
                     "Reference image is missing: "
                     f"{reference['original_filename']}"
                 )
 
-            result[
-                "references"
-            ].append(
+            result["references"].append(
                 {
-                    **dict(
-                        reference
+                    **dict(reference),
+                    "storage_ref": storage_ref,
+                    "data": STORAGE.read_bytes(storage_ref),
+                    "media_type": media_type_for_storage(
+                        storage_ref,
+                        reference["original_filename"],
                     ),
-                    "absolute_path":
-                        path,
-                    "media_type":
-                        media_type_for_path(
-                            path
-                        ),
+                    "absolute_path": STORAGE.local_path(storage_ref),
                 }
             )
+
 
         return result
 
@@ -942,9 +889,7 @@ def get_reference_file(
     reference_id: int,
 ):
     connection = get_connection()
-    owner_id = (
-        get_current_owner_id()
-    )
+    owner_id = get_current_owner_id()
 
     try:
         row = connection.execute(
@@ -956,60 +901,34 @@ def get_reference_file(
                 ri.stored_filename,
                 ri.file_path
             FROM reference_images ri
-
             JOIN generation_jobs gj
                 ON gj.id = ri.job_id
-
             WHERE
                 ri.id = ?
                 AND ri.job_id = ?
                 AND gj.owner_id = ?
             """,
-            (
-                reference_id,
-                job_id,
-                owner_id,
-            ),
+            (reference_id, job_id, owner_id),
         ).fetchone()
 
         if row is None:
             return None
 
-        path = (
-            BASE_DIR
-            /
-            row[
-                "file_path"
-            ]
-        ).resolve()
-
-        uploads_root = (
-            UPLOADS_DIR.resolve()
-        )
-
-        if (
-            path != uploads_root
-            and
-            uploads_root
-            not in path.parents
-        ):
-            return None
-
-        if not path.exists():
+        storage_ref = row["file_path"]
+        if not STORAGE.exists(storage_ref):
             return None
 
         return {
-            "path":
-                path,
-            "media_type":
-                media_type_for_path(
-                    path
-                ),
-            "original_filename":
-                row[
-                    "original_filename"
-                ],
+            "storage_ref": storage_ref,
+            "path": STORAGE.local_path(storage_ref),
+            "signed_url": STORAGE.signed_get_url(storage_ref),
+            "media_type": media_type_for_storage(
+                storage_ref,
+                row["original_filename"],
+            ),
+            "original_filename": row["original_filename"],
         }
 
     finally:
         connection.close()
+

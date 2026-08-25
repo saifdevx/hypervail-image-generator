@@ -6752,188 +6752,205 @@ button:hover {
 
 
 /* =========================================================
-   HYPEREX — STEP 14 PHASE 1 ADMIN
+   HYPEREX — SIMPLE ADMIN DASHBOARD
 ========================================================= */
 
 .admin-shell {
-    width:
-        min(
-            1180px,
-            calc(100% - 48px)
-        );
-
-    margin:
-        0
-        auto
-        80px;
+    width: min(1180px, calc(100% - 48px));
+    margin: 0 auto 80px;
 }
 
 .admin-overview-grid {
     display: grid;
-
-    grid-template-columns:
-        repeat(
-            5,
-            minmax(0, 1fr)
-        );
-
-    gap: 1px;
-
-    background:
-        rgba(0, 0, 0, 0.12);
-
-    border:
-        1px solid
-        rgba(0, 0, 0, 0.12);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .admin-overview-grid article {
-    min-height: 112px;
-
+    min-height: 126px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-
-    padding: 17px;
-
+    padding: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     background: var(--white);
 }
 
-.admin-overview-grid span {
-    color:
-        rgba(0, 0, 0, 0.5);
-
+.admin-overview-grid article > span {
+    color: rgba(0, 0, 0, 0.52);
     font-size: 7px;
-    font-weight: 900;
-
+    font-weight: 950;
     letter-spacing: 0.08em;
 }
 
-.admin-overview-grid strong {
+.admin-overview-grid article > strong {
+    margin-top: 16px;
     color: var(--black);
-
-    font-size: 30px;
+    font-size: 31px;
     font-weight: 650;
-
     letter-spacing: -0.04em;
+}
+
+.admin-overview-grid article > small {
+    margin-top: auto;
+    padding-top: 11px;
+    color: rgba(0, 0, 0, 0.47);
+    font-size: 7px;
+    line-height: 1.45;
 }
 
 .admin-section {
     margin-top: 18px;
-
-    border:
-        1px solid
-        rgba(0, 0, 0, 0.13);
-
+    border: 1px solid rgba(0, 0, 0, 0.12);
     background: var(--white);
 }
 
 .admin-section > header {
     display: flex;
     justify-content: space-between;
-
-    gap: 24px;
-
-    padding: 18px;
-
-    border-bottom:
-        1px solid
-        rgba(0, 0, 0, 0.12);
+    align-items: flex-start;
+    gap: 28px;
+    padding: 19px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .admin-section > header span {
     color: var(--orange);
-
     font-size: 7px;
     font-weight: 950;
-
     letter-spacing: 0.08em;
 }
 
 .admin-section > header h2 {
-    margin:
-        5px
-        0
-        0;
-
-    font-size: 18px;
+    margin: 5px 0 0;
+    font-size: 19px;
     font-weight: 650;
 }
 
 .admin-section > header p {
-    max-width: 390px;
-
+    width: min(420px, 50%);
     margin: 0;
-
-    color:
-        rgba(0, 0, 0, 0.52);
-
+    color: rgba(0, 0, 0, 0.5);
     font-size: 8px;
+    line-height: 1.6;
+}
 
-    line-height: 1.55;
+.admin-system-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-system-row {
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px;
+    border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+.admin-system-row:last-child {
+    border-right: 0;
+}
+
+.admin-system-row strong {
+    display: block;
+    font-size: 9px;
+}
+
+.admin-system-row div > span {
+    display: block;
+    margin-top: 5px;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 8px;
+}
+
+.admin-connection-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid rgba(0, 0, 0, 0.13);
+    font-size: 7px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.admin-connection-status.connected {
+    border-color: rgba(52, 201, 133, 0.42);
+    background: rgba(52, 201, 133, 0.09);
+    color: var(--success);
+}
+
+.admin-connection-status.missing {
+    border-color: rgba(255, 193, 90, 0.45);
+    background: rgba(255, 193, 90, 0.09);
+    color: #9b6712;
+}
+
+.admin-model-guide {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.admin-model-guide > div {
+    padding: 12px 15px;
+    background: var(--cream);
+}
+
+.admin-model-guide strong,
+.admin-model-guide span {
+    display: block;
+}
+
+.admin-model-guide strong {
+    font-size: 9px;
+}
+
+.admin-model-guide span {
+    margin-top: 4px;
+    color: rgba(0, 0, 0, 0.48);
+    font-size: 7px;
 }
 
 .admin-model-list,
-.admin-feature-list,
-.admin-user-list {
+.admin-user-list,
+.admin-failure-list {
     display: grid;
 }
 
-.admin-model-row,
-.admin-user-row {
+.admin-model-row.simple,
+.admin-user-row.simple {
     display: grid;
     align-items: center;
-
-    grid-template-columns:
-        minmax(180px, 1.15fr)
-        minmax(180px, 1.4fr)
-        minmax(130px, 0.9fr)
-        auto
-        70px;
-
     gap: 10px;
-
     min-height: 62px;
-
-    padding:
-        10px
-        14px;
-
-    border-bottom:
-        1px solid
-        rgba(0, 0, 0, 0.09);
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.admin-user-row {
-    grid-template-columns:
-        minmax(220px, 1fr)
-        130px
-        130px
-        70px;
+.admin-model-row.simple {
+    grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.4fr) 100px 68px;
 }
 
-.admin-model-row:last-child,
-.admin-user-row:last-child,
-.admin-feature-row:last-child {
+.admin-user-row.simple {
+    grid-template-columns: minmax(240px, 1fr) 130px 130px 68px;
+}
+
+.admin-model-row.simple:last-child,
+.admin-user-row.simple:last-child {
     border-bottom: 0;
-}
-
-.admin-row-meta,
-.admin-user-copy {
-    min-width: 0;
 }
 
 .admin-row-meta strong,
 .admin-user-copy strong {
     display: block;
-
     overflow: hidden;
-
-    color: var(--black);
-
     font-size: 9px;
     font-weight: 850;
-
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -6941,136 +6958,117 @@ button:hover {
 .admin-row-meta span,
 .admin-user-copy span {
     display: block;
-
     margin-top: 5px;
-
-    color:
-        rgba(0, 0, 0, 0.48);
-
+    color: rgba(0, 0, 0, 0.48);
     font-size: 7px;
-    font-weight: 800;
-
-    letter-spacing: 0.04em;
 }
 
 .admin-model-row input[type="text"],
-.admin-model-row select,
 .admin-user-row select {
     width: 100%;
     height: 36px;
-
-    padding:
-        0
-        9px;
-
-    border:
-        1px solid
-        rgba(0, 0, 0, 0.16);
-
+    padding: 0 9px;
+    border: 1px solid rgba(0, 0, 0, 0.16);
     background: var(--cream);
     color: var(--black);
-
     font-size: 8px;
 }
 
 .admin-inline-check {
     display: flex;
     align-items: center;
-
-    gap: 7px;
-
+    gap: 6px;
     font-size: 8px;
     font-weight: 800;
 }
 
-.admin-inline-check input,
-.admin-feature-row input {
+.admin-inline-check input {
     accent-color: var(--orange);
 }
 
 .admin-model-row button,
 .admin-user-row button {
     min-height: 34px;
-
-    border:
-        1px solid
-        var(--black);
-
+    border: 1px solid var(--black);
     background: var(--black);
     color: var(--white);
-
     font-size: 7px;
     font-weight: 900;
 }
 
-.admin-feature-row {
-    min-height: 56px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    gap: 20px;
-
-    padding:
-        10px
-        14px;
-
-    border-bottom:
-        1px solid
-        rgba(0, 0, 0, 0.09);
+.admin-failure-row {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.admin-feature-row strong {
-    display: block;
+.admin-failure-row:last-child {
+    border-bottom: 0;
+}
 
+.admin-failure-row strong,
+.admin-failure-row span {
+    display: block;
+}
+
+.admin-failure-row strong {
     font-size: 9px;
 }
 
-.admin-feature-row span {
+.admin-failure-row span {
+    margin-top: 4px;
+    color: rgba(0, 0, 0, 0.48);
+    font-size: 7px;
+}
+
+.admin-failure-row p {
+    margin: 8px 0 0;
+    color: var(--danger);
+    font-size: 8px;
+    line-height: 1.5;
+}
+
+.admin-empty-success {
+    padding: 24px 18px;
+}
+
+.admin-empty-success strong,
+.admin-empty-success span {
     display: block;
+}
 
+.admin-empty-success strong {
+    color: var(--success);
+    font-size: 10px;
+}
+
+.admin-empty-success span {
     margin-top: 5px;
-
-    color:
-        rgba(0, 0, 0, 0.5);
-
+    color: rgba(0, 0, 0, 0.48);
     font-size: 8px;
 }
 
-.admin-feature-row input {
-    width: 18px;
-    height: 18px;
-}
-
-@media
-(max-width: 980px) {
+@media (max-width: 1050px) {
     .admin-overview-grid {
-        grid-template-columns:
-            repeat(
-                2,
-                minmax(0, 1fr)
-            );
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .admin-model-row {
-        grid-template-columns:
-            1fr
-            1fr;
+    .admin-system-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .admin-user-row {
-        grid-template-columns:
-            1fr
-            1fr;
+    .admin-system-row:nth-child(2) {
+        border-right: 0;
+    }
+
+    .admin-model-row.simple,
+    .admin-user-row.simple {
+        grid-template-columns: 1fr 1fr;
     }
 }
 
-@media
-(max-width: 720px) {
+@media (max-width: 720px) {
     .admin-shell {
-        width:
-            calc(100% - 24px);
+        width: calc(100% - 24px);
     }
 
     .admin-section > header {
@@ -7078,12 +7076,19 @@ button:hover {
     }
 
     .admin-section > header p {
+        width: auto;
         margin-top: 10px;
     }
 
-    .admin-model-row,
-    .admin-user-row {
-        grid-template-columns:
-            1fr;
+    .admin-system-list,
+    .admin-model-guide,
+    .admin-model-row.simple,
+    .admin-user-row.simple {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-system-row {
+        border-right: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     }
 }

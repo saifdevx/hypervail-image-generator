@@ -1768,14 +1768,14 @@ Connect key inside Settings</pre>
             <header class="page-header">
                 <div>
                     <span class="page-kicker">
-                        HYPEREX CONTROL CENTER
+                        HYPEREX ADMIN
                     </span>
 
-                    <h1>Admin.</h1>
+                    <h1>Dashboard.</h1>
 
                     <p>
-                        Manage users, model tiers and platform feature
-                        switches without changing application code.
+                        See how Hyperex is running, manage users,
+                        and choose which AI models power each quality level.
                     </p>
                 </div>
 
@@ -1792,93 +1792,66 @@ Connect key inside Settings</pre>
             <div class="admin-shell">
 
                 <section class="admin-overview-grid">
-
                     <article>
-                        <span>USERS</span>
+                        <span>TOTAL USERS</span>
                         <strong id="adminUsersCount">—</strong>
-                    </article>
-
-                    <article>
-                        <span>ALL JOBS</span>
-                        <strong id="adminJobsCount">—</strong>
+                        <small>Registered Hyperex accounts</small>
                     </article>
 
                     <article>
                         <span>JOBS TODAY</span>
                         <strong id="adminJobsTodayCount">—</strong>
+                        <small>Generation jobs created today</small>
                     </article>
 
                     <article>
-                        <span>IMAGES COMPLETE</span>
+                        <span>TOTAL JOBS</span>
+                        <strong id="adminJobsCount">—</strong>
+                        <small>All saved generation jobs</small>
+                    </article>
+
+                    <article>
+                        <span>IMAGES MADE</span>
                         <strong id="adminImagesCount">—</strong>
+                        <small>Completed generated images</small>
                     </article>
 
                     <article>
-                        <span>IMAGE FAILURES</span>
-                        <strong id="adminFailuresCount">—</strong>
+                        <span>SUCCESS RATE</span>
+                        <strong id="adminSuccessRate">—</strong>
+                        <small>Completed vs failed image attempts</small>
                     </article>
-
                 </section>
 
 
-                <section class="admin-section">
-
+                <section class="admin-section admin-system-section">
                     <header>
                         <div>
-                            <span>MODEL REGISTRY</span>
-                            <h2>Economy · Balanced · Best Quality</h2>
+                            <span>SYSTEM</span>
+                            <h2>Connections</h2>
                         </div>
-
                         <p>
-                            The user-facing tiers are stored here so future
-                            provider model changes do not require a frontend rewrite.
+                            A quick check that login, database, storage and
+                            background generation are connected.
                         </p>
                     </header>
 
                     <div
-                        class="admin-model-list"
-                        id="adminModelList"
-                    >
-                        <div class="loading-state">
-                            Loading models…
-                        </div>
-                    </div>
-
-                </section>
-
-
-                <section class="admin-section">
-
-                    <header>
-                        <div>
-                            <span>FEATURE FLAGS</span>
-                            <h2>Platform switches</h2>
-                        </div>
-
-                        <p>
-                            Future features can be turned on after they are ready.
-                        </p>
-                    </header>
-
-                    <div
-                        class="admin-feature-list"
-                        id="adminFeatureList"
+                        class="admin-system-list"
+                        id="adminSystemList"
                     ></div>
-
                 </section>
 
 
                 <section class="admin-section">
-
                     <header>
                         <div>
                             <span>USERS</span>
-                            <h2>Accounts & access</h2>
+                            <h2>Accounts</h2>
                         </div>
-
                         <p>
-                            User roles are enforced by the backend, not only hidden
-                            in the interface.
+                            See user activity, change access level, or suspend
+                            an account when needed.
                         </p>
                     </header>
 
@@ -1886,7 +1859,56 @@ Connect key inside Settings</pre>
                         class="admin-user-list"
                         id="adminUserList"
                     ></div>
+                </section>
 
+
+                <section class="admin-section">
+                    <header>
+                        <div>
+                            <span>AI MODELS</span>
+                            <h2>Quality levels</h2>
+                        </div>
+                        <p>
+                            Economy uses fewer credits, Balanced gives stronger
+                            results, and Best Quality is the premium option.
+                            Change the API model ID here when providers release
+                            better models.
+                        </p>
+                    </header>
+
+                    <div class="admin-model-guide">
+                        <div><strong>Economy</strong><span>Lowest usage</span></div>
+                        <div><strong>Balanced</strong><span>Recommended default</span></div>
+                        <div><strong>Best Quality</strong><span>Strongest results</span></div>
+                    </div>
+
+                    <div
+                        class="admin-model-list"
+                        id="adminModelList"
+                    >
+                        <div class="loading-state">
+                            Loading AI models…
+                        </div>
+                    </div>
+                </section>
+
+
+                <section class="admin-section">
+                    <header>
+                        <div>
+                            <span>RECENT ERRORS</span>
+                            <h2>What needs attention</h2>
+                        </div>
+                        <p>
+                            Only recent failed image generations appear here.
+                            Successful jobs do not clutter this list.
+                        </p>
+                    </header>
+
+                    <div
+                        class="admin-failure-list"
+                        id="adminFailureList"
+                    ></div>
                 </section>
 
             </div>
