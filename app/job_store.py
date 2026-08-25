@@ -7,11 +7,23 @@ from app.builtin_workflows import (
     is_builtin_workflow_name,
     load_builtin_instruction,
 )
+from app.request_context import (
+    get_current_owner_id,
+    LOCAL_OWNER_ID,
+)
+from app.platform.storage_backend import (
+    get_storage_backend,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-UPLOADS_DIR = DATA_DIR / "uploads"
+
+STORAGE = get_storage_backend(
+    BASE_DIR
+)
+
+DATA_DIR = STORAGE.data_dir
+UPLOADS_DIR = STORAGE.uploads_dir
 
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 
@@ -264,6 +276,8 @@ def ensure_job_schema():
         }
 
         additions = {
+            "owner_id":
+                "TEXT",
             "aspect_ratio":
                 "TEXT",
             "planner_provider_snapshot":
@@ -299,6 +313,17 @@ def ensure_job_schema():
                 """
             )
 
+        connection.execute(
+            """
+            UPDATE generation_jobs
+            SET owner_id = ?
+            WHERE owner_id IS NULL
+            """,
+            (
+                LOCAL_OWNER_ID,
+            ),
+        )
+
         connection.commit()
 
     finally:
@@ -323,6 +348,10 @@ def create_prepared_job(
     connection = get_connection()
     job_directory = None
 
+    owner_id = (
+        get_current_owner_id()
+    )
+
     try:
         profile = connection.execute(
             """
@@ -338,8 +367,21 @@ def create_prepared_job(
             WHERE
                 gp.id = ?
                 AND gp.is_active = 1
+                AND (
+                    gp.owner_id = ?
+                    OR (
+                        gp.owner_id IS NULL
+                        AND gp.name IN (
+                            'Hero Images',
+                            'UGC Images'
+                        )
+                    )
+                )
             """,
-            (profile_id,),
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
         if profile is None:
@@ -384,6 +426,7 @@ def create_prepared_job(
         cursor = connection.execute(
             """
             INSERT INTO generation_jobs (
+                owner_id,
                 profile_id,
                 profile_version_id,
                 description,
@@ -405,10 +448,11 @@ def create_prepared_job(
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?
+                ?, ?
             )
             """,
             (
+                owner_id,
                 profile_id,
                 profile[
                     "active_version_id"
@@ -453,9 +497,9 @@ def create_prepared_job(
         job_id = cursor.lastrowid
 
         job_directory = (
-            UPLOADS_DIR
-            /
-            f"job_{job_id:06d}"
+            STORAGE.job_upload_dir(
+                job_id
+            )
         )
 
         job_directory.mkdir(
@@ -545,12 +589,16 @@ def get_job(
 ):
     ensure_job_schema()
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         job = connection.execute(
             """
             SELECT
                 gj.id,
+                gj.owner_id,
                 gj.profile_id,
                 gj.profile_version_id,
                 gj.description,
@@ -586,9 +634,14 @@ def get_job(
             JOIN profile_versions pv
                 ON pv.id =
                     gj.profile_version_id
-            WHERE gj.id = ?
+            WHERE
+                gj.id = ?
+                AND gj.owner_id = ?
             """,
-            (job_id,),
+            (
+                job_id,
+                owner_id,
+            ),
         ).fetchone()
 
         if job is None:
@@ -649,12 +702,16 @@ def get_job_for_planning(
 ):
     ensure_job_schema()
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         job = connection.execute(
             """
             SELECT
                 id,
+                owner_id,
                 profile_id,
                 profile_version_id,
                 description,
@@ -672,9 +729,14 @@ def get_job_for_planning(
                 status,
                 system_instruction_snapshot
             FROM generation_jobs
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
-            (job_id,),
+            (
+                job_id,
+                owner_id,
+            ),
         ).fetchone()
 
         if job is None:
@@ -759,6 +821,9 @@ def mark_job_planning(
     provider: str = "gemini",
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         connection.execute(
@@ -770,12 +835,15 @@ def mark_job_planning(
                 planner_model = ?,
                 planner_error = NULL,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 provider,
                 model,
                 job_id,
+                owner_id,
             ),
         )
 
@@ -792,6 +860,9 @@ def mark_job_planned(
     provider: str = "gemini",
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         connection.execute(
@@ -805,13 +876,16 @@ def mark_job_planned(
                 planner_error = NULL,
                 planned_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 provider,
                 model,
                 raw_output,
                 job_id,
+                owner_id,
             ),
         )
 
@@ -828,6 +902,9 @@ def mark_job_planning_failed(
     provider: str = "gemini",
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         connection.execute(
@@ -839,7 +916,9 @@ def mark_job_planning_failed(
                 planner_model = ?,
                 planner_error = ?,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 provider,
@@ -848,6 +927,7 @@ def mark_job_planning_failed(
                     :2000
                 ],
                 job_id,
+                owner_id,
             ),
         )
 
@@ -862,6 +942,9 @@ def get_reference_file(
     reference_id: int,
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         row = connection.execute(
@@ -873,13 +956,19 @@ def get_reference_file(
                 ri.stored_filename,
                 ri.file_path
             FROM reference_images ri
+
+            JOIN generation_jobs gj
+                ON gj.id = ri.job_id
+
             WHERE
                 ri.id = ?
                 AND ri.job_id = ?
+                AND gj.owner_id = ?
             """,
             (
                 reference_id,
                 job_id,
+                owner_id,
             ),
         ).fetchone()
 

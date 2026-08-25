@@ -218,14 +218,20 @@ def sync_builtin_workflows():
                 cursor = connection.execute(
                     """
                     INSERT INTO generation_profiles (
+                        owner_id,
                         name,
+                        slug,
                         description,
                         is_active
                     )
-                    VALUES (?, ?, 1)
+                    VALUES (
+                        NULL,
+                        ?, ?, ?, 1
+                    )
                     """,
                     (
                         name,
+                        spec["slug"],
                         spec["description"],
                     ),
                 )
@@ -271,11 +277,14 @@ def sync_builtin_workflows():
                 """
                 UPDATE generation_profiles
                 SET
+                    owner_id = NULL,
+                    slug = ?,
                     description = ?,
                     is_active = 1
                 WHERE id = ?
                 """,
                 (
+                    spec["slug"],
                     spec["description"],
                     profile_id,
                 ),

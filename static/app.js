@@ -1,5 +1,5 @@
 /* =========================================================
-   IMAGE AGENT — STEP 11 STUDIO UI
+   HYPEREX — STEP 11 STUDIO UI
 ========================================================= */
 
 const $ = id =>
@@ -14,11 +14,39 @@ const navGenerate = $("navGenerate");
 const navProfiles = $("navProfiles");
 const navHistory = $("navHistory");
 const navSettings = $("navSettings");
+const navAdmin = $("navAdmin");
 
 const generateView = $("generateView");
 const profilesView = $("profilesView");
 const historyView = $("historyView");
 const settingsView = $("settingsView");
+const adminView = $("adminView");
+
+const authGate = $("authGate");
+const appShell = $("appShell");
+const authLoginTab = $("authLoginTab");
+const authSignupTab = $("authSignupTab");
+const authForm = $("authForm");
+const authEmailInput = $("authEmailInput");
+const authPasswordInput = $("authPasswordInput");
+const authSubmitButton = $("authSubmitButton");
+const authMessage = $("authMessage");
+const authLocalNote = $("authLocalNote");
+
+const sidebarUserEmail = $("sidebarUserEmail");
+const settingsUserEmail = $("settingsUserEmail");
+const logoutButton = $("logoutButton");
+const claimLocalDataButton = $("claimLocalDataButton");
+
+const refreshAdminButton = $("refreshAdminButton");
+const adminUsersCount = $("adminUsersCount");
+const adminJobsCount = $("adminJobsCount");
+const adminJobsTodayCount = $("adminJobsTodayCount");
+const adminImagesCount = $("adminImagesCount");
+const adminFailuresCount = $("adminFailuresCount");
+const adminModelList = $("adminModelList");
+const adminFeatureList = $("adminFeatureList");
+const adminUserList = $("adminUserList");
 
 const createPlannerSummary = $("createPlannerSummary");
 const createImageSummary = $("createImageSummary");
@@ -274,6 +302,11 @@ const toast = $("toast");
 let profiles = [];
 let managerProfiles = [];
 
+let authProvider = "local";
+let currentUser = null;
+let authFormMode = "login";
+let applicationStarted = false;
+
 let selectedProfileId = null;
 let selectedProfileVersionId = null;
 
@@ -295,10 +328,10 @@ let settingsPayload = null;
 let providerConnections = null;
 
 const CREATE_DRAFT_KEY =
-    "imageAgentCreateDraftV1";
+    "hyperexCreateDraftV1";
 
 const LAST_JOB_KEY =
-    "imageAgentLastJobV1";
+    "hyperexLastJobV1";
 
 let imageBatchPollTimer = null;
 let imageBatchRequestRunning = false;
@@ -724,6 +757,1136 @@ async function restoreLastJob() {
 
 
 /* =========================================================
+   AUTHENTICATION
+========================================================= */
+
+function setAuthMessage(
+    message,
+    state = ""
+) {
+    authMessage.textContent =
+        message;
+
+    authMessage.className =
+        "auth-message";
+
+    if (state) {
+        authMessage.classList.add(
+            state
+        );
+    }
+}
+
+
+function setAuthFormMode(
+    mode
+) {
+    authFormMode =
+        mode
+        ===
+        "signup"
+            ?
+            "signup"
+            :
+            "login";
+
+    authLoginTab.classList.toggle(
+        "active",
+        authFormMode
+        ===
+        "login"
+    );
+
+    authSignupTab.classList.toggle(
+        "active",
+        authFormMode
+        ===
+        "signup"
+    );
+
+    authSubmitButton.textContent =
+        authFormMode
+        ===
+        "login"
+            ?
+            "SIGN IN →"
+            :
+            "CREATE ACCOUNT →";
+
+    authPasswordInput.autocomplete =
+        authFormMode
+        ===
+        "login"
+            ?
+            "current-password"
+            :
+            "new-password";
+
+    setAuthMessage(
+        authFormMode
+        ===
+        "login"
+            ?
+            "Sign in to continue."
+            :
+            "Create an account. Your provider keys and jobs will belong only to you."
+    );
+}
+
+
+function renderAuthenticatedUser() {
+    const email =
+        currentUser?.email
+        ||
+        (
+            authProvider
+            ===
+            "local"
+                ?
+                "Local development"
+                :
+                "Signed in"
+        );
+
+    sidebarUserEmail.textContent =
+        email;
+
+    settingsUserEmail.textContent =
+        email;
+
+    logoutButton.classList.toggle(
+        "hidden-element",
+        authProvider
+        ===
+        "local"
+    );
+
+    claimLocalDataButton.classList.toggle(
+        "hidden-element",
+        authProvider
+        ===
+        "local"
+    );
+
+    const isAdmin =
+        currentUser?.role
+        ===
+        "admin";
+
+    navAdmin.classList.toggle(
+        "hidden-element",
+        !isAdmin
+    );
+}
+
+
+function showAuthenticatedApp() {
+    authGate.classList.add(
+        "hidden-element"
+    );
+
+    appShell.classList.remove(
+        "hidden-element"
+    );
+
+    renderAuthenticatedUser();
+}
+
+
+function showAuthGate() {
+    appShell.classList.add(
+        "hidden-element"
+    );
+
+    authGate.classList.remove(
+        "hidden-element"
+    );
+}
+
+
+async function getAuthSession() {
+    try {
+        const response =
+            await fetch(
+                "/api/auth/session",
+                {
+                    cache:
+                        "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            return {
+                authenticated:
+                    false,
+                provider:
+                    "firebase",
+                user:
+                    null,
+            };
+        }
+
+        return await response.json();
+
+    } catch {
+        return {
+            authenticated:
+                false,
+            provider:
+                "firebase",
+            user:
+                null,
+        };
+    }
+}
+
+
+async function bootApplication() {
+    const session =
+        await getAuthSession();
+
+    authProvider =
+        session.provider
+        ||
+        "local";
+
+    currentUser =
+        session.user
+        ||
+        null;
+
+    if (
+        !session.authenticated
+    ) {
+        showAuthGate();
+        setAuthFormMode(
+            "login"
+        );
+
+        return;
+    }
+
+    showAuthenticatedApp();
+
+    if (
+        authProvider
+        ===
+        "local"
+    ) {
+        authLocalNote.classList.remove(
+            "hidden-element"
+        );
+    }
+
+    if (!applicationStarted) {
+        applicationStarted =
+            true;
+
+        await startApplication();
+    }
+}
+
+
+authLoginTab.addEventListener(
+    "click",
+    () =>
+        setAuthFormMode(
+            "login"
+        )
+);
+
+
+authSignupTab.addEventListener(
+    "click",
+    () =>
+        setAuthFormMode(
+            "signup"
+        )
+);
+
+
+authForm.addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        const email =
+            authEmailInput
+            .value
+            .trim();
+
+        const password =
+            authPasswordInput
+            .value;
+
+        if (
+            !email
+            ||
+            password.length < 6
+        ) {
+            setAuthMessage(
+                "Enter a valid email and a password of at least 6 characters.",
+                "error"
+            );
+
+            return;
+        }
+
+        authSubmitButton.disabled =
+            true;
+
+        authSubmitButton.textContent =
+            authFormMode
+            ===
+            "login"
+                ?
+                "SIGNING IN…"
+                :
+                "CREATING…";
+
+        try {
+            const endpoint =
+                authFormMode
+                ===
+                "login"
+                    ?
+                    "/api/auth/login"
+                    :
+                    "/api/auth/signup";
+
+            const response =
+                await fetch(
+                    endpoint,
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify({
+                                email:
+                                    email,
+                                password:
+                                    password,
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const result =
+                await response.json();
+
+            if (
+                result.needs_confirmation
+            ) {
+                setAuthMessage(
+                    "Account created. Check your email to confirm it, then sign in.",
+                    "success"
+                );
+
+                setAuthFormMode(
+                    "login"
+                );
+
+                return;
+            }
+
+            setAuthMessage(
+                "Signed in.",
+                "success"
+            );
+
+            await bootApplication();
+
+        } catch (error) {
+            setAuthMessage(
+                error.message,
+                "error"
+            );
+
+        } finally {
+            authSubmitButton.disabled =
+                false;
+
+            authSubmitButton.textContent =
+                authFormMode
+                ===
+                "login"
+                    ?
+                    "SIGN IN →"
+                    :
+                    "CREATE ACCOUNT →";
+        }
+    }
+);
+
+
+logoutButton.addEventListener(
+    "click",
+    async () => {
+        try {
+            await fetch(
+                "/api/auth/logout",
+                {
+                    method:
+                        "POST",
+                }
+            );
+        } finally {
+            window.location.reload();
+        }
+    }
+);
+
+
+claimLocalDataButton.addEventListener(
+    "click",
+    async () => {
+        const confirmed =
+            window.confirm(
+                "Claim the old local single-user profiles, jobs, settings and saved provider connections into this account?"
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        claimLocalDataButton.disabled =
+            true;
+
+        try {
+            const response =
+                await fetch(
+                    "/api/account/claim-local-data",
+                    {
+                        method:
+                            "POST",
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const result =
+                await response.json();
+
+            showToast(
+                result.claimed
+                    ?
+                    "Old local data moved into this account."
+                    :
+                    "There was no local data to claim."
+            );
+
+            await Promise.all([
+                loadProfiles(),
+                loadManagerProfiles(),
+                loadHistory(),
+                loadSettings(),
+            ]);
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            claimLocalDataButton.disabled =
+                false;
+        }
+    }
+);
+
+
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
+async function loadAdminDashboard() {
+    if (
+        currentUser?.role
+        !==
+        "admin"
+    ) {
+        return;
+    }
+
+    try {
+        const response =
+            await fetch(
+                "/api/admin/dashboard",
+                {
+                    cache:
+                        "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const data =
+            await response.json();
+
+        renderAdminOverview(
+            data.overview
+            ||
+            {}
+        );
+
+        renderAdminModels(
+            data.models
+            ||
+            []
+        );
+
+        renderAdminFeatures(
+            data.feature_flags
+            ||
+            []
+        );
+
+        renderAdminUsers(
+            data.users
+            ||
+            []
+        );
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+    }
+}
+
+
+function renderAdminOverview(
+    overview
+) {
+    adminUsersCount.textContent =
+        formatNumber(
+            overview.users
+            ||
+            0
+        );
+
+    adminJobsCount.textContent =
+        formatNumber(
+            overview.jobs
+            ||
+            0
+        );
+
+    adminJobsTodayCount.textContent =
+        formatNumber(
+            overview.jobs_today
+            ||
+            0
+        );
+
+    adminImagesCount.textContent =
+        formatNumber(
+            overview.complete_images
+            ||
+            0
+        );
+
+    adminFailuresCount.textContent =
+        formatNumber(
+            overview.failed_images
+            ||
+            0
+        );
+}
+
+
+function renderAdminModels(
+    models
+) {
+    adminModelList.innerHTML =
+        "";
+
+    if (!models.length) {
+        adminModelList.innerHTML = `
+            <div class="loading-state">
+                No model registry entries found.
+            </div>
+        `;
+
+        return;
+    }
+
+    models.forEach(
+        model => {
+            const row =
+                document.createElement(
+                    "article"
+                );
+
+            row.className =
+                "admin-model-row";
+
+            const meta =
+                document.createElement(
+                    "div"
+                );
+
+            meta.className =
+                "admin-row-meta";
+
+            const heading =
+                document.createElement(
+                    "strong"
+                );
+
+            heading.textContent =
+                `${capitalize(model.provider)} · ${capitalize(model.capability)}`;
+
+            const tier =
+                document.createElement(
+                    "span"
+                );
+
+            tier.textContent =
+                model.tier
+                ===
+                "premium"
+                    ?
+                    "BEST QUALITY"
+                    :
+                    model.tier
+                        .toUpperCase();
+
+            meta.append(
+                heading,
+                tier
+            );
+
+            const modelInput =
+                document.createElement(
+                    "input"
+                );
+
+            modelInput.type =
+                "text";
+
+            modelInput.value =
+                model.model_id
+                ||
+                "";
+
+            modelInput.placeholder =
+                "API model id";
+
+            const nameInput =
+                document.createElement(
+                    "input"
+                );
+
+            nameInput.type =
+                "text";
+
+            nameInput.value =
+                model.display_name
+                ||
+                "";
+
+            nameInput.placeholder =
+                "User label";
+
+            const enabledLabel =
+                document.createElement(
+                    "label"
+                );
+
+            enabledLabel.className =
+                "admin-inline-check";
+
+            const enabled =
+                document.createElement(
+                    "input"
+                );
+
+            enabled.type =
+                "checkbox";
+
+            enabled.checked =
+                Boolean(
+                    model.enabled
+                );
+
+            const enabledText =
+                document.createElement(
+                    "span"
+                );
+
+            enabledText.textContent =
+                "Enabled";
+
+            enabledLabel.append(
+                enabled,
+                enabledText
+            );
+
+            const save =
+                document.createElement(
+                    "button"
+                );
+
+            save.type =
+                "button";
+
+            save.textContent =
+                "Save";
+
+            save.addEventListener(
+                "click",
+                async () => {
+                    save.disabled =
+                        true;
+
+                    try {
+                        const response =
+                            await fetch(
+                                `/api/admin/models/${model.id}`,
+                                {
+                                    method:
+                                        "PATCH",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json",
+                                    },
+
+                                    body:
+                                        JSON.stringify({
+                                            model_id:
+                                                modelInput
+                                                    .value
+                                                    .trim(),
+
+                                            display_name:
+                                                nameInput
+                                                    .value
+                                                    .trim(),
+
+                                            enabled:
+                                                enabled
+                                                    .checked,
+                                        }),
+                                }
+                            );
+
+                        if (!response.ok) {
+                            throw new Error(
+                                await apiError(
+                                    response
+                                )
+                            );
+                        }
+
+                        await response.json();
+
+                        showToast(
+                            "Model registry updated."
+                        );
+
+                        await Promise.all([
+                            loadAdminDashboard(),
+                            loadSettings(),
+                        ]);
+
+                    } catch (error) {
+                        showToast(
+                            error.message
+                        );
+
+                    } finally {
+                        save.disabled =
+                            false;
+                    }
+                }
+            );
+
+            row.append(
+                meta,
+                modelInput,
+                nameInput,
+                enabledLabel,
+                save
+            );
+
+            adminModelList.appendChild(
+                row
+            );
+        }
+    );
+}
+
+
+function renderAdminFeatures(
+    features
+) {
+    adminFeatureList.innerHTML =
+        "";
+
+    features.forEach(
+        feature => {
+            const row =
+                document.createElement(
+                    "article"
+                );
+
+            row.className =
+                "admin-feature-row";
+
+            const copy =
+                document.createElement(
+                    "div"
+                );
+
+            const title =
+                document.createElement(
+                    "strong"
+                );
+
+            title.textContent =
+                feature.key;
+
+            const description =
+                document.createElement(
+                    "span"
+                );
+
+            description.textContent =
+                feature.description
+                ||
+                "";
+
+            copy.append(
+                title,
+                description
+            );
+
+            const toggle =
+                document.createElement(
+                    "input"
+                );
+
+            toggle.type =
+                "checkbox";
+
+            toggle.checked =
+                Boolean(
+                    feature.enabled
+                );
+
+            toggle.addEventListener(
+                "change",
+                async () => {
+                    toggle.disabled =
+                        true;
+
+                    try {
+                        const response =
+                            await fetch(
+                                `/api/admin/features/${encodeURIComponent(feature.key)}`,
+                                {
+                                    method:
+                                        "PATCH",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json",
+                                    },
+
+                                    body:
+                                        JSON.stringify({
+                                            enabled:
+                                                toggle
+                                                    .checked,
+                                        }),
+                                }
+                            );
+
+                        if (!response.ok) {
+                            throw new Error(
+                                await apiError(
+                                    response
+                                )
+                            );
+                        }
+
+                        await response.json();
+
+                        showToast(
+                            "Feature flag updated."
+                        );
+
+                    } catch (error) {
+                        toggle.checked =
+                            !toggle.checked;
+
+                        showToast(
+                            error.message
+                        );
+
+                    } finally {
+                        toggle.disabled =
+                            false;
+                    }
+                }
+            );
+
+            row.append(
+                copy,
+                toggle
+            );
+
+            adminFeatureList.appendChild(
+                row
+            );
+        }
+    );
+}
+
+
+function renderAdminUsers(
+    users
+) {
+    adminUserList.innerHTML =
+        "";
+
+    if (!users.length) {
+        adminUserList.innerHTML = `
+            <div class="loading-state">
+                No users yet.
+            </div>
+        `;
+
+        return;
+    }
+
+    users.forEach(
+        user => {
+            const row =
+                document.createElement(
+                    "article"
+                );
+
+            row.className =
+                "admin-user-row";
+
+            const copy =
+                document.createElement(
+                    "div"
+                );
+
+            copy.className =
+                "admin-user-copy";
+
+            const email =
+                document.createElement(
+                    "strong"
+                );
+
+            email.textContent =
+                user.email
+                ||
+                user.user_id;
+
+            const meta =
+                document.createElement(
+                    "span"
+                );
+
+            meta.textContent =
+                `${formatNumber(user.job_count || 0)} jobs · ${formatNumber(user.image_count || 0)} images`;
+
+            copy.append(
+                email,
+                meta
+            );
+
+            const role =
+                document.createElement(
+                    "select"
+                );
+
+            [
+                "user",
+                "support",
+                "admin",
+            ].forEach(
+                optionValue => {
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        optionValue;
+
+                    option.textContent =
+                        capitalize(
+                            optionValue
+                        );
+
+                    option.selected =
+                        user.role
+                        ===
+                        optionValue;
+
+                    role.appendChild(
+                        option
+                    );
+                }
+            );
+
+            const status =
+                document.createElement(
+                    "select"
+                );
+
+            [
+                "active",
+                "suspended",
+            ].forEach(
+                optionValue => {
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        optionValue;
+
+                    option.textContent =
+                        capitalize(
+                            optionValue
+                        );
+
+                    option.selected =
+                        user.status
+                        ===
+                        optionValue;
+
+                    status.appendChild(
+                        option
+                    );
+                }
+            );
+
+            const save =
+                document.createElement(
+                    "button"
+                );
+
+            save.type =
+                "button";
+
+            save.textContent =
+                "Save";
+
+            save.addEventListener(
+                "click",
+                async () => {
+                    save.disabled =
+                        true;
+
+                    try {
+                        const response =
+                            await fetch(
+                                `/api/admin/users/${encodeURIComponent(user.user_id)}`,
+                                {
+                                    method:
+                                        "PATCH",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json",
+                                    },
+
+                                    body:
+                                        JSON.stringify({
+                                            role:
+                                                role.value,
+                                            status:
+                                                status.value,
+                                        }),
+                                }
+                            );
+
+                        if (!response.ok) {
+                            throw new Error(
+                                await apiError(
+                                    response
+                                )
+                            );
+                        }
+
+                        await response.json();
+
+                        showToast(
+                            "User access updated."
+                        );
+
+                        await loadAdminDashboard();
+
+                    } catch (error) {
+                        showToast(
+                            error.message
+                        );
+
+                    } finally {
+                        save.disabled =
+                            false;
+                    }
+                }
+            );
+
+            row.append(
+                copy,
+                role,
+                status,
+                save
+            );
+
+            adminUserList.appendChild(
+                row
+            );
+        }
+    );
+}
+
+
+refreshAdminButton.addEventListener(
+    "click",
+    loadAdminDashboard
+);
+
+
+/* =========================================================
    VIEW NAVIGATION
 ========================================================= */
 
@@ -739,6 +1902,8 @@ function showView(
             historyView,
         settings:
             settingsView,
+        admin:
+            adminView,
     };
 
     Object.entries(
@@ -770,6 +1935,11 @@ function showView(
     navSettings.classList.toggle(
         "active",
         view === "settings"
+    );
+
+    navAdmin.classList.toggle(
+        "active",
+        view === "admin"
     );
 
     const mobileMap = {
@@ -863,6 +2033,30 @@ navSettings.addEventListener(
         );
 
         await loadSettings();
+    }
+);
+
+
+navAdmin.addEventListener(
+    "click",
+    async () => {
+        if (
+            currentUser?.role
+            !==
+            "admin"
+        ) {
+            showToast(
+                "Administrator access required."
+            );
+
+            return;
+        }
+
+        showView(
+            "admin"
+        );
+
+        await loadAdminDashboard();
     }
 );
 
@@ -8835,4 +10029,4 @@ async function startApplication() {
 }
 
 
-startApplication();
+bootApplication();

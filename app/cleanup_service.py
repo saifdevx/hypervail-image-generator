@@ -7,6 +7,9 @@ from app.job_store import (
     DATA_DIR,
     UPLOADS_DIR,
 )
+from app.request_context import (
+    get_current_owner_id,
+)
 
 
 OUTPUTS_DIR = DATA_DIR / "outputs"
@@ -54,19 +57,30 @@ def delete_generated_image(
     image_id: int,
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         row = connection.execute(
             """
             SELECT
-                id,
-                job_id,
-                file_path
-            FROM generated_images
-            WHERE id = ?
+                gi.id,
+                gi.job_id,
+                gi.file_path
+            FROM generated_images gi
+
+            JOIN generation_jobs gj
+                ON gj.id =
+                    gi.job_id
+
+            WHERE
+                gi.id = ?
+                AND gj.owner_id = ?
             """,
             (
                 image_id,
+                owner_id,
             ),
         ).fetchone()
 
@@ -115,16 +129,22 @@ def delete_job(
     job_id: int,
 ):
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         job = connection.execute(
             """
             SELECT id
             FROM generation_jobs
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 job_id,
+                owner_id,
             ),
         ).fetchone()
 
@@ -164,10 +184,13 @@ def delete_job(
         connection.execute(
             """
             DELETE FROM generation_jobs
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 job_id,
+                owner_id,
             ),
         )
 

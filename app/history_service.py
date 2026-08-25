@@ -274,10 +274,18 @@ def list_history_jobs(
     ensure_history_schema()
 
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
-        clauses = []
-        params = []
+        clauses = [
+            "gj.owner_id = ?"
+        ]
+
+        params = [
+            owner_id
+        ]
 
         clean_query = (
             q
@@ -757,6 +765,9 @@ def get_history_options():
     ensure_history_schema()
 
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         profiles = connection.execute(
@@ -767,8 +778,21 @@ def get_history_options():
 
             FROM generation_profiles
 
+            WHERE
+                owner_id = ?
+                OR (
+                    owner_id IS NULL
+                    AND name IN (
+                        'Hero Images',
+                        'UGC Images'
+                    )
+                )
+
             ORDER BY name ASC
-            """
+            """,
+            (
+                owner_id,
+            ),
         ).fetchall()
 
         return {
@@ -925,6 +949,9 @@ def set_job_favorite(
     ensure_history_schema()
 
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         cursor = connection.execute(
@@ -933,7 +960,9 @@ def set_job_favorite(
 
             SET is_favorite = ?
 
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 1
@@ -941,6 +970,7 @@ def set_job_favorite(
                 else
                 0,
                 job_id,
+                owner_id,
             ),
         )
 
@@ -969,6 +999,9 @@ def set_image_favorite(
     ensure_history_schema()
 
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         cursor = connection.execute(
@@ -977,7 +1010,16 @@ def set_image_favorite(
 
             SET is_favorite = ?
 
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND EXISTS (
+                    SELECT 1
+                    FROM generation_jobs gj
+                    WHERE
+                        gj.id =
+                            generated_images.job_id
+                        AND gj.owner_id = ?
+                )
             """,
             (
                 1
@@ -985,6 +1027,7 @@ def set_image_favorite(
                 else
                 0,
                 image_id,
+                owner_id,
             ),
         )
 
