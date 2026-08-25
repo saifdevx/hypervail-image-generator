@@ -65,10 +65,9 @@ def build_openai_content(
         )
 
         image_bytes = (
-            reference[
-                "absolute_path"
-            ]
-            .read_bytes()
+            reference.get("data")
+            if reference.get("data") is not None
+            else reference["absolute_path"].read_bytes()
         )
 
         content.append(

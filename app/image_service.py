@@ -1,6 +1,8 @@
 import base64
 import os
 import time
+import tempfile
+from pathlib import Path
 from contextlib import ExitStack
 from contextvars import copy_context
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,6 +27,7 @@ from app.settings_store import (
 )
 from app.platform.storage_backend import (
     get_storage_backend,
+    media_type_for_filename,
 )
 from app.openai_image_service import (
     create_openai_client,
@@ -796,6 +799,7 @@ def get_image_batch_status(
 
 def get_generated_image_file(
     image_id: int,
+    include_bytes: bool = False,
 ):
     connection = get_connection()
 
@@ -819,34 +823,33 @@ def get_generated_image_file(
         ):
             return None
 
-        path = (
-            BASE_DIR /
-            row["file_path"]
-        ).resolve()
+        storage_ref = row["file_path"]
 
-        outputs_root = (
-            OUTPUTS_DIR
-        ).resolve()
-
-        if (
-            path != outputs_root
-            and outputs_root not in path.parents
-        ):
+        if not STORAGE.exists(storage_ref):
             return None
 
-        if not path.exists():
-            return None
+        local_path = STORAGE.local_path(storage_ref)
+        media_type = media_type_for_filename(storage_ref)
+        extension = Path(storage_ref).suffix.lower() or ".jpg"
 
-        _, media_type = (
-            _media_type_from_bytes(
-                path.read_bytes()
-            )
-        )
-
-        return {
-            "path": path,
+        result = {
+            "storage_ref": storage_ref,
+            "path": local_path,
+            "signed_url": STORAGE.signed_get_url(storage_ref),
+            "extension": extension,
             "media_type": media_type,
         }
+
+        if include_bytes:
+            data = STORAGE.read_bytes(storage_ref)
+            extension, media_type = _media_type_from_bytes(data)
+            result.update({
+                "bytes": data,
+                "extension": extension,
+                "media_type": media_type,
+            })
+
+        return result
 
     finally:
         connection.close()
@@ -932,10 +935,9 @@ def _build_gemini_image_contents(
         )
 
         image_bytes = (
-            reference[
-                "absolute_path"
-            ]
-            .read_bytes()
+            reference.get("data")
+            if reference.get("data") is not None
+            else reference["absolute_path"].read_bytes()
         )
 
         contents.append(
@@ -1061,15 +1063,41 @@ def _generate_openai_image_bytes(
     )
 
     with ExitStack() as stack:
-        files = [
-            stack.enter_context(
-                open(
-                    reference["absolute_path"],
-                    "rb",
+        files = []
+
+        for reference in job["references"]:
+            absolute_path = reference.get("absolute_path")
+
+            if absolute_path is not None:
+                files.append(
+                    stack.enter_context(
+                        open(absolute_path, "rb")
+                    )
+                )
+                continue
+
+            suffix = Path(
+                reference.get("original_filename")
+                or "reference.png"
+            ).suffix or ".png"
+
+            temp = tempfile.NamedTemporaryFile(
+                suffix=suffix,
+                delete=False,
+            )
+            temp.write(reference["data"])
+            temp.flush()
+            temp.close()
+
+            stack.callback(
+                lambda path=temp.name: Path(path).unlink(missing_ok=True)
+            )
+
+            files.append(
+                stack.enter_context(
+                    open(temp.name, "rb")
                 )
             )
-            for reference in job["references"]
-        ]
 
         image_input = (
             files[0]
@@ -1310,44 +1338,24 @@ def _generate_into_record(
                 )
             )
 
-            output_dir = (
-                STORAGE.job_output_dir(
-                    job[
-                        "id"
-                    ]
-                )
+            filename = (
+                f"prompt_"
+                f"{package['position']:02d}_"
+                f"image_{image_id:06d}"
+                f"{extension}"
             )
 
-            output_dir.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
-
-            output_path = (
-                output_dir /
-                (
-                    f"prompt_"
-                    f"{package['position']:02d}_"
-                    f"image_{image_id:06d}"
-                    f"{extension}"
-                )
-            )
-
-            output_path.write_bytes(
-                image_bytes
-            )
-
-            relative_path = (
-                output_path
-                .relative_to(
-                    BASE_DIR
-                )
-                .as_posix()
+            storage_ref = STORAGE.write_output(
+                owner_id=job["owner_id"],
+                job_id=job["id"],
+                filename=filename,
+                data=image_bytes,
+                media_type=_media_type_from_bytes(image_bytes)[1],
             )
 
             _mark_image_complete(
                 image_id,
-                relative_path,
+                storage_ref,
             )
 
             return {

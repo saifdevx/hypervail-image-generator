@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from app.database import get_connection
@@ -6,8 +7,23 @@ from app.database import get_connection
 BASE_DIR = Path(__file__).resolve().parent.parent
 PRIVATE_PROFILE_DIR = BASE_DIR / "profiles" / "private"
 
-HERO_PRIVATE_FILE = PRIVATE_PROFILE_DIR / "hero_images.txt"
-UGC_PRIVATE_FILE = PRIVATE_PROFILE_DIR / "ugc_images.txt"
+
+def _workflow_path(env_name: str, local_name: str):
+    configured = (os.getenv(env_name) or "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return PRIVATE_PROFILE_DIR / local_name
+
+
+HERO_PRIVATE_FILE = _workflow_path(
+    "HERO_WORKFLOW_PATH",
+    "hero_images.txt",
+)
+
+UGC_PRIVATE_FILE = _workflow_path(
+    "UGC_WORKFLOW_PATH",
+    "ugc_images.txt",
+)
 
 PRIVATE_PLACEHOLDER = (
     "PRIVATE_BUILTIN_WORKFLOW. "
@@ -66,16 +82,21 @@ def get_builtin_description(name: str | None):
 
 
 def get_builtin_file_status():
-    return {
-        name: {
-            "exists": spec["path"].exists(),
-            "path": str(
-                spec["path"].relative_to(BASE_DIR)
-            ),
+    result = {}
+
+    for name, spec in BUILTIN_WORKFLOWS.items():
+        path = spec["path"]
+        try:
+            display_path = str(path.relative_to(BASE_DIR))
+        except ValueError:
+            display_path = str(path)
+
+        result[name] = {
+            "exists": path.exists(),
+            "path": display_path,
         }
-        for name, spec
-        in BUILTIN_WORKFLOWS.items()
-    }
+
+    return result
 
 
 def load_builtin_instruction(name: str):

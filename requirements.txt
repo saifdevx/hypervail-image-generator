@@ -1,11 +1,10 @@
-google-genai>=2.3.0
-python-dotenv>=1.0.0
-python-multipart>=0.0.9
-openai
-google-genai
 fastapi
-cryptography>=42
 uvicorn[standard]
 python-multipart
 python-dotenv
 httpx>=0.27
+cryptography>=42
+google-genai
+openai
+libsql
+boto3

@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 import re
+import os
+import secrets
 
 from fastapi import (
     FastAPI,
@@ -14,6 +16,7 @@ from fastapi.responses import (
     FileResponse,
     Response,
     JSONResponse,
+    RedirectResponse,
 )
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -140,11 +143,6 @@ from app.model_registry import (
     list_models,
     update_model,
 )
-from app.feature_flags import (
-    ensure_feature_flag_schema,
-    list_feature_flags,
-    set_feature_flag,
-)
 from app.usage_service import (
     ensure_usage_schema,
     record_usage,
@@ -155,6 +153,7 @@ from app.admin_service import (
 )
 from app.platform.queue_backend import (
     get_generation_queue,
+    get_queue_provider,
 )
 
 
@@ -255,8 +254,13 @@ class AdminUserUpdateRequest(BaseModel):
     status: str | None = None
 
 
-class FeatureFlagUpdateRequest(BaseModel):
-    enabled: bool
+class InternalQueueTask(BaseModel):
+    task: str
+    job_id: int
+    user_id: str
+    prompt_id: int | None = None
+    regenerate_completed: bool = False
+    extra_direction: str = ""
 
 
 class FavoriteRequest(BaseModel):
@@ -393,7 +397,6 @@ async def lifespan(
     ensure_credential_schema()
     ensure_user_schema()
     ensure_model_registry_schema()
-    ensure_feature_flag_schema()
     ensure_usage_schema()
     seed_default_profiles()
     sync_builtin_workflows()
@@ -412,7 +415,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.0-phase1-platform",
+    version="0.14.0-phase2-cloud",
     lifespan=lifespan,
 )
 
@@ -432,6 +435,8 @@ async def auth_and_security(
         )
         or
         path == "/health"
+        or
+        path == "/api/internal/queue/consume"
     )
 
     should_authenticate = (
@@ -1022,20 +1027,6 @@ def account_claim_local_data():
 
 
 # ============================================================
-# FEATURE FLAGS
-# ============================================================
-
-@app.get(
-    "/api/features"
-)
-def feature_flags_public():
-    return {
-        "features":
-            list_feature_flags()
-    }
-
-
-# ============================================================
 # ADMIN
 # ============================================================
 
@@ -1084,41 +1075,6 @@ def admin_model_update(
         raise HTTPException(
             status_code=404,
             detail="Model registry item not found.",
-        )
-
-    return result
-
-
-@app.get(
-    "/api/admin/features"
-)
-def admin_features():
-    require_admin()
-
-    return {
-        "features":
-            list_feature_flags()
-    }
-
-
-@app.patch(
-    "/api/admin/features/{key}"
-)
-def admin_feature_update(
-    key: str,
-    request: FeatureFlagUpdateRequest,
-):
-    require_admin()
-
-    result = set_feature_flag(
-        key,
-        request.enabled,
-    )
-
-    if result is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Feature flag not found.",
         )
 
     return result
@@ -2455,14 +2411,21 @@ def reference_image_file(
             ),
         )
 
-    return FileResponse(
-        path=str(
-            reference["path"]
-        ),
-        media_type=
-            reference[
-                "media_type"
-            ],
+    if reference.get("signed_url"):
+        return RedirectResponse(
+            reference["signed_url"],
+            status_code=307,
+        )
+
+    if reference.get("path") is not None:
+        return FileResponse(
+            path=str(reference["path"]),
+            media_type=reference["media_type"],
+        )
+
+    return Response(
+        content=b"",
+        status_code=404,
     )
 
 
@@ -2596,6 +2559,159 @@ def job_prompt_packages(
     return result
 
 
+def _queue_task_response(task: dict, local_callable):
+    queue = get_generation_queue()
+    dispatched = queue.dispatch(
+        task,
+        local_callable=local_callable,
+    )
+
+    if dispatched.get("queued"):
+        return {
+            "ok": True,
+            "status": "queued",
+            "queue_provider": queue.name,
+            "task": task,
+        }
+
+    return dispatched["result"]
+
+
+def _run_internal_queue_task(task: InternalQueueTask):
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT owner_id
+            FROM generation_jobs
+            WHERE id = ?
+            """,
+            (task.job_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if row is None or row["owner_id"] != task.user_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Queued job not found.",
+        )
+
+    tokens = set_current_user(
+        task.user_id,
+        "",
+    )
+
+    try:
+        if task.task == "generate_all":
+            result = generate_all_prompt_images(
+                job_id=task.job_id,
+                regenerate_completed=task.regenerate_completed,
+            )
+
+            successful = [
+                item
+                for item in result.get("results", [])
+                if item.get("ok")
+            ]
+
+            if successful:
+                first = successful[0]
+                record_usage(
+                    "image_generated",
+                    job_id=task.job_id,
+                    provider=first.get("provider"),
+                    model=first.get("model"),
+                    quantity=len(successful),
+                )
+
+            return result
+
+        if task.task in {"generate_one", "regenerate_one"}:
+            if task.prompt_id is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Queued image task is missing prompt_id.",
+                )
+
+            result = generate_prompt_image(
+                task.job_id,
+                task.prompt_id,
+                extra_direction=(
+                    task.extra_direction
+                    if task.task == "regenerate_one"
+                    else ""
+                ),
+            )
+
+            if result.get("ok"):
+                record_usage(
+                    "image_regenerated"
+                    if task.task == "regenerate_one"
+                    else "image_generated",
+                    job_id=task.job_id,
+                    provider=result.get("provider"),
+                    model=result.get("model"),
+                )
+
+            return result
+
+        raise HTTPException(
+            status_code=422,
+            detail="Unsupported queue task.",
+        )
+
+    finally:
+        reset_current_user(tokens)
+
+
+@app.post(
+    "/api/internal/queue/consume",
+    include_in_schema=False,
+)
+def internal_queue_consume(
+    request: Request,
+    task: InternalQueueTask,
+):
+    expected = (
+        os.getenv("HYPEREX_QUEUE_SHARED_SECRET")
+        or
+        ""
+    ).strip()
+
+    supplied = (
+        request.headers.get("X-Hyperex-Queue-Secret")
+        or
+        ""
+    ).strip()
+
+    if (
+        not expected
+        or
+        not supplied
+        or
+        not secrets.compare_digest(expected, supplied)
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid queue worker secret.",
+        )
+
+    result = _run_internal_queue_task(task)
+
+    if result.get("code"):
+        raise HTTPException(
+            status_code=502,
+            detail=result.get("error", "Queued generation failed."),
+        )
+
+    return {
+        "ok": True,
+        "result": result,
+    }
+
+
 # ============================================================
 # STEP 9 — IMAGE GENERATION
 # ============================================================
@@ -2608,43 +2724,40 @@ def prompt_generate_image(
     job_id: int,
     prompt_id: int,
 ):
-    queue = (
-        get_generation_queue()
+    owner_id = get_current_owner_id()
+
+    task = {
+        "task": "generate_one",
+        "job_id": job_id,
+        "user_id": owner_id,
+        "prompt_id": prompt_id,
+    }
+
+    result = _queue_task_response(
+        task,
+        lambda: generate_prompt_image(
+            job_id,
+            prompt_id,
+        ),
     )
 
-    result = queue.run(
-        generate_prompt_image,
-        job_id,
-        prompt_id,
-    )
+    if result.get("status") == "queued":
+        return result
 
     if result["ok"]:
         record_usage(
             "image_generated",
-            job_id=
-                job_id,
-            provider=
-                result.get(
-                    "provider"
-                ),
-            model=
-                result.get(
-                    "model"
-                ),
+            job_id=job_id,
+            provider=result.get("provider"),
+            model=result.get("model"),
         )
-
         return result
 
-    code = result.get(
-        "code"
-    )
+    code = result.get("code")
 
     if code == "job_not_found":
         status_code = 404
-    elif code in {
-        "package_invalid",
-        "no_references",
-    }:
+    elif code in {"package_invalid", "no_references"}:
         status_code = 409
     elif code == "provider_not_configured":
         status_code = 503
@@ -2653,10 +2766,7 @@ def prompt_generate_image(
 
     raise HTTPException(
         status_code=status_code,
-        detail=result.get(
-            "error",
-            "Image generation failed.",
-        ),
+        detail=result.get("error", "Image generation failed."),
     )
 
 
@@ -2669,47 +2779,43 @@ def prompt_regenerate_image(
     prompt_id: int,
     request: RegenerateImageRequest,
 ):
-    queue = (
-        get_generation_queue()
+    owner_id = get_current_owner_id()
+    extra_direction = request.extra_direction.strip()
+
+    task = {
+        "task": "regenerate_one",
+        "job_id": job_id,
+        "user_id": owner_id,
+        "prompt_id": prompt_id,
+        "extra_direction": extra_direction,
+    }
+
+    result = _queue_task_response(
+        task,
+        lambda: generate_prompt_image(
+            job_id,
+            prompt_id,
+            extra_direction=extra_direction,
+        ),
     )
 
-    result = queue.run(
-        generate_prompt_image,
-        job_id,
-        prompt_id,
-        extra_direction=
-            request
-            .extra_direction
-            .strip(),
-    )
+    if result.get("status") == "queued":
+        return result
 
     if result["ok"]:
         record_usage(
             "image_regenerated",
-            job_id=
-                job_id,
-            provider=
-                result.get(
-                    "provider"
-                ),
-            model=
-                result.get(
-                    "model"
-                ),
+            job_id=job_id,
+            provider=result.get("provider"),
+            model=result.get("model"),
         )
-
         return result
 
-    code = result.get(
-        "code"
-    )
+    code = result.get("code")
 
     if code == "job_not_found":
         status_code = 404
-    elif code in {
-        "package_invalid",
-        "no_references",
-    }:
+    elif code in {"package_invalid", "no_references"}:
         status_code = 409
     elif code == "provider_not_configured":
         status_code = 503
@@ -2718,10 +2824,7 @@ def prompt_regenerate_image(
 
     raise HTTPException(
         status_code=status_code,
-        detail=result.get(
-            "error",
-            "Image regeneration failed.",
-        ),
+        detail=result.get("error", "Image regeneration failed."),
     )
 
 
@@ -2732,16 +2835,25 @@ def job_generate_all_images(
     job_id: int,
     regenerate_completed: bool = False,
 ):
-    queue = (
-        get_generation_queue()
+    owner_id = get_current_owner_id()
+
+    task = {
+        "task": "generate_all",
+        "job_id": job_id,
+        "user_id": owner_id,
+        "regenerate_completed": regenerate_completed,
+    }
+
+    result = _queue_task_response(
+        task,
+        lambda: generate_all_prompt_images(
+            job_id=job_id,
+            regenerate_completed=regenerate_completed,
+        ),
     )
 
-    result = queue.run(
-        generate_all_prompt_images,
-        job_id=job_id,
-        regenerate_completed=
-            regenerate_completed,
-    )
+    if result.get("status") == "queued":
+        return result
 
     if result.get("code"):
         code = result.get("code")
@@ -2761,45 +2873,23 @@ def job_generate_all_images(
 
         raise HTTPException(
             status_code=status_code,
-            detail=result.get(
-                "error",
-                "Batch image generation failed.",
-            ),
+            detail=result.get("error", "Batch image generation failed."),
         )
 
     successful = [
         item
-        for item
-        in result.get(
-            "results",
-            []
-        )
-        if item.get(
-            "ok"
-        )
+        for item in result.get("results", [])
+        if item.get("ok")
     ]
 
     if successful:
-        first = successful[
-            0
-        ]
-
+        first = successful[0]
         record_usage(
             "image_generated",
-            job_id=
-                job_id,
-            provider=
-                first.get(
-                    "provider"
-                ),
-            model=
-                first.get(
-                    "model"
-                ),
-            quantity=
-                len(
-                    successful
-                ),
+            job_id=job_id,
+            provider=first.get("provider"),
+            model=first.get("model"),
+            quantity=len(successful),
         )
 
     return result
@@ -2951,17 +3041,26 @@ def generated_image_download(
         f"image-{image_id}.jpg"
     )
 
-    return FileResponse(
-        path=str(
-            image["path"]
-        ),
-        media_type=
-            image[
-                "media_type"
-            ],
-        filename=
-            filename,
-    )
+    if image.get("storage_ref"):
+        from app.image_service import STORAGE as IMAGE_STORAGE
+        signed = IMAGE_STORAGE.signed_get_url(
+            image["storage_ref"],
+            download_name=filename,
+        )
+        if signed:
+            return RedirectResponse(
+                signed,
+                status_code=307,
+            )
+
+    if image.get("path") is not None:
+        return FileResponse(
+            path=str(image["path"]),
+            media_type=image["media_type"],
+            filename=filename,
+        )
+
+    raise HTTPException(status_code=404, detail="Generated image file unavailable.")
 
 
 @app.get(
@@ -3023,12 +3122,16 @@ def generated_image_file(
             ),
         )
 
-    return FileResponse(
-        path=str(
-            image["path"]
-        ),
-        media_type=
-            image[
-                "media_type"
-            ],
-    )
+    if image.get("signed_url"):
+        return RedirectResponse(
+            image["signed_url"],
+            status_code=307,
+        )
+
+    if image.get("path") is not None:
+        return FileResponse(
+            path=str(image["path"]),
+            media_type=image["media_type"],
+        )
+
+    raise HTTPException(status_code=404, detail="Generated image file unavailable.")
