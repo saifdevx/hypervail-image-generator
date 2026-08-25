@@ -54,7 +54,23 @@ def ensure_user_schema():
         connection.close()
 
 
+def _bootstrap_admin_uid():
+    return (
+        os.getenv(
+            "HYPEREX_ADMIN_UID"
+        )
+        or
+        ""
+    ).strip()
+
+
 def _bootstrap_admin_email():
+    """
+    Legacy/local bootstrap fallback only.
+
+    For Firebase mode, Hyperex should use HYPEREX_ADMIN_UID so an
+    unverified email string alone can never grant administrator access.
+    """
     return (
         os.getenv(
             "HYPEREX_ADMIN_EMAIL"
@@ -62,6 +78,22 @@ def _bootstrap_admin_email():
         or
         ""
     ).strip().lower()
+
+
+def _allow_email_admin_bootstrap():
+    return (
+        os.getenv(
+            "ALLOW_EMAIL_ADMIN_BOOTSTRAP",
+            "false",
+        )
+        or
+        "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def ensure_user(
@@ -81,18 +113,32 @@ def ensure_user(
     if user_id == LOCAL_OWNER_ID:
         role = "admin"
 
-    admin_email = (
-        _bootstrap_admin_email()
+    admin_uid = (
+        _bootstrap_admin_uid()
     )
 
     if (
-        admin_email
+        admin_uid
         and
-        clean_email.lower()
+        user_id
         ==
-        admin_email
+        admin_uid
     ):
         role = "admin"
+
+    elif _allow_email_admin_bootstrap():
+        admin_email = (
+            _bootstrap_admin_email()
+        )
+
+        if (
+            admin_email
+            and
+            clean_email.lower()
+            ==
+            admin_email
+        ):
+            role = "admin"
 
     connection = get_connection()
 
