@@ -6,6 +6,9 @@ from app.job_store import get_job
 from app.normalizer_service import (
     get_prompt_packages,
 )
+from app.request_context import (
+    get_current_owner_id,
+)
 
 
 # ============================================================
