@@ -2,6 +2,7 @@ import base64
 import os
 import time
 from contextlib import ExitStack
+from contextvars import copy_context
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from google.genai import types
@@ -21,6 +22,9 @@ from app.normalizer_service import (
 )
 from app.settings_store import (
     get_runtime_settings,
+)
+from app.platform.storage_backend import (
+    get_storage_backend,
 )
 from app.openai_image_service import (
     create_openai_client,
@@ -65,10 +69,12 @@ SUPPORTED_GEMINI_ASPECT_RATIOS = {
     "21:9",
 }
 
+STORAGE = get_storage_backend(
+    BASE_DIR
+)
+
 OUTPUTS_DIR = (
-    BASE_DIR /
-    "data" /
-    "outputs"
+    STORAGE.outputs_dir
 )
 
 
@@ -1305,8 +1311,11 @@ def _generate_into_record(
             )
 
             output_dir = (
-                OUTPUTS_DIR /
-                f"job_{job['id']:06d}"
+                STORAGE.job_output_dir(
+                    job[
+                        "id"
+                    ]
+                )
             )
 
             output_dir.mkdir(
@@ -1744,6 +1753,7 @@ def generate_all_prompt_images(
     ) as executor:
         future_map = {
             executor.submit(
+                copy_context().run,
                 _generate_into_record,
                 image_id,
                 job,

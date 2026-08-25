@@ -7,13 +7,14 @@ from cryptography.fernet import (
 )
 
 from app.database import get_connection
+from app.request_context import (
+    get_current_owner_id,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 LOCAL_KEY_FILE = DATA_DIR / ".credential_key"
-
-OWNER_KEY = "local"
 
 SUPPORTED_PROVIDERS = {
     "openai",
@@ -139,11 +140,18 @@ def _fernet():
 def save_provider_api_key(
     provider: str,
     api_key: str,
+    owner_id: str | None = None,
 ):
     ensure_credential_schema()
 
     provider = _clean_provider(
         provider
+    )
+
+    owner_id = (
+        owner_id
+        or
+        get_current_owner_id()
     )
 
     clean_key = (
@@ -195,7 +203,7 @@ def save_provider_api_key(
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
-                OWNER_KEY,
+                owner_id,
                 provider,
                 encrypted,
                 suffix,
@@ -219,11 +227,18 @@ def save_provider_api_key(
 
 def get_saved_provider_api_key(
     provider: str,
+    owner_id: str | None = None,
 ):
     ensure_credential_schema()
 
     provider = _clean_provider(
         provider
+    )
+
+    owner_id = (
+        owner_id
+        or
+        get_current_owner_id()
     )
 
     connection = get_connection()
@@ -238,7 +253,7 @@ def get_saved_provider_api_key(
                 AND provider = ?
             """,
             (
-                OWNER_KEY,
+                owner_id,
                 provider,
             ),
         ).fetchone()
@@ -270,11 +285,18 @@ def get_saved_provider_api_key(
 
 def remove_provider_api_key(
     provider: str,
+    owner_id: str | None = None,
 ):
     ensure_credential_schema()
 
     provider = _clean_provider(
         provider
+    )
+
+    owner_id = (
+        owner_id
+        or
+        get_current_owner_id()
     )
 
     connection = get_connection()
@@ -288,7 +310,7 @@ def remove_provider_api_key(
                 AND provider = ?
             """,
             (
-                OWNER_KEY,
+                owner_id,
                 provider,
             ),
         )
@@ -306,8 +328,16 @@ def remove_provider_api_key(
         connection.close()
 
 
-def get_saved_connection_status():
+def get_saved_connection_status(
+    owner_id: str | None = None,
+):
     ensure_credential_schema()
+
+    owner_id = (
+        owner_id
+        or
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
@@ -323,7 +353,7 @@ def get_saved_connection_status():
             WHERE owner_key = ?
             """,
             (
-                OWNER_KEY,
+                owner_id,
             ),
         ).fetchall()
 

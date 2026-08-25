@@ -7,7 +7,7 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <title>Image Agent Studio</title>
+    <title>Hyperex</title>
 
     <meta
         name="theme-color"
@@ -31,7 +31,111 @@
 
 <body>
 
-<div class="app-shell">
+<!-- =========================================================
+     AUTHENTICATION
+========================================================= -->
+
+<section
+    class="auth-gate"
+    id="authGate"
+>
+    <div class="auth-panel">
+
+        <div class="auth-brand">
+            <div class="brand-mark">IA</div>
+
+            <div>
+                <strong>HYPEREX</strong>
+                <span>Creative Studio</span>
+            </div>
+        </div>
+
+        <div class="auth-copy">
+            <span>WELCOME</span>
+            <h1>Your product studio.</h1>
+            <p>
+                Sign in to keep your provider connections, custom
+                workflows, jobs, history and favorites separate
+                from every other user.
+            </p>
+        </div>
+
+        <div class="auth-tabs">
+            <button
+                class="active"
+                id="authLoginTab"
+                type="button"
+            >
+                Sign in
+            </button>
+
+            <button
+                id="authSignupTab"
+                type="button"
+            >
+                Create account
+            </button>
+        </div>
+
+        <form
+            class="auth-form"
+            id="authForm"
+        >
+            <label>
+                <span>EMAIL</span>
+
+                <input
+                    id="authEmailInput"
+                    type="email"
+                    autocomplete="email"
+                    required
+                    placeholder="you@example.com"
+                >
+            </label>
+
+            <label>
+                <span>PASSWORD</span>
+
+                <input
+                    id="authPasswordInput"
+                    type="password"
+                    autocomplete="current-password"
+                    minlength="6"
+                    required
+                    placeholder="At least 6 characters"
+                >
+            </label>
+
+            <button
+                id="authSubmitButton"
+                type="submit"
+            >
+                SIGN IN →
+            </button>
+        </form>
+
+        <div
+            class="auth-message"
+            id="authMessage"
+        >
+            Your session is stored in secure HTTP-only cookies.
+        </div>
+
+        <div
+            class="auth-local-note hidden-element"
+            id="authLocalNote"
+        >
+            LOCAL DEVELOPMENT MODE · Authentication is bypassed.
+        </div>
+
+    </div>
+</section>
+
+
+<div
+    class="app-shell hidden-element"
+    id="appShell"
+>
 
     <aside class="sidebar">
 
@@ -39,7 +143,7 @@
             <div class="brand-mark">IA</div>
 
             <div>
-                <strong>IMAGE AGENT</strong>
+                <strong>HYPEREX</strong>
                 <span>Creative Studio</span>
             </div>
         </div>
@@ -75,6 +179,21 @@
 
         <div class="sidebar-spacer"></div>
 
+        <div class="sidebar-account">
+            <span>ACCOUNT</span>
+
+            <strong id="sidebarUserEmail">
+                —
+            </strong>
+
+            <button
+                id="logoutButton"
+                type="button"
+            >
+                Log out
+            </button>
+        </div>
+
         <div class="engine-status">
             <i></i>
             <div>
@@ -90,6 +209,15 @@
         >
             <span>04</span>
             Settings
+        </button>
+
+        <button
+            class="nav-item hidden-element"
+            id="navAdmin"
+            type="button"
+        >
+            <span>05</span>
+            Admin
         </button>
 
     </aside>
@@ -1599,6 +1727,20 @@ APP_ENCRYPTION_KEY=...
 Users:
 Connect key inside Settings</pre>
 
+                    <div class="settings-tip account-settings-tip">
+                        <strong>Signed-in account</strong>
+                        <span id="settingsUserEmail">
+                            —
+                        </span>
+
+                        <button
+                            id="claimLocalDataButton"
+                            type="button"
+                        >
+                            Claim my old local data
+                        </button>
+                    </div>
+
                     <div class="settings-tip">
                         <strong>Recommended test setup</strong>
                         <span>
@@ -1608,6 +1750,144 @@ Connect key inside Settings</pre>
                     </div>
 
                 </aside>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             ADMIN
+        ================================================== -->
+
+        <section
+            class="app-view hidden-view"
+            id="adminView"
+        >
+
+            <header class="page-header">
+                <div>
+                    <span class="page-kicker">
+                        HYPEREX CONTROL CENTER
+                    </span>
+
+                    <h1>Admin.</h1>
+
+                    <p>
+                        Manage users, model tiers and platform feature
+                        switches without changing application code.
+                    </p>
+                </div>
+
+                <button
+                    class="header-action"
+                    id="refreshAdminButton"
+                    type="button"
+                >
+                    Refresh
+                </button>
+            </header>
+
+
+            <div class="admin-shell">
+
+                <section class="admin-overview-grid">
+
+                    <article>
+                        <span>USERS</span>
+                        <strong id="adminUsersCount">—</strong>
+                    </article>
+
+                    <article>
+                        <span>ALL JOBS</span>
+                        <strong id="adminJobsCount">—</strong>
+                    </article>
+
+                    <article>
+                        <span>JOBS TODAY</span>
+                        <strong id="adminJobsTodayCount">—</strong>
+                    </article>
+
+                    <article>
+                        <span>IMAGES COMPLETE</span>
+                        <strong id="adminImagesCount">—</strong>
+                    </article>
+
+                    <article>
+                        <span>IMAGE FAILURES</span>
+                        <strong id="adminFailuresCount">—</strong>
+                    </article>
+
+                </section>
+
+
+                <section class="admin-section">
+
+                    <header>
+                        <div>
+                            <span>MODEL REGISTRY</span>
+                            <h2>Economy · Balanced · Best Quality</h2>
+                        </div>
+
+                        <p>
+                            The user-facing tiers are stored here so future
+                            provider model changes do not require a frontend rewrite.
+                        </p>
+                    </header>
+
+                    <div
+                        class="admin-model-list"
+                        id="adminModelList"
+                    >
+                        <div class="loading-state">
+                            Loading models…
+                        </div>
+                    </div>
+
+                </section>
+
+
+                <section class="admin-section">
+
+                    <header>
+                        <div>
+                            <span>FEATURE FLAGS</span>
+                            <h2>Platform switches</h2>
+                        </div>
+
+                        <p>
+                            Future features can be turned on after they are ready.
+                        </p>
+                    </header>
+
+                    <div
+                        class="admin-feature-list"
+                        id="adminFeatureList"
+                    ></div>
+
+                </section>
+
+
+                <section class="admin-section">
+
+                    <header>
+                        <div>
+                            <span>USERS</span>
+                            <h2>Accounts & access</h2>
+                        </div>
+
+                        <p>
+                            User roles are enforced by the backend, not only hidden
+                            in the interface.
+                        </p>
+                    </header>
+
+                    <div
+                        class="admin-user-list"
+                        id="adminUserList"
+                    ></div>
+
+                </section>
 
             </div>
 

@@ -1,9 +1,9 @@
 {
-  "name": "Image Agent Studio",
-  "short_name": "Image Agent",
+  "name": "Hyperex",
+  "short_name": "Hyperex",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#070707",
   "theme_color": "#070707",
-  "description": "AI product image creative studio."
+  "description": "Hyperex AI product image studio."
 }

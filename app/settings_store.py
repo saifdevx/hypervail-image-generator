@@ -1,5 +1,13 @@
 import os
 from app.database import get_connection
+from app.request_context import (
+    get_current_owner_id,
+    LOCAL_OWNER_ID,
+)
+from app.model_registry import (
+    model_options,
+    allowed_model_ids,
+)
 
 
 DEFAULTS = {
@@ -67,42 +75,7 @@ CATALOG = {
         {"id": "gemini", "label": "Google Gemini"},
         {"id": "openai", "label": "OpenAI"},
     ],
-    "planner_models": {
-        "gemini": [
-            {
-                "id": "gemini-3.6-flash",
-                "label": "Gemini 3.6 Flash",
-                "note": "Strong multimodal default",
-            },
-            {
-                "id": "gemini-3.5-flash-lite",
-                "label": "Gemini 3.5 Flash-Lite",
-                "note": "Lower-cost Gemini planner",
-            },
-            {
-                "id": "gemini-3.1-flash-lite",
-                "label": "Gemini 3.1 Flash-Lite",
-                "note": "Fast / economical",
-            },
-        ],
-        "openai": [
-            {
-                "id": "gpt-5.6-luna",
-                "label": "GPT-5.6 Luna",
-                "note": "Lowest-cost GPT-5.6 planner",
-            },
-            {
-                "id": "gpt-5.6-terra",
-                "label": "GPT-5.6 Terra",
-                "note": "Balanced quality / cost",
-            },
-            {
-                "id": "gpt-5.6-sol",
-                "label": "GPT-5.6 Sol",
-                "note": "Highest planner quality",
-            },
-        ],
-    },
+    "planner_models": {},
     "openai_reasoning": [
         "none",
         "low",
@@ -113,27 +86,7 @@ CATALOG = {
         {"id": "openai", "label": "OpenAI"},
         {"id": "gemini", "label": "Google Gemini"},
     ],
-    "image_models": {
-        "openai": [
-            {
-                "id": "gpt-image-2",
-                "label": "GPT Image 2",
-                "note": "Current OpenAI image model",
-            },
-        ],
-        "gemini": [
-            {
-                "id": "gemini-3.1-flash-lite-image",
-                "label": "Gemini 3.1 Flash Lite Image",
-                "note": "Lower-cost / faster",
-            },
-            {
-                "id": "gemini-3.1-flash-image",
-                "label": "Gemini 3.1 Flash Image",
-                "note": "Higher quality",
-            },
-        ],
-    },
+    "image_models": {},
     "openai_image_quality": [
         "low",
         "medium",
@@ -184,18 +137,81 @@ def ensure_settings_schema():
     connection = get_connection()
 
     try:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS app_settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
+        columns = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA table_info(app_settings)"
+            ).fetchall()
+        }
 
-        # Step 11 fields are intentionally additive.
+        if not columns:
+            connection.execute(
+                """
+                CREATE TABLE app_settings (
+                    owner_id TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                        DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (
+                        owner_id,
+                        key
+                    )
+                )
+                """
+            )
+
+        elif "owner_id" not in columns:
+            connection.execute(
+                """
+                ALTER TABLE app_settings
+                RENAME TO app_settings_legacy
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE TABLE app_settings (
+                    owner_id TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                        DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (
+                        owner_id,
+                        key
+                    )
+                )
+                """
+            )
+
+            connection.execute(
+                """
+                INSERT INTO app_settings (
+                    owner_id,
+                    key,
+                    value,
+                    updated_at
+                )
+                SELECT
+                    ?,
+                    key,
+                    value,
+                    updated_at
+                FROM app_settings_legacy
+                """,
+                (
+                    LOCAL_OWNER_ID,
+                ),
+            )
+
+            connection.execute(
+                """
+                DROP TABLE app_settings_legacy
+                """
+            )
+
+        # Phase compatibility.
         image_columns = {
             row["name"]
             for row in connection.execute(
@@ -203,7 +219,11 @@ def ensure_settings_schema():
             ).fetchall()
         }
 
-        if "generation_note" not in image_columns:
+        if (
+            "generation_note"
+            not in
+            image_columns
+        ):
             connection.execute(
                 """
                 ALTER TABLE generated_images
@@ -218,7 +238,11 @@ def ensure_settings_schema():
             ).fetchall()
         }
 
-        if "planner_provider" not in job_columns:
+        if (
+            "planner_provider"
+            not in
+            job_columns
+        ):
             connection.execute(
                 """
                 ALTER TABLE generation_jobs
@@ -226,19 +250,29 @@ def ensure_settings_schema():
                 """
             )
 
-        for key, value in DEFAULTS.items():
+        owner_id = (
+            get_current_owner_id()
+        )
+
+        for key, value in (
+            DEFAULTS.items()
+        ):
             connection.execute(
                 """
                 INSERT OR IGNORE INTO app_settings (
+                    owner_id,
                     key,
                     value
                 )
-                VALUES (?, ?)
+                VALUES (?, ?, ?)
                 """,
                 (
+                    owner_id,
                     key,
-                    str(value),
-                )
+                    str(
+                        value
+                    ),
+                ),
             )
 
         connection.commit()
@@ -254,14 +288,23 @@ def get_setting(
     ensure_settings_schema()
     connection = get_connection()
 
+    owner_id = (
+        get_current_owner_id()
+    )
+
     try:
         row = connection.execute(
             """
             SELECT value
             FROM app_settings
-            WHERE key = ?
+            WHERE
+                owner_id = ?
+                AND key = ?
             """,
-            (key,)
+            (
+                owner_id,
+                key,
+            )
         ).fetchone()
 
         if row is None:
@@ -390,16 +433,14 @@ def _validate(
             "Planner provider must be gemini or openai."
         )
 
-    planner_models = {
-        item["id"]
-        for item in CATALOG[
-            "planner_models"
-        ][
+    planner_models = (
+        allowed_model_ids(
             merged[
                 "planner_provider"
-            ]
-        ]
-    }
+            ],
+            "planner",
+        )
+    )
 
     selected_planner_model = (
         merged[
@@ -439,28 +480,24 @@ def _validate(
 
     if merged[
         "openai_image_model"
-    ] not in {
-        item["id"]
-        for item in CATALOG[
-            "image_models"
-        ][
-            "openai"
-        ]
-    }:
+    ] not in (
+        allowed_model_ids(
+            "openai",
+            "image",
+        )
+    ):
         raise ValueError(
             "Unsupported OpenAI image model."
         )
 
     if merged[
         "gemini_image_model"
-    ] not in {
-        item["id"]
-        for item in CATALOG[
-            "image_models"
-        ][
-            "gemini"
-        ]
-    }:
+    ] not in (
+        allowed_model_ids(
+            "gemini",
+            "image",
+        )
+    ):
         raise ValueError(
             "Unsupported Gemini image model."
         )
@@ -619,6 +656,9 @@ def update_runtime_settings(
     )
 
     connection = get_connection()
+    owner_id = (
+        get_current_owner_id()
+    )
 
     try:
         for key in DEFAULTS:
@@ -643,20 +683,32 @@ def update_runtime_settings(
             connection.execute(
                 """
                 INSERT INTO app_settings (
+                    owner_id,
                     key,
                     value,
                     updated_at
                 )
-                VALUES (?, ?, CURRENT_TIMESTAMP)
+                VALUES (
+                    ?, ?, ?,
+                    CURRENT_TIMESTAMP
+                )
 
-                ON CONFLICT(key)
+                ON CONFLICT(
+                    owner_id,
+                    key
+                )
                 DO UPDATE SET
-                    value = excluded.value,
-                    updated_at = CURRENT_TIMESTAMP
+                    value =
+                        excluded.value,
+                    updated_at =
+                        CURRENT_TIMESTAMP
                 """,
                 (
+                    owner_id,
                     key,
-                    str(value),
+                    str(
+                        value
+                    ),
                 )
             )
 
@@ -669,4 +721,30 @@ def update_runtime_settings(
 
 
 def get_settings_catalog():
-    return CATALOG
+    return {
+        **CATALOG,
+        "planner_models": {
+            "openai":
+                model_options(
+                    "openai",
+                    "planner",
+                ),
+            "gemini":
+                model_options(
+                    "gemini",
+                    "planner",
+                ),
+        },
+        "image_models": {
+            "openai":
+                model_options(
+                    "openai",
+                    "image",
+                ),
+            "gemini":
+                model_options(
+                    "gemini",
+                    "image",
+                ),
+        },
+    }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "image-agent-shell-v1";
+const CACHE_NAME = "hyperex-shell-v1";
 
 const SHELL = [
     "/",

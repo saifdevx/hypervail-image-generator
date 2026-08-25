@@ -1,1281 +1,1065 @@
-from pathlib import Path
 import re
 
 from app.database import get_connection
+from app.request_context import (
+    get_current_owner_id,
+)
 
 
-# ============================================================
-# PATHS
-# ============================================================
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-PROFILES_DIR = BASE_DIR / "profiles"
+BUILTIN_PROFILE_NAMES = {
+    "Hero Images",
+    "UGC Images",
+}
 
 
-# ============================================================
-# DEFAULT PROFILES
-# ============================================================
-
-DEFAULT_PROFILES = [
-    {
-        "name": "Hero Images",
-        "slug": "hero-images",
-        "description": (
-            "Clean eCommerce hero image prompt generation."
-        ),
-        "filename": "hero_images.txt",
-    },
-    {
-        "name": "UGC Images",
-        "slug": "ugc-images",
-        "description": (
-            "Authentic grooming salon and tabletop "
-            "UGC prompt generation."
-        ),
-        "filename": "ugc_images.txt",
-    },
-]
-
-
-# ============================================================
-# HELPERS
-# ============================================================
-
-def make_slug(
-    value: str
+def _slugify(
+    value: str,
 ):
-
-    value = value.strip().lower()
-
-    value = re.sub(
-        r"[^a-z0-9]+",
-        "-",
-        value
+    slug = (
+        value.strip()
+        .lower()
     )
 
-    return value.strip("-")
+    slug = re.sub(
+        r"[^a-z0-9]+",
+        "-",
+        slug,
+    ).strip(
+        "-"
+    )
+
+    return (
+        slug
+        or
+        "profile"
+    )
 
 
-def make_unique_slug(
+def _unique_slug(
     connection,
-    name: str
+    name: str,
+    exclude_profile_id: int | None = None,
 ):
-
-    base_slug = make_slug(
+    base = _slugify(
         name
     )
 
-    if not base_slug:
-        base_slug = "profile"
-
-    slug = base_slug
+    candidate = base
     counter = 2
 
     while True:
+        if exclude_profile_id is None:
+            row = connection.execute(
+                """
+                SELECT id
+                FROM generation_profiles
+                WHERE slug = ?
+                """,
+                (
+                    candidate,
+                ),
+            ).fetchone()
+        else:
+            row = connection.execute(
+                """
+                SELECT id
+                FROM generation_profiles
+                WHERE
+                    slug = ?
+                    AND id != ?
+                """,
+                (
+                    candidate,
+                    exclude_profile_id,
+                ),
+            ).fetchone()
 
-        existing = connection.execute(
-            """
-            SELECT id
-            FROM generation_profiles
-            WHERE slug = ?
-            """,
-            (slug,)
-        ).fetchone()
+        if row is None:
+            return candidate
 
-        if existing is None:
-            return slug
-
-        slug = (
-            f"{base_slug}-{counter}"
+        candidate = (
+            f"{base}-{counter}"
         )
 
         counter += 1
 
 
-# ============================================================
-# SEED DEFAULT PROFILES
-# ============================================================
+def _profile_access_clause():
+    return """
+        (
+            gp.owner_id = ?
+            OR (
+                gp.owner_id IS NULL
+                AND gp.name IN (
+                    'Hero Images',
+                    'UGC Images'
+                )
+            )
+        )
+    """
+
+
+def _profile_select():
+    return """
+        SELECT
+            gp.id,
+            gp.owner_id,
+            gp.name,
+            gp.slug,
+            gp.description,
+            gp.is_active,
+            gp.active_version_id,
+            gp.created_at,
+            gp.updated_at,
+
+            active.version_number
+                AS active_version_number,
+            active.system_instruction
+                AS system_instruction,
+
+            (
+                SELECT
+                    MAX(
+                        pv2.version_number
+                    )
+                FROM profile_versions pv2
+                WHERE
+                    pv2.profile_id = gp.id
+            )
+                AS latest_version_number,
+
+            active.id
+                AS version_id
+
+        FROM generation_profiles gp
+
+        LEFT JOIN profile_versions active
+            ON active.id =
+                gp.active_version_id
+    """
+
 
 def seed_default_profiles():
+    """
+    Step 14 no longer seeds public Hero/UGC instructions from the normal
+    profiles folder. Built-in workflow records are managed by
+    builtin_workflows.sync_builtin_workflows(), and their real instruction
+    text lives only under profiles/private/.
+    """
+    return {
+        "seeded":
+            False,
+        "reason":
+            "builtins_managed_privately",
+    }
+
+
+def list_profiles(
+    include_inactive: bool = False,
+):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
+        clauses = [
+            _profile_access_clause()
+        ]
 
-        for profile in DEFAULT_PROFILES:
+        params = [
+            owner_id
+        ]
 
-            file_path = (
-                PROFILES_DIR /
-                profile["filename"]
+        if not include_inactive:
+            clauses.append(
+                "gp.is_active = 1"
             )
 
-            if not file_path.exists():
+        rows = connection.execute(
+            _profile_select()
+            +
+            """
+            WHERE
+            """
+            +
+            " AND ".join(
+                f"({clause})"
+                for clause
+                in clauses
+            )
+            +
+            """
+            ORDER BY
+                CASE
+                    WHEN gp.name =
+                        'Hero Images'
+                        THEN 0
+                    WHEN gp.name =
+                        'UGC Images'
+                        THEN 1
+                    ELSE 2
+                END,
+                gp.name ASC
+            """,
+            tuple(
+                params
+            ),
+        ).fetchall()
 
-                print(
-                    "Profile seed skipped: "
-                    f"{file_path}"
-                )
+        return [
+            dict(
+                row
+            )
+            for row in rows
+        ]
 
-                continue
-
-
-            existing = connection.execute(
-                """
-                SELECT id
-
-                FROM generation_profiles
-
-                WHERE slug = ?
-                """,
-                (profile["slug"],)
-            ).fetchone()
+    finally:
+        connection.close()
 
 
-            if existing:
-                continue
+def get_profile(
+    profile_id: int,
+):
+    owner_id = (
+        get_current_owner_id()
+    )
+
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            _profile_select()
+            +
+            f"""
+            WHERE
+                gp.id = ?
+                AND
+                {_profile_access_clause()}
+            """,
+            (
+                profile_id,
+                owner_id,
+            ),
+        ).fetchone()
+
+        return (
+            dict(
+                row
+            )
+            if row
+            else
+            None
+        )
+
+    finally:
+        connection.close()
 
 
-            instruction = file_path.read_text(
-                encoding="utf-8-sig"
-            ).strip()
+def get_profile_version(
+    profile_id: int,
+    version_number: int,
+):
+    owner_id = (
+        get_current_owner_id()
+    )
 
+    connection = get_connection()
 
-            if not instruction:
-                continue
+    try:
+        row = connection.execute(
+            """
+            SELECT
+                gp.id,
+                gp.owner_id,
+                gp.name,
+                gp.slug,
+                gp.description,
+                gp.is_active,
+                gp.active_version_id,
 
+                pv.id
+                    AS version_id,
+                pv.version_number,
+                pv.system_instruction,
+                pv.created_at
 
-            cursor = connection.execute(
-                """
-                INSERT INTO generation_profiles (
-                    name,
-                    slug,
-                    description
-                )
+            FROM generation_profiles gp
 
-                VALUES (?, ?, ?)
-                """,
+            JOIN profile_versions pv
+                ON pv.profile_id =
+                    gp.id
+
+            WHERE
+                gp.id = ?
+                AND pv.version_number = ?
+                AND
                 (
-                    profile["name"],
-                    profile["slug"],
-                    profile["description"]
+                    gp.owner_id = ?
+                    OR (
+                        gp.owner_id IS NULL
+                        AND gp.name IN (
+                            'Hero Images',
+                            'UGC Images'
+                        )
+                    )
                 )
+            """,
+            (
+                profile_id,
+                version_number,
+                owner_id,
+            ),
+        ).fetchone()
+
+        return (
+            dict(
+                row
+            )
+            if row
+            else
+            None
+        )
+
+    finally:
+        connection.close()
+
+
+def list_profile_versions(
+    profile_id: int,
+):
+    owner_id = (
+        get_current_owner_id()
+    )
+
+    connection = get_connection()
+
+    try:
+        allowed = connection.execute(
+            """
+            SELECT id
+            FROM generation_profiles gp
+            WHERE
+                gp.id = ?
+                AND
+                (
+                    gp.owner_id = ?
+                    OR (
+                        gp.owner_id IS NULL
+                        AND gp.name IN (
+                            'Hero Images',
+                            'UGC Images'
+                        )
+                    )
+                )
+            """,
+            (
+                profile_id,
+                owner_id,
+            ),
+        ).fetchone()
+
+        if allowed is None:
+            return []
+
+        rows = connection.execute(
+            """
+            SELECT
+                id,
+                profile_id,
+                version_number,
+                system_instruction,
+                created_at
+
+            FROM profile_versions
+
+            WHERE profile_id = ?
+
+            ORDER BY
+                version_number DESC
+            """,
+            (
+                profile_id,
+            ),
+        ).fetchall()
+
+        return [
+            dict(
+                row
+            )
+            for row in rows
+        ]
+
+    finally:
+        connection.close()
+
+
+def create_profile(
+    name: str,
+    description: str,
+    system_instruction: str,
+):
+    owner_id = (
+        get_current_owner_id()
+    )
+
+    connection = get_connection()
+
+    try:
+        duplicate = connection.execute(
+            """
+            SELECT id
+            FROM generation_profiles
+            WHERE
+                owner_id = ?
+                AND LOWER(name) =
+                    LOWER(?)
+            """,
+            (
+                owner_id,
+                name,
+            ),
+        ).fetchone()
+
+        if duplicate is not None:
+            raise ValueError(
+                "A profile with this name already exists."
             )
 
+        slug = _unique_slug(
+            connection,
+            name,
+        )
 
-            profile_id = (
-                cursor.lastrowid
+        cursor = connection.execute(
+            """
+            INSERT INTO generation_profiles (
+                owner_id,
+                name,
+                slug,
+                description,
+                is_active,
+                created_at,
+                updated_at
             )
+            VALUES (
+                ?, ?, ?, ?, 1,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            """,
+            (
+                owner_id,
+                name,
+                slug,
+                description,
+            ),
+        )
 
+        profile_id = (
+            cursor.lastrowid
+        )
 
-            version_cursor = connection.execute(
+        version_cursor = (
+            connection.execute(
                 """
                 INSERT INTO profile_versions (
                     profile_id,
                     version_number,
                     system_instruction
                 )
-
-                VALUES (?, ?, ?)
+                VALUES (?, 1, ?)
                 """,
                 (
                     profile_id,
-                    1,
-                    instruction
-                )
-            )
-
-
-            version_id = (
-                version_cursor.lastrowid
-            )
-
-
-            connection.execute(
-                """
-                UPDATE generation_profiles
-
-                SET active_version_id = ?
-
-                WHERE id = ?
-                """,
-                (
-                    version_id,
-                    profile_id
-                )
-            )
-
-
-            print(
-                f"Seeded profile: "
-                f"{profile['name']} v1"
-            )
-
-
-        connection.commit()
-
-
-    finally:
-
-        connection.close()
-
-
-# ============================================================
-# LIST PROFILES
-# ============================================================
-
-def list_profiles(
-    include_inactive: bool = False
-):
-
-    connection = get_connection()
-
-    try:
-
-        where_clause = (
-            ""
-            if include_inactive
-            else
-            "WHERE gp.is_active = 1"
-        )
-
-
-        rows = connection.execute(
-            f"""
-            SELECT
-
-                gp.id,
-                gp.name,
-                gp.slug,
-                gp.description,
-                gp.is_active,
-                gp.active_version_id,
-                gp.created_at,
-                gp.updated_at,
-
-                active_v.version_number
-                    AS active_version_number,
-
-                latest_v.id
-                    AS latest_version_id,
-
-                latest_v.version_number
-                    AS latest_version_number,
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM profile_versions count_v
-
-                    WHERE
-                        count_v.profile_id = gp.id
-                )
-                    AS version_count
-
-            FROM generation_profiles gp
-
-            LEFT JOIN profile_versions active_v
-                ON active_v.id =
-                    gp.active_version_id
-
-            LEFT JOIN profile_versions latest_v
-                ON latest_v.id = (
-
-                    SELECT id
-
-                    FROM profile_versions
-
-                    WHERE profile_id = gp.id
-
-                    ORDER BY
-                        version_number DESC
-
-                    LIMIT 1
-                )
-
-            {where_clause}
-
-            ORDER BY
-                gp.is_active DESC,
-                gp.name COLLATE NOCASE ASC,
-                gp.id ASC
-            """
-        ).fetchall()
-
-
-        profiles = []
-
-        for row in rows:
-
-            item = dict(row)
-
-            # Compatibility with the frontend:
-            # version_id/version_number always mean
-            # "currently used for Generate".
-            item["version_id"] = (
-                item["active_version_id"]
-            )
-
-            item["version_number"] = (
-                item["active_version_number"]
-            )
-
-            profiles.append(
-                item
-            )
-
-
-        return profiles
-
-
-    finally:
-
-        connection.close()
-
-
-# ============================================================
-# GET PROFILE — ACTIVE GENERATION VERSION
-# ============================================================
-
-def get_profile(
-    profile_id: int
-):
-
-    connection = get_connection()
-
-    try:
-
-        row = connection.execute(
-            """
-            SELECT
-
-                gp.id,
-                gp.name,
-                gp.slug,
-                gp.description,
-                gp.is_active,
-                gp.active_version_id,
-                gp.created_at,
-                gp.updated_at,
-
-                active_v.id
-                    AS version_id,
-
-                active_v.version_number
-                    AS version_number,
-
-                active_v.system_instruction
-                    AS system_instruction,
-
-                active_v.version_number
-                    AS active_version_number,
-
-                latest_v.id
-                    AS latest_version_id,
-
-                latest_v.version_number
-                    AS latest_version_number,
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM profile_versions count_v
-
-                    WHERE
-                        count_v.profile_id = gp.id
-                )
-                    AS version_count
-
-            FROM generation_profiles gp
-
-            LEFT JOIN profile_versions active_v
-                ON active_v.id =
-                    gp.active_version_id
-
-            LEFT JOIN profile_versions latest_v
-                ON latest_v.id = (
-
-                    SELECT id
-
-                    FROM profile_versions
-
-                    WHERE profile_id = gp.id
-
-                    ORDER BY
-                        version_number DESC
-
-                    LIMIT 1
-                )
-
-            WHERE gp.id = ?
-            """,
-            (profile_id,)
-        ).fetchone()
-
-
-        if row is None:
-            return None
-
-
-        return dict(row)
-
-
-    finally:
-
-        connection.close()
-
-
-# ============================================================
-# SPECIFIC VERSION
-# ============================================================
-
-def get_profile_version(
-    profile_id: int,
-    version_number: int
-):
-
-    connection = get_connection()
-
-    try:
-
-        row = connection.execute(
-            """
-            SELECT
-
-                gp.id,
-                gp.name,
-                gp.slug,
-                gp.description,
-                gp.is_active,
-                gp.active_version_id,
-                gp.created_at,
-                gp.updated_at,
-
-                pv.id
-                    AS version_id,
-
-                pv.version_number,
-
-                pv.system_instruction,
-
-                pv.created_at
-                    AS version_created_at,
-
-                active_v.version_number
-                    AS active_version_number,
-
-                latest_v.id
-                    AS latest_version_id,
-
-                latest_v.version_number
-                    AS latest_version_number,
-
-                CASE
-                    WHEN pv.id =
-                        gp.active_version_id
-                    THEN 1
-                    ELSE 0
-                END
-                    AS is_generation_version
-
-            FROM generation_profiles gp
-
-            JOIN profile_versions pv
-                ON pv.profile_id = gp.id
-
-            LEFT JOIN profile_versions active_v
-                ON active_v.id =
-                    gp.active_version_id
-
-            LEFT JOIN profile_versions latest_v
-                ON latest_v.id = (
-
-                    SELECT id
-
-                    FROM profile_versions
-
-                    WHERE profile_id = gp.id
-
-                    ORDER BY
-                        version_number DESC
-
-                    LIMIT 1
-                )
-
-            WHERE
-                gp.id = ?
-                AND pv.version_number = ?
-            """,
-            (
-                profile_id,
-                version_number
-            )
-        ).fetchone()
-
-
-        if row is None:
-            return None
-
-
-        return dict(row)
-
-
-    finally:
-
-        connection.close()
-
-
-# ============================================================
-# VERSION HISTORY
-# ============================================================
-
-def list_profile_versions(
-    profile_id: int
-):
-
-    connection = get_connection()
-
-    try:
-
-        rows = connection.execute(
-            """
-            SELECT
-
-                pv.id AS version_id,
-
-                pv.version_number,
-
-                pv.created_at,
-
-                LENGTH(
-                    pv.system_instruction
-                )
-                    AS character_count,
-
-                CASE
-                    WHEN pv.id =
-                        gp.active_version_id
-                    THEN 1
-                    ELSE 0
-                END
-                    AS is_generation_version,
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM generation_jobs gj
-
-                    WHERE
-                        gj.profile_version_id =
-                        pv.id
-                )
-                    AS usage_count
-
-            FROM profile_versions pv
-
-            JOIN generation_profiles gp
-                ON gp.id =
-                    pv.profile_id
-
-            WHERE pv.profile_id = ?
-
-            ORDER BY
-                pv.version_number DESC
-            """,
-            (profile_id,)
-        ).fetchall()
-
-
-        return [
-            dict(row)
-            for row in rows
-        ]
-
-
-    finally:
-
-        connection.close()
-
-
-# ============================================================
-# CREATE PROFILE
-# ============================================================
-
-def create_profile(
-    name: str,
-    description: str,
-    system_instruction: str
-):
-
-    connection = get_connection()
-
-    try:
-
-        slug = make_unique_slug(
-            connection,
-            name
-        )
-
-
-        cursor = connection.execute(
-            """
-            INSERT INTO generation_profiles (
-                name,
-                slug,
-                description
-            )
-
-            VALUES (?, ?, ?)
-            """,
-            (
-                name.strip(),
-                slug,
-                description.strip()
+                    system_instruction,
+                ),
             )
         )
-
-
-        profile_id = (
-            cursor.lastrowid
-        )
-
-
-        version_cursor = connection.execute(
-            """
-            INSERT INTO profile_versions (
-                profile_id,
-                version_number,
-                system_instruction
-            )
-
-            VALUES (?, ?, ?)
-            """,
-            (
-                profile_id,
-                1,
-                system_instruction.strip()
-            )
-        )
-
-
-        version_id = (
-            version_cursor.lastrowid
-        )
-
 
         connection.execute(
             """
             UPDATE generation_profiles
-
-            SET active_version_id = ?
-
+            SET
+                active_version_id = ?,
+                updated_at =
+                    CURRENT_TIMESTAMP
             WHERE id = ?
             """,
             (
-                version_id,
-                profile_id
-            )
+                version_cursor.lastrowid,
+                profile_id,
+            ),
         )
-
 
         connection.commit()
 
+    except Exception:
+        connection.rollback()
+        raise
 
     finally:
-
         connection.close()
-
 
     return get_profile(
         profile_id
     )
 
-
-# ============================================================
-# UPDATE PROFILE METADATA
-# ============================================================
 
 def update_profile_metadata(
     profile_id: int,
     name: str,
-    description: str
+    description: str,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
-        existing = connection.execute(
+        row = connection.execute(
             """
-            SELECT id
-
+            SELECT
+                id,
+                name
             FROM generation_profiles
-
             WHERE
                 id = ?
+                AND owner_id = ?
                 AND is_active = 1
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
-        if existing is None:
+        if row is None:
             return None
 
+        duplicate = connection.execute(
+            """
+            SELECT id
+            FROM generation_profiles
+            WHERE
+                owner_id = ?
+                AND LOWER(name) =
+                    LOWER(?)
+                AND id != ?
+            """,
+            (
+                owner_id,
+                name,
+                profile_id,
+            ),
+        ).fetchone()
+
+        if duplicate is not None:
+            raise ValueError(
+                "A profile with this name already exists."
+            )
+
+        slug = _unique_slug(
+            connection,
+            name,
+            exclude_profile_id=
+                profile_id,
+        )
 
         connection.execute(
             """
             UPDATE generation_profiles
-
             SET
                 name = ?,
+                slug = ?,
                 description = ?,
                 updated_at =
                     CURRENT_TIMESTAMP
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
-                name.strip(),
-                description.strip(),
-                profile_id
-            )
+                name,
+                slug,
+                description,
+                profile_id,
+                owner_id,
+            ),
         )
-
 
         connection.commit()
 
-
     finally:
-
         connection.close()
-
 
     return get_profile(
         profile_id
     )
 
 
-# ============================================================
-# CREATE NEW VERSION
-# ============================================================
-
 def create_profile_version(
     profile_id: int,
-    system_instruction: str
+    system_instruction: str,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
-        profile = connection.execute(
+        row = connection.execute(
             """
             SELECT id
-
             FROM generation_profiles
-
             WHERE
                 id = ?
+                AND owner_id = ?
                 AND is_active = 1
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
-        if profile is None:
+        if row is None:
             return None
 
-
-        version_row = connection.execute(
+        next_row = connection.execute(
             """
             SELECT
                 COALESCE(
-                    MAX(version_number),
+                    MAX(
+                        version_number
+                    ),
                     0
-                ) AS latest_version
-
+                ) + 1
+                    AS next_version
             FROM profile_versions
-
             WHERE profile_id = ?
             """,
-            (profile_id,)
+            (
+                profile_id,
+            ),
         ).fetchone()
 
-
-        next_version = (
-            version_row["latest_version"]
-            +
-            1
-        )
-
-
-        version_cursor = connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO profile_versions (
                 profile_id,
                 version_number,
                 system_instruction
             )
-
             VALUES (?, ?, ?)
             """,
             (
                 profile_id,
-                next_version,
-                system_instruction.strip()
-            )
+                next_row[
+                    "next_version"
+                ],
+                system_instruction,
+            ),
         )
 
-
-        new_version_id = (
-            version_cursor.lastrowid
-        )
-
-
-        # New versions become the generation version
-        # automatically. You can later switch back.
         connection.execute(
             """
             UPDATE generation_profiles
-
             SET
                 active_version_id = ?,
                 updated_at =
                     CURRENT_TIMESTAMP
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
-                new_version_id,
-                profile_id
-            )
+                cursor.lastrowid,
+                profile_id,
+                owner_id,
+            ),
         )
-
 
         connection.commit()
 
-
     finally:
-
         connection.close()
-
 
     return get_profile(
         profile_id
     )
 
 
-# ============================================================
-# USE VERSION FOR GENERATE
-# ============================================================
-
 def activate_profile_version(
     profile_id: int,
-    version_number: int
+    version_number: int,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
         profile = connection.execute(
             """
             SELECT id
-
             FROM generation_profiles
-
             WHERE
                 id = ?
+                AND owner_id = ?
                 AND is_active = 1
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
         if profile is None:
-
             return {
-                "status": "not_found"
+                "status":
+                    "not_found"
             }
-
 
         version = connection.execute(
             """
             SELECT id
-
             FROM profile_versions
-
             WHERE
                 profile_id = ?
                 AND version_number = ?
             """,
             (
                 profile_id,
-                version_number
-            )
+                version_number,
+            ),
         ).fetchone()
 
-
         if version is None:
-
             return {
-                "status": "version_not_found"
+                "status":
+                    "version_not_found"
             }
-
 
         connection.execute(
             """
             UPDATE generation_profiles
-
             SET
                 active_version_id = ?,
                 updated_at =
                     CURRENT_TIMESTAMP
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
                 version["id"],
-                profile_id
-            )
+                profile_id,
+                owner_id,
+            ),
         )
-
 
         connection.commit()
 
-
         return {
-            "status": "activated",
-            "profile": get_profile(
-                profile_id
-            )
+            "status":
+                "activated",
+            "profile":
+                get_profile(
+                    profile_id
+                ),
         }
 
-
     finally:
-
         connection.close()
 
 
-# ============================================================
-# DELETE VERSION
-# ============================================================
-
 def delete_profile_version(
     profile_id: int,
-    version_number: int
+    version_number: int,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
         profile = connection.execute(
             """
             SELECT
                 id,
                 active_version_id
-
             FROM generation_profiles
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
         if profile is None:
-
             return {
-                "status": "profile_not_found"
+                "status":
+                    "profile_not_found"
             }
 
-
-        version = connection.execute(
+        versions = connection.execute(
             """
             SELECT
                 id,
                 version_number
-
             FROM profile_versions
-
-            WHERE
-                profile_id = ?
-                AND version_number = ?
+            WHERE profile_id = ?
+            ORDER BY version_number
             """,
             (
                 profile_id,
-                version_number
-            )
-        ).fetchone()
+            ),
+        ).fetchall()
 
+        if len(
+            versions
+        ) <= 1:
+            return {
+                "status":
+                    "last_version"
+            }
+
+        version = next(
+            (
+                row
+                for row in versions
+                if int(
+                    row[
+                        "version_number"
+                    ]
+                )
+                ==
+                int(
+                    version_number
+                )
+            ),
+            None,
+        )
 
         if version is None:
-
             return {
-                "status": "version_not_found"
+                "status":
+                    "version_not_found"
             }
-
-
-        count_row = connection.execute(
-            """
-            SELECT COUNT(*) AS total
-
-            FROM profile_versions
-
-            WHERE profile_id = ?
-            """,
-            (profile_id,)
-        ).fetchone()
-
-
-        if count_row["total"] <= 1:
-
-            return {
-                "status": "last_version"
-            }
-
 
         if (
-            version["id"]
+            int(
+                profile[
+                    "active_version_id"
+                ]
+                or
+                0
+            )
             ==
-            profile["active_version_id"]
+            int(
+                version[
+                    "id"
+                ]
+            )
         ):
-
             return {
-                "status": "active_version"
+                "status":
+                    "active_version"
             }
 
-
-        usage_row = connection.execute(
+        used = connection.execute(
             """
-            SELECT COUNT(*) AS total
-
+            SELECT
+                COUNT(*) AS count
             FROM generation_jobs
-
-            WHERE profile_version_id = ?
+            WHERE
+                profile_version_id = ?
+                AND owner_id = ?
             """,
-            (version["id"],)
+            (
+                version[
+                    "id"
+                ],
+                owner_id,
+            ),
         ).fetchone()
 
-
-        if usage_row["total"] > 0:
-
+        if (
+            int(
+                used[
+                    "count"
+                ]
+            )
+            >
+            0
+        ):
             return {
-                "status": "used_by_jobs",
-                "usage_count":
-                    usage_row["total"]
+                "status":
+                    "used_by_jobs"
             }
-
 
         connection.execute(
             """
             DELETE FROM profile_versions
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND profile_id = ?
             """,
-            (version["id"],)
+            (
+                version[
+                    "id"
+                ],
+                profile_id,
+            ),
         )
-
-
-        connection.execute(
-            """
-            UPDATE generation_profiles
-
-            SET updated_at =
-                CURRENT_TIMESTAMP
-
-            WHERE id = ?
-            """,
-            (profile_id,)
-        )
-
 
         connection.commit()
 
-
         return {
-            "status": "deleted"
+            "status":
+                "deleted",
+            "version_number":
+                version_number,
         }
 
-
     finally:
-
         connection.close()
 
 
-# ============================================================
-# ARCHIVE / RESTORE
-# ============================================================
-
 def set_profile_active(
     profile_id: int,
-    is_active: bool
+    is_active: bool,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
-        existing = connection.execute(
-            """
-            SELECT
-                id,
-                active_version_id
-
-            FROM generation_profiles
-
-            WHERE id = ?
-            """,
-            (profile_id,)
-        ).fetchone()
-
-
-        if existing is None:
-            return None
-
-
-        # If somehow an archived profile has no active
-        # version, restore its latest version.
-        active_version_id = (
-            existing["active_version_id"]
-        )
-
-
-        if (
-            is_active
-            and
-            active_version_id is None
-        ):
-
-            latest = connection.execute(
-                """
-                SELECT id
-
-                FROM profile_versions
-
-                WHERE profile_id = ?
-
-                ORDER BY
-                    version_number DESC
-
-                LIMIT 1
-                """,
-                (profile_id,)
-            ).fetchone()
-
-
-            if latest:
-
-                active_version_id = (
-                    latest["id"]
-                )
-
-
-        connection.execute(
+        cursor = connection.execute(
             """
             UPDATE generation_profiles
-
             SET
                 is_active = ?,
-                active_version_id = ?,
                 updated_at =
                     CURRENT_TIMESTAMP
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
             (
-                1 if is_active else 0,
-                active_version_id,
-                profile_id
-            )
+                1
+                if is_active
+                else
+                0,
+                profile_id,
+                owner_id,
+            ),
         )
-
 
         connection.commit()
 
+        if cursor.rowcount < 1:
+            return None
 
     finally:
-
         connection.close()
-
 
     return get_profile(
         profile_id
     )
 
 
-# ============================================================
-# PERMANENT PROFILE DELETE
-# ============================================================
-
 def permanently_delete_profile(
-    profile_id: int
+    profile_id: int,
 ):
+    owner_id = (
+        get_current_owner_id()
+    )
 
     connection = get_connection()
 
     try:
-
         profile = connection.execute(
             """
             SELECT id
-
             FROM generation_profiles
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
         if profile is None:
-
             return {
-                "status": "not_found"
+                "status":
+                    "not_found"
             }
-
 
         jobs = connection.execute(
             """
-            SELECT COUNT(*) AS total
-
+            SELECT
+                COUNT(*) AS count
             FROM generation_jobs
-
-            WHERE profile_id = ?
+            WHERE
+                profile_id = ?
+                AND owner_id = ?
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         ).fetchone()
 
-
-        # Once generations exist we preserve their
-        # historical profile/version relationship.
-        if jobs["total"] > 0:
-
+        if (
+            int(
+                jobs[
+                    "count"
+                ]
+            )
+            >
+            0
+        ):
             return {
-                "status": "used_by_jobs",
-                "usage_count": jobs["total"]
+                "status":
+                    "used_by_jobs"
             }
-
 
         connection.execute(
             """
             DELETE FROM generation_profiles
-
-            WHERE id = ?
+            WHERE
+                id = ?
+                AND owner_id = ?
             """,
-            (profile_id,)
+            (
+                profile_id,
+                owner_id,
+            ),
         )
-
 
         connection.commit()
 
-
         return {
-            "status": "deleted"
+            "status":
+                "deleted",
+            "profile_id":
+                profile_id,
         }
 
-
     finally:
-
         connection.close()
