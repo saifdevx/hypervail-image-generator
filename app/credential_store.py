@@ -1,4 +1,5 @@
 import os
+import threading
 from pathlib import Path
 
 from cryptography.fernet import (
@@ -22,32 +23,46 @@ SUPPORTED_PROVIDERS = {
 }
 
 
-def ensure_credential_schema():
-    connection = get_connection()
+_SCHEMA_READY = False
+_SCHEMA_LOCK = threading.RLock()
+_MASTER_KEY = None
+_MASTER_KEY_LOCK = threading.RLock()
 
-    try:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS
-            provider_credentials (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                owner_key TEXT NOT NULL,
-                provider TEXT NOT NULL,
-                encrypted_key TEXT NOT NULL,
-                key_suffix TEXT NOT NULL,
-                created_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(owner_key, provider)
+
+def ensure_credential_schema(force: bool = False):
+    global _SCHEMA_READY
+
+    if _SCHEMA_READY and not force:
+        return
+
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY and not force:
+            return
+
+        connection = get_connection()
+
+        try:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS
+                provider_credentials (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    owner_key TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    encrypted_key TEXT NOT NULL,
+                    key_suffix TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(owner_key, provider)
+                )
+                """
             )
-            """
-        )
 
-        connection.commit()
+            connection.commit()
+            _SCHEMA_READY = True
 
-    finally:
-        connection.close()
+        finally:
+            connection.close()
 
 
 def _clean_provider(
@@ -68,67 +83,78 @@ def _clean_provider(
 
 
 def _load_or_create_master_key():
-    env_value = (
-        os.getenv(
-            "APP_ENCRYPTION_KEY"
-        )
-        or
-        ""
-    ).strip()
+    global _MASTER_KEY
 
-    if env_value:
-        key = env_value.encode(
-            "utf-8"
-        )
+    if _MASTER_KEY is not None:
+        return _MASTER_KEY
 
-        # Raises ValueError if malformed.
-        Fernet(
-            key
-        )
+    with _MASTER_KEY_LOCK:
+        if _MASTER_KEY is not None:
+            return _MASTER_KEY
 
-        return key
-
-    DATA_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    if LOCAL_KEY_FILE.exists():
-        key = (
-            LOCAL_KEY_FILE
-            .read_text(
-                encoding="utf-8"
+        env_value = (
+            os.getenv(
+                "APP_ENCRYPTION_KEY"
             )
-            .strip()
-            .encode(
+            or
+            ""
+        ).strip()
+
+        if env_value:
+            key = env_value.encode(
                 "utf-8"
             )
+
+            Fernet(
+                key
+            )
+
+            _MASTER_KEY = key
+            return key
+
+        DATA_DIR.mkdir(
+            parents=True,
+            exist_ok=True,
         )
 
-        Fernet(
-            key
+        if LOCAL_KEY_FILE.exists():
+            key = (
+                LOCAL_KEY_FILE
+                .read_text(
+                    encoding="utf-8"
+                )
+                .strip()
+                .encode(
+                    "utf-8"
+                )
+            )
+
+            Fernet(
+                key
+            )
+
+            _MASTER_KEY = key
+            return key
+
+        key = Fernet.generate_key()
+
+        LOCAL_KEY_FILE.write_text(
+            key.decode(
+                "utf-8"
+            ),
+            encoding="utf-8",
         )
 
+        try:
+            os.chmod(
+                LOCAL_KEY_FILE,
+                0o600,
+            )
+        except OSError:
+            pass
+
+        _MASTER_KEY = key
         return key
-
-    key = Fernet.generate_key()
-
-    LOCAL_KEY_FILE.write_text(
-        key.decode(
-            "utf-8"
-        ),
-        encoding="utf-8",
-    )
-
-    try:
-        os.chmod(
-            LOCAL_KEY_FILE,
-            0o600,
-        )
-    except OSError:
-        pass
-
-    return key
 
 
 def _fernet():

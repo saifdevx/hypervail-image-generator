@@ -169,6 +169,9 @@ const saveSettingsButton = $("saveSettingsButton");
 const plannerProviderStatus = $("plannerProviderStatus");
 const plannerProviderSelect = $("plannerProviderSelect");
 const plannerModelSelect = $("plannerModelSelect");
+const plannerTierChoices = $("plannerTierChoices");
+const plannerResolvedModel = $("plannerResolvedModel");
+const plannerTierNote = $("plannerTierNote");
 const openaiReasoningField = $("openaiReasoningField");
 const openaiReasoningSelect = $("openaiReasoningSelect");
 const plannerConnectionSummary = $("plannerConnectionSummary");
@@ -178,6 +181,9 @@ const plannerTestResult = $("plannerTestResult");
 const imageProviderStatus = $("imageProviderStatus");
 const imageProviderSelect = $("imageProviderSelect");
 const imageModelSelect = $("imageModelSelect");
+const imageTierChoices = $("imageTierChoices");
+const imageResolvedModel = $("imageResolvedModel");
+const imageTierNote = $("imageTierNote");
 const openaiQualityField = $("openaiQualityField");
 const openaiQualitySelect = $("openaiQualitySelect");
 const imageSizeSelect = $("imageSizeSelect");
@@ -286,10 +292,12 @@ const historyDetailImages = $("historyDetailImages");
 const historyDetailPrompts = $("historyDetailPrompts");
 const historyDeleteJobButton = $("historyDeleteJobButton");
 
+const mobileBottomNav = $("mobileBottomNav");
 const mobileNavCreate = $("mobileNavCreate");
 const mobileNavProfiles = $("mobileNavProfiles");
 const mobileNavHistory = $("mobileNavHistory");
 const mobileNavSettings = $("mobileNavSettings");
+const mobileNavAdmin = $("mobileNavAdmin");
 const mobileGenerateButton = $("mobileGenerateButton");
 const mobileGenerateDock = $("mobileGenerateDock");
 
@@ -327,6 +335,7 @@ let activeFinalPackage = null;
 
 let settingsPayload = null;
 let providerConnections = null;
+let providerConnectionsLoadedAt = 0;
 
 const CREATE_DRAFT_KEY =
     "hyperexCreateDraftV1";
@@ -878,6 +887,20 @@ function renderAuthenticatedUser() {
         "hidden-element",
         !isAdmin
     );
+
+    if (mobileNavAdmin) {
+        mobileNavAdmin.classList.toggle(
+            "hidden-element",
+            !isAdmin
+        );
+    }
+
+    if (mobileBottomNav) {
+        mobileBottomNav.classList.toggle(
+            "admin-mode",
+            isAdmin
+        );
+    }
 }
 
 
@@ -1471,6 +1494,9 @@ refreshAdminButton.addEventListener(
 function showView(
     view
 ) {
+    document.body.dataset.hyperexView =
+        view;
+
     const mapping = {
         generate:
             generateView,
@@ -1529,6 +1555,8 @@ function showView(
             mobileNavHistory,
         settings:
             mobileNavSettings,
+        admin:
+            mobileNavAdmin,
     };
 
     Object.entries(
@@ -1671,6 +1699,13 @@ if (mobileNavCreate) {
         "click",
         () => navSettings.click()
     );
+
+    if (mobileNavAdmin) {
+        mobileNavAdmin.addEventListener(
+            "click",
+            () => navAdmin.click()
+        );
+    }
 }
 
 if (mobileGenerateButton) {
@@ -1829,7 +1864,10 @@ async function loadSettings() {
     try {
         const response =
             await fetch(
-                "/api/settings"
+                "/api/settings",
+                {
+                    cache: "no-store",
+                }
             );
 
         if (!response.ok) {
@@ -1843,15 +1881,37 @@ async function loadSettings() {
         settingsPayload =
             await response.json();
 
+        // Render the page immediately. Provider-key suffix details are a
+        // secondary request and must never block model choices / Create.
         renderSettings();
         renderCreateProviderSummary();
+        seedProviderConnectionsFromSettings();
 
-        await loadProviderConnections();
+        loadProviderConnections()
+            .catch(
+                error =>
+                    console.warn(
+                        "Provider connection refresh failed:",
+                        error
+                    )
+            );
 
     } catch (error) {
         console.error(
             error
         );
+
+        plannerProviderStatus.textContent =
+            "LOAD ERROR";
+
+        imageProviderStatus.textContent =
+            "LOAD ERROR";
+
+        plannerConnectionSummary.textContent =
+            "Settings could not load. Refresh Hyperex and try again.";
+
+        imageConnectionSummary.textContent =
+            "Settings could not load. Refresh Hyperex and try again.";
 
         showToast(
             error.message
@@ -1884,11 +1944,7 @@ function fillSelect(
                     item.id;
 
                 option.textContent =
-                    item.note
-                        ?
-                        `${item.label} — ${item.note}`
-                        :
-                        item.label;
+                    item.label;
             } else {
                 option.value =
                     String(item);
@@ -1976,9 +2032,343 @@ function renderSettings() {
         );
 
     renderConnectionBadges();
-
     renderPlannerSettingsState();
     renderImageSettingsState();
+}
+
+
+function renderTierSelect(
+    element,
+    items,
+    selectedTier
+) {
+    element.innerHTML = "";
+
+    const available = items.some(
+        item =>
+            item.id
+            ===
+            selectedTier
+    );
+
+    if (
+        selectedTier
+        &&
+        !available
+    ) {
+        const unavailable =
+            document.createElement(
+                "option"
+            );
+
+        unavailable.value =
+            selectedTier;
+
+        unavailable.textContent =
+            `${tierDisplayName(selectedTier)} — unavailable`;
+
+        unavailable.disabled =
+            true;
+
+        unavailable.selected =
+            true;
+
+        element.appendChild(
+            unavailable
+        );
+    }
+
+    items.forEach(
+        item => {
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                item.id;
+
+            option.textContent =
+                item.label;
+
+            option.selected =
+                item.id
+                ===
+                selectedTier;
+
+            element.appendChild(
+                option
+            );
+        }
+    );
+}
+
+
+function tierBenefit(
+    tier
+) {
+    if (tier === "premium") {
+        return "Strongest results";
+    }
+
+    if (tier === "balanced") {
+        return "Recommended";
+    }
+
+    return "Lowest usage";
+}
+
+
+function syncTierChoiceSelection(
+    container,
+    selectedTier
+) {
+    if (!container) {
+        return;
+    }
+
+    container
+        .querySelectorAll(
+            ".tier-choice"
+        )
+        .forEach(
+            button => {
+                button.classList.toggle(
+                    "selected",
+                    button.dataset.tier
+                    ===
+                    selectedTier
+                );
+
+                button.setAttribute(
+                    "aria-pressed",
+                    button.dataset.tier
+                    ===
+                    selectedTier
+                        ?
+                        "true"
+                        :
+                        "false"
+                );
+            }
+        );
+}
+
+
+function renderTierChoices(
+    container,
+    selectElement,
+    items,
+    selectedTier
+) {
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    if (!items.length) {
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "tier-unavailable-note";
+
+        empty.textContent =
+            "No quality levels are enabled for this provider.";
+
+        container.appendChild(
+            empty
+        );
+
+        return;
+    }
+
+    const selectedAvailable =
+        items.some(
+            item =>
+                item.id
+                ===
+                selectedTier
+        );
+
+    if (
+        selectedTier
+        &&
+        !selectedAvailable
+    ) {
+        const warning =
+            document.createElement(
+                "div"
+            );
+
+        warning.className =
+            "tier-unavailable-note";
+
+        warning.textContent =
+            `${tierDisplayName(selectedTier)} is currently disabled. Choose another level.`;
+
+        container.appendChild(
+            warning
+        );
+    }
+
+    items.forEach(
+        item => {
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.type =
+                "button";
+
+            button.dataset.tier =
+                item.id;
+
+            button.className =
+                `tier-choice tier-choice-${item.id}`;
+
+            const title =
+                document.createElement(
+                    "strong"
+                );
+
+            title.textContent =
+                item.label;
+
+            const benefit =
+                document.createElement(
+                    "span"
+                );
+
+            benefit.textContent =
+                tierBenefit(
+                    item.id
+                );
+
+            const model =
+                document.createElement(
+                    "small"
+                );
+
+            model.textContent =
+                item.model_id;
+
+            button.append(
+                title,
+                benefit,
+                model
+            );
+
+            button.addEventListener(
+                "click",
+                () => {
+                    selectElement.value =
+                        item.id;
+
+                    syncTierChoiceSelection(
+                        container,
+                        item.id
+                    );
+
+                    selectElement.dispatchEvent(
+                        new Event(
+                            "change"
+                        )
+                    );
+                }
+            );
+
+            container.appendChild(
+                button
+            );
+        }
+    );
+
+    syncTierChoiceSelection(
+        container,
+        selectedTier
+    );
+}
+
+
+function currentTierItem(
+    capability,
+    provider,
+    tier
+) {
+    const catalog =
+        capability
+        ===
+        "planner"
+            ?
+            settingsPayload
+                ?.catalog
+                ?.planner_tiers
+            :
+            settingsPayload
+                ?.catalog
+                ?.image_tiers;
+
+    return (
+        catalog
+        ?.[provider]
+        ?.find(
+            item =>
+                item.id
+                ===
+                tier
+        )
+        ||
+        null
+    );
+}
+
+
+function renderPlannerTierDetail() {
+    if (!settingsPayload) {
+        return;
+    }
+
+    const provider =
+        plannerProviderSelect.value
+        ||
+        settingsPayload.settings
+            .planner_provider;
+
+    const tier =
+        plannerModelSelect.value
+        ||
+        settingsPayload.settings
+            .planner_tier;
+
+    const item =
+        currentTierItem(
+            "planner",
+            provider,
+            tier
+        );
+
+    if (!item) {
+        plannerResolvedModel.textContent =
+            "Choose another level";
+
+        plannerTierNote.textContent =
+            "This quality level is not currently available.";
+
+        return;
+    }
+
+    plannerResolvedModel.textContent =
+        item.model_id;
+
+    plannerTierNote.textContent =
+        item.note
+        ||
+        "Hyperex will use this model for new jobs.";
 }
 
 
@@ -1993,31 +2383,87 @@ function renderPlannerModelOptions() {
         settingsPayload.settings
             .planner_provider;
 
-    const settings =
-        settingsPayload.settings;
+    const items =
+        settingsPayload.catalog
+            .planner_tiers[
+                provider
+            ]
+        ||
+        [];
+
+    const currentValue =
+        plannerModelSelect.value;
 
     const selected =
-        provider === "gemini"
-            ?
-            settings.gemini_planner_model
-            :
-            settings.openai_planner_model;
+        currentValue
+        ||
+        settingsPayload.settings
+            .planner_tier;
 
-    fillSelect(
+    renderTierSelect(
         plannerModelSelect,
-        settingsPayload.catalog
-            .planner_models[
-                provider
-            ],
+        items,
         selected
     );
 
-    openaiReasoningField
-        .classList
-        .toggle(
-            "hidden-element",
-            provider !== "openai"
+    renderTierChoices(
+        plannerTierChoices,
+        plannerModelSelect,
+        items,
+        plannerModelSelect.value
+        ||
+        selected
+    );
+
+    openaiReasoningField.classList.add(
+        "hidden-element"
+    );
+
+    renderPlannerTierDetail();
+}
+
+
+function renderImageTierDetail() {
+    if (!settingsPayload) {
+        return;
+    }
+
+    const provider =
+        imageProviderSelect.value
+        ||
+        settingsPayload.settings
+            .image_provider;
+
+    const tier =
+        imageModelSelect.value
+        ||
+        settingsPayload.settings
+            .image_tier;
+
+    const item =
+        currentTierItem(
+            "image",
+            provider,
+            tier
         );
+
+    if (!item) {
+        imageResolvedModel.textContent =
+            "Choose another level";
+
+        imageTierNote.textContent =
+            "This quality level is not currently available.";
+
+        return;
+    }
+
+    imageResolvedModel.textContent =
+        item.model_id;
+
+    imageTierNote.textContent =
+        item.note
+        ||
+        "Hyperex will use this model for new jobs.";
 }
 
 
@@ -2032,91 +2478,110 @@ function renderImageProviderOptions() {
         settingsPayload.settings
             .image_provider;
 
-    const settings =
-        settingsPayload.settings;
-
-    const model =
-        provider === "openai"
-            ?
-            settings.openai_image_model
-            :
-            settings.gemini_image_model;
-
-    fillSelect(
-        imageModelSelect,
+    const items =
         settingsPayload.catalog
-            .image_models[
+            .image_tiers[
                 provider
-            ],
-        model
+            ]
+        ||
+        [];
+
+    const currentValue =
+        imageModelSelect.value;
+
+    const selected =
+        currentValue
+        ||
+        settingsPayload.settings
+            .image_tier;
+
+    renderTierSelect(
+        imageModelSelect,
+        items,
+        selected
     );
 
-    if (
-        provider
-        ===
-        "openai"
-    ) {
-        fillSelect(
-            openaiQualitySelect,
-            settingsPayload.catalog
-                .openai_image_quality,
-            settings.openai_image_quality
-        );
-
-        fillSelect(
-            imageSizeSelect,
-            settingsPayload.catalog
-                .openai_image_sizes,
-            settings.openai_image_size
-        );
-    } else {
-        fillSelect(
-            imageSizeSelect,
-            settingsPayload.catalog
-                .gemini_image_sizes,
-            settings.gemini_image_size
-        );
-
-        fillSelect(
-            geminiAspectSelect,
-            settingsPayload.catalog
-                .gemini_image_aspect_ratios,
-            settings
-                .gemini_image_aspect_ratio
-        );
-    }
-
-    openaiQualityField
-        .classList
-        .toggle(
-            "hidden-element",
-            provider !== "openai"
-        );
-
-    geminiAspectField
-        .classList
-        .toggle(
-            "hidden-element",
-            provider !== "gemini"
-        );
-
-    // Flash Lite image only supports 1K.
-    if (
-        provider === "gemini"
-        &&
+    renderTierChoices(
+        imageTierChoices,
+        imageModelSelect,
+        items,
         imageModelSelect.value
-        ===
-        "gemini-3.1-flash-lite-image"
-    ) {
-        imageSizeSelect.value =
-            "1K";
+        ||
+        selected
+    );
 
-        imageSizeSelect.disabled =
-            true;
-    } else {
-        imageSizeSelect.disabled =
-            false;
+    openaiQualityField.classList.add(
+        "hidden-element"
+    );
+
+    geminiAspectField.classList.add(
+        "hidden-element"
+    );
+
+    renderImageTierDetail();
+}
+
+
+function seedProviderConnectionsFromSettings() {
+    if (!settingsPayload) {
+        return;
     }
+
+    const planner =
+        settingsPayload.planner
+        ||
+        {};
+
+    const image =
+        settingsPayload.image
+        ||
+        {};
+
+    const statusFor =
+        provider => {
+            const plannerItem =
+                planner
+                    ?.providers
+                    ?.[provider]
+                ||
+                {};
+
+            const imageItem =
+                image
+                    ?.providers
+                    ?.[provider]
+                ||
+                {};
+
+            return {
+                saved: false,
+                configured:
+                    Boolean(
+                        plannerItem.configured
+                        ||
+                        imageItem.configured
+                    ),
+                source:
+                    plannerItem.key_source
+                    ||
+                    imageItem.key_source
+                    ||
+                    null,
+            };
+        };
+
+    providerConnections = {
+        openai:
+            statusFor(
+                "openai"
+            ),
+        gemini:
+            statusFor(
+                "gemini"
+            ),
+    };
+
+    renderProviderConnections();
 }
 
 
@@ -2184,13 +2649,23 @@ function renderPlannerSettingsState() {
     const provider =
         plannerProviderSelect.value;
 
+    const tier =
+        plannerModelSelect.value;
+
+    const tierAvailable =
+        Boolean(
+            currentTierItem(
+                "planner",
+                provider,
+                tier
+            )
+        );
+
     const providerStatus =
         settingsPayload
             ?.planner
             ?.providers
-            ?.[
-                provider
-            ];
+            ?.[provider];
 
     const configured =
         Boolean(
@@ -2199,17 +2674,23 @@ function renderPlannerSettingsState() {
         );
 
     plannerProviderStatus.textContent =
-        configured
+        !tierAvailable
             ?
-            "READY"
+            "CHOOSE LEVEL"
             :
-            "NEEDS KEY";
+            configured
+                ?
+                "READY"
+                :
+                "NEEDS KEY";
 
     plannerProviderStatus
         .classList
         .toggle(
             "ready",
             configured
+            &&
+            tierAvailable
         );
 
     plannerProviderStatus
@@ -2217,14 +2698,20 @@ function renderPlannerSettingsState() {
         .toggle(
             "warning",
             !configured
+            ||
+            !tierAvailable
         );
 
     plannerConnectionSummary.textContent =
-        configured
+        !tierAvailable
             ?
-            `${provider.toUpperCase()} credential is configured.`
+            "This quality level is disabled. Choose another level."
             :
-            `${provider.toUpperCase()} is not connected. Add a key in Provider Connections.`;
+            configured
+                ?
+                `${provider.toUpperCase()} is connected and ready.`
+                :
+                `${provider.toUpperCase()} is not connected. Add its API key above.`;
 }
 
 
@@ -2232,13 +2719,23 @@ function renderImageSettingsState() {
     const provider =
         imageProviderSelect.value;
 
+    const tier =
+        imageModelSelect.value;
+
+    const tierAvailable =
+        Boolean(
+            currentTierItem(
+                "image",
+                provider,
+                tier
+            )
+        );
+
     const providerStatus =
         settingsPayload
             ?.image
             ?.providers
-            ?.[
-                provider
-            ];
+            ?.[provider];
 
     const configured =
         Boolean(
@@ -2247,17 +2744,23 @@ function renderImageSettingsState() {
         );
 
     imageProviderStatus.textContent =
-        configured
+        !tierAvailable
             ?
-            "READY"
+            "CHOOSE LEVEL"
             :
-            "NEEDS KEY";
+            configured
+                ?
+                "READY"
+                :
+                "NEEDS KEY";
 
     imageProviderStatus
         .classList
         .toggle(
             "ready",
             configured
+            &&
+            tierAvailable
         );
 
     imageProviderStatus
@@ -2265,14 +2768,20 @@ function renderImageSettingsState() {
         .toggle(
             "warning",
             !configured
+            ||
+            !tierAvailable
         );
 
     imageConnectionSummary.textContent =
-        configured
+        !tierAvailable
             ?
-            `${provider.toUpperCase()} credential is configured.`
+            "This quality level is disabled. Choose another level."
             :
-            `${provider.toUpperCase()} is not connected. Add a key in Provider Connections.`;
+            configured
+                ?
+                `${provider.toUpperCase()} is connected and ready.`
+                :
+                `${provider.toUpperCase()} is not connected. Add its API key above.`;
 }
 
 
@@ -2281,6 +2790,16 @@ plannerProviderSelect.addEventListener(
     () => {
         renderPlannerModelOptions();
         renderPlannerSettingsState();
+    }
+);
+
+
+plannerModelSelect.addEventListener(
+    "change",
+    () => {
+        renderPlannerTierDetail();
+        renderPlannerSettingsState();
+        updateCreateCostEstimate();
     }
 );
 
@@ -2298,7 +2817,8 @@ imageProviderSelect.addEventListener(
 imageModelSelect.addEventListener(
     "change",
     () => {
-        renderImageProviderOptions();
+        renderImageTierDetail();
+        renderImageSettingsState();
         updateCreateCostEstimate();
     }
 );
@@ -2331,11 +2851,14 @@ async function saveSettings() {
         planner_provider:
             providerPlanner,
 
-        openai_planner_reasoning:
-            openaiReasoningSelect.value,
+        planner_tier:
+            plannerModelSelect.value,
 
         image_provider:
             providerImage,
+
+        image_tier:
+            imageModelSelect.value,
 
         batch_concurrency:
             Number(
@@ -2361,42 +2884,6 @@ async function saveSettings() {
         draft_autosave:
             draftAutosaveCheckbox.checked,
     };
-
-    if (
-        providerPlanner
-        ===
-        "gemini"
-    ) {
-        body.gemini_planner_model =
-            plannerModelSelect.value;
-    } else {
-        body.openai_planner_model =
-            plannerModelSelect.value;
-    }
-
-    if (
-        providerImage
-        ===
-        "openai"
-    ) {
-        body.openai_image_model =
-            imageModelSelect.value;
-
-        body.openai_image_quality =
-            openaiQualitySelect.value;
-
-        body.openai_image_size =
-            imageSizeSelect.value;
-    } else {
-        body.gemini_image_model =
-            imageModelSelect.value;
-
-        body.gemini_image_size =
-            imageSizeSelect.value;
-
-        body.gemini_image_aspect_ratio =
-            geminiAspectSelect.value;
-    }
 
     saveSettingsButton.disabled =
         true;
@@ -2432,14 +2919,12 @@ async function saveSettings() {
             );
         }
 
-        const updated =
-            await response.json();
+        await response.json();
 
-        // Refresh the full catalog/status payload.
         await loadSettings();
 
         showToast(
-            "Provider settings saved. No restart required."
+            "Hyperex quality settings saved."
         );
 
     } catch (error) {
@@ -2450,6 +2935,8 @@ async function saveSettings() {
         showToast(
             error.message
         );
+
+        throw error;
 
     } finally {
         saveSettingsButton.disabled =
@@ -2594,13 +3081,45 @@ testImageProviderButton.addEventListener(
    PROVIDER CONNECTIONS
 ========================================================= */
 
-async function loadProviderConnections() {
+async function loadProviderConnections(
+    force = false
+) {
+    const cacheAge =
+        Date.now()
+        -
+        providerConnectionsLoadedAt;
+
+    if (
+        !force
+        &&
+        providerConnections
+        &&
+        providerConnectionsLoadedAt
+        &&
+        cacheAge < 10000
+    ) {
+        renderProviderConnections();
+        return providerConnections;
+    }
+
+    const controller =
+        new AbortController();
+
+    const timeout =
+        window.setTimeout(
+            () =>
+                controller.abort(),
+            5000
+        );
+
     try {
         const response =
             await fetch(
                 "/api/provider-connections",
                 {
                     cache: "no-store",
+                    signal:
+                        controller.signal,
                 }
             );
 
@@ -2615,14 +3134,42 @@ async function loadProviderConnections() {
         providerConnections =
             await response.json();
 
+        providerConnectionsLoadedAt =
+            Date.now();
+
         renderProviderConnections();
 
-    } catch (error) {
-        providerKeyResult.className =
-            "connection-result error";
+        return providerConnections;
 
-        providerKeyResult.textContent =
-            error.message;
+    } catch (error) {
+        // The Settings page already has a fast status snapshot from
+        // /api/settings. A slow secondary key-suffix refresh must not leave
+        // the entire page stuck on "Checking…".
+        if (!providerConnections) {
+            openaiKeyConnectionText.textContent =
+                "Status unavailable";
+
+            geminiKeyConnectionText.textContent =
+                "Status unavailable";
+        }
+
+        if (
+            error.name
+            !==
+            "AbortError"
+        ) {
+            console.warn(
+                "Provider connection refresh failed:",
+                error
+            );
+        }
+
+        return providerConnections;
+
+    } finally {
+        window.clearTimeout(
+            timeout
+        );
     }
 }
 
@@ -2765,6 +3312,7 @@ async function saveProviderKey(
         providerKeyResult.textContent =
             `${provider.toUpperCase()} connected and encrypted.`;
 
+        providerConnectionsLoadedAt = 0;
         await loadSettings();
 
     } catch (error) {
@@ -2822,6 +3370,7 @@ async function removeProviderKey(
         providerKeyResult.textContent =
             `${provider.toUpperCase()} saved key disconnected.`;
 
+        providerConnectionsLoadedAt = 0;
         await loadSettings();
 
     } catch (error) {
@@ -2878,6 +3427,21 @@ removeGeminiKeyButton.addEventListener(
    CREATE PROVIDER SUMMARY / COST
 ========================================================= */
 
+function tierDisplayName(
+    tier
+) {
+    if (tier === "premium") {
+        return "Best Quality";
+    }
+
+    return capitalize(
+        tier
+        ||
+        "economy"
+    );
+}
+
+
 function renderCreateProviderSummary() {
     if (!settingsPayload) {
         return;
@@ -2889,51 +3453,38 @@ function renderCreateProviderSummary() {
     const plannerProvider =
         settings.planner_provider;
 
-    const plannerModel =
+    const plannerName =
         plannerProvider
         ===
         "gemini"
             ?
-            settings
-                .gemini_planner_model
+            "Gemini"
             :
-            settings
-                .openai_planner_model;
+            "OpenAI";
 
     createPlannerSummary.textContent =
-        `${plannerProvider === "gemini" ? "Gemini" : "OpenAI"} · ${plannerModel}`;
+        `${plannerName} · ${tierDisplayName(settings.planner_tier)}`;
 
     const imageProvider =
         settings.image_provider;
 
-    const imageModel =
+    const imageName =
         imageProvider
         ===
-        "openai"
+        "gemini"
             ?
-            settings
-                .openai_image_model
+            "Gemini"
             :
-            settings
-                .gemini_image_model;
-
-    const quality =
-        imageProvider
-        ===
-        "openai"
-            ?
-            ` · ${capitalize(settings.openai_image_quality)}`
-            :
-            "";
+            "OpenAI";
 
     createImageSummary.textContent =
-        `${imageProvider === "gemini" ? "Gemini" : "OpenAI"} · ${imageModel}${quality}`;
+        `${imageName} · ${tierDisplayName(settings.image_tier)}`;
 
     summaryPlanner.textContent =
-        `${plannerProvider === "gemini" ? "Gemini" : "OpenAI"} · ${plannerModel}`;
+        `${plannerName} · ${tierDisplayName(settings.planner_tier)} · ${settings.planner_resolved_model || "Unavailable"}`;
 
     summaryImageEngine.textContent =
-        `${imageProvider === "gemini" ? "Gemini" : "OpenAI"} · ${imageModel}`;
+        `${imageName} · ${tierDisplayName(settings.image_tier)} · ${settings.image_resolved_model || "Unavailable"}`;
 
     updateCreateCostEstimate();
 }
@@ -2951,76 +3502,16 @@ function updateCreateCostEstimate() {
         settingsPayload.settings;
 
     const count =
-        selectedCount === "auto"
+        selectedCount
+        ===
+        "auto"
             ?
-            null
+            "Auto"
             :
-            Number(
-                selectedCount
-            );
+            selectedCount;
 
-    if (
-        settings.image_provider
-        ===
-        "openai"
-    ) {
-        createCostEstimate.textContent =
-            count
-                ?
-                `${count} images · ${capitalize(settings.openai_image_quality)}`
-                :
-                `${capitalize(settings.openai_image_quality)} · provider billed`;
-
-        return;
-    }
-
-    const model =
-        settings.gemini_image_model;
-
-    const size =
-        settings.gemini_image_size;
-
-    let perImage = null;
-
-    if (
-        model
-        ===
-        "gemini-3.1-flash-lite-image"
-        &&
-        size === "1K"
-    ) {
-        perImage = 0.0336;
-    }
-
-    if (
-        model
-        ===
-        "gemini-3.1-flash-image"
-    ) {
-        perImage = {
-            "1K": 0.067,
-            "2K": 0.101,
-            "4K": 0.151,
-        }[
-            size
-        ];
-    }
-
-    if (
-        count
-        &&
-        perImage
-    ) {
-        createCostEstimate.textContent =
-            `≈ $${(
-                count
-                *
-                perImage
-            ).toFixed(2)}`;
-    } else {
-        createCostEstimate.textContent =
-            `${size} · provider billed`;
-    }
+    createCostEstimate.textContent =
+        `${count} outputs · ${tierDisplayName(settings.image_tier)} · provider billed`;
 }
 
 
@@ -3901,6 +4392,91 @@ async function runCreateJob() {
     if (!selectedImages.length) {
         showToast(
             "Add at least one product reference."
+        );
+
+        return;
+    }
+
+    const runtime =
+        settingsPayload?.settings;
+
+    if (!runtime) {
+        showToast(
+            "Settings are still loading. Try again in a moment."
+        );
+
+        return;
+    }
+
+    if (!runtime.planner_tier_available) {
+        showToast(
+            "Your prompt quality level is unavailable. Choose another level in Settings."
+        );
+
+        showView(
+            "settings"
+        );
+
+        return;
+    }
+
+    const plannerReady =
+        Boolean(
+            settingsPayload
+                ?.planner
+                ?.providers
+                ?.[runtime.planner_provider]
+                ?.configured
+        );
+
+    if (!plannerReady) {
+        showToast(
+            `Connect ${runtime.planner_provider === "openai" ? "OpenAI" : "Gemini"} in Settings before generating.`
+        );
+
+        showView(
+            "settings"
+        );
+
+        return;
+    }
+
+    if (
+        autoGenerateImages.checked
+        &&
+        !runtime.image_tier_available
+    ) {
+        showToast(
+            "Your image quality level is unavailable. Choose another level in Settings."
+        );
+
+        showView(
+            "settings"
+        );
+
+        return;
+    }
+
+    const imageReady =
+        Boolean(
+            settingsPayload
+                ?.image
+                ?.providers
+                ?.[runtime.image_provider]
+                ?.configured
+        );
+
+    if (
+        autoGenerateImages.checked
+        &&
+        !imageReady
+    ) {
+        showToast(
+            `Connect ${runtime.image_provider === "openai" ? "OpenAI" : "Gemini"} in Settings before generating images.`
+        );
+
+        showView(
+            "settings"
         );
 
         return;

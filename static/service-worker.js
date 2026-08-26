@@ -1,10 +1,14 @@
-const CACHE_NAME = "hyperex-shell-v1";
+const CACHE_NAME = "hyperex-shell-v4";
 
 const SHELL = [
     "/",
     "/static/styles.css",
     "/static/app.js",
     "/static/manifest.webmanifest",
+    "/static/icons/hyperex-logo.png",
+    "/static/icons/favicon-32.png",
+    "/static/icons/icon-192.png",
+    "/static/icons/icon-512.png",
 ];
 
 self.addEventListener(
