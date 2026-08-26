@@ -201,11 +201,13 @@ class RegenerateImageRequest(BaseModel):
 
 class SettingsUpdateRequest(BaseModel):
     planner_provider: str | None = None
+    planner_tier: str | None = None
     gemini_planner_model: str | None = None
     openai_planner_model: str | None = None
     openai_planner_reasoning: str | None = None
 
     image_provider: str | None = None
+    image_tier: str | None = None
     openai_image_model: str | None = None
     openai_image_quality: str | None = None
     openai_image_size: str | None = None
@@ -415,7 +417,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.0-phase2-cloud",
+    version="0.14.0-phase2-checkpoint05-stable",
     lifespan=lifespan,
 )
 
@@ -1306,19 +1308,235 @@ def provider_connection_delete(
 # APPLICATION SETTINGS
 # ============================================================
 
+def _settings_provider_snapshot(
+    settings: dict,
+):
+    """
+    Fast Settings-page provider status.
+
+    This intentionally avoids calling the full planner/image status helpers,
+    which repeatedly resolve settings and provider credentials. The detailed
+    provider endpoints remain available for explicit connection tests.
+    """
+    saved = (
+        get_saved_connection_status()
+    )
+
+    openai_saved = bool(
+        saved.get(
+            "openai",
+            {},
+        ).get(
+            "saved"
+        )
+    )
+
+    gemini_saved = bool(
+        saved.get(
+            "gemini",
+            {},
+        ).get(
+            "saved"
+        )
+    )
+
+    openai_env = bool(
+        (
+            os.getenv(
+                "OPENAI_API_KEY"
+            )
+            or
+            ""
+        ).strip()
+    )
+
+    gemini_env = bool(
+        (
+            os.getenv(
+                "GEMINI_API_KEY"
+            )
+            or
+            ""
+        ).strip()
+    )
+
+    openai_configured = (
+        openai_saved
+        or
+        openai_env
+    )
+
+    gemini_configured = (
+        gemini_saved
+        or
+        gemini_env
+    )
+
+    openai_source = (
+        "saved_connection"
+        if openai_saved
+        else (
+            "OPENAI_API_KEY"
+            if openai_env
+            else None
+        )
+    )
+
+    gemini_source = (
+        "saved_connection"
+        if gemini_saved
+        else (
+            "GEMINI_API_KEY"
+            if gemini_env
+            else None
+        )
+    )
+
+    planner_provider = (
+        settings[
+            "planner_provider"
+        ]
+    )
+
+    image_provider = (
+        settings[
+            "image_provider"
+        ]
+    )
+
+    planner = {
+        "selected_provider":
+            planner_provider,
+        "configured": (
+            gemini_configured
+            if planner_provider
+            ==
+            "gemini"
+            else openai_configured
+        ),
+        "model":
+            settings.get(
+                "planner_resolved_model"
+            ),
+        "providers": {
+            "gemini": {
+                "configured":
+                    gemini_configured,
+                "model":
+                    settings[
+                        "gemini_planner_model"
+                    ],
+                "key_source":
+                    gemini_source,
+            },
+            "openai": {
+                "configured":
+                    openai_configured,
+                "model":
+                    settings[
+                        "openai_planner_model"
+                    ],
+                "reasoning_effort":
+                    settings[
+                        "openai_planner_reasoning"
+                    ],
+                "key_source":
+                    openai_source,
+            },
+        },
+    }
+
+    image = {
+        "selected_provider":
+            image_provider,
+        "configured": (
+            gemini_configured
+            if image_provider
+            ==
+            "gemini"
+            else openai_configured
+        ),
+        "model":
+            settings.get(
+                "image_resolved_model"
+            ),
+        "providers": {
+            "gemini": {
+                "configured":
+                    gemini_configured,
+                "model":
+                    settings[
+                        "gemini_image_model"
+                    ],
+                "image_size":
+                    settings[
+                        "gemini_image_size"
+                    ],
+                "aspect_ratio":
+                    settings[
+                        "gemini_image_aspect_ratio"
+                    ],
+                "key_source":
+                    gemini_source,
+            },
+            "openai": {
+                "configured":
+                    openai_configured,
+                "model":
+                    settings[
+                        "openai_image_model"
+                    ],
+                "quality":
+                    settings[
+                        "openai_image_quality"
+                    ],
+                "size":
+                    settings[
+                        "openai_image_size"
+                    ],
+                "output_format":
+                    settings[
+                        "openai_image_output_format"
+                    ],
+                "key_source":
+                    openai_source,
+            },
+        },
+        "batch_concurrency":
+            settings[
+                "batch_concurrency"
+            ],
+    }
+
+    return (
+        planner,
+        image,
+    )
+
+
 @app.get(
     "/api/settings"
 )
 def application_settings():
+    settings = (
+        get_runtime_settings()
+    )
+
+    planner, image = (
+        _settings_provider_snapshot(
+            settings
+        )
+    )
+
     return {
         "settings":
-            get_runtime_settings(),
+            settings,
         "catalog":
             get_settings_catalog(),
         "planner":
-            get_planner_status(),
+            planner,
         "image":
-            get_image_provider_status(),
+            image,
     }
 
 
@@ -1349,13 +1567,19 @@ def application_settings_update(
             ),
         )
 
+    planner, image = (
+        _settings_provider_snapshot(
+            settings
+        )
+    )
+
     return {
         "settings":
             settings,
         "planner":
-            get_planner_status(),
+            planner,
         "image":
-            get_image_provider_status(),
+            image,
     }
 
 
@@ -2191,6 +2415,95 @@ async def job_create(
     runtime_settings = (
         get_runtime_settings()
     )
+
+    if not runtime_settings.get(
+        "planner_tier_available"
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Your selected prompt quality level is currently unavailable. "
+                "Open Settings and choose another quality level."
+            ),
+        )
+
+    if (
+        runtime_settings.get(
+            "auto_generate_images"
+        )
+        and
+        not runtime_settings.get(
+            "image_tier_available"
+        )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Your selected image quality level is currently unavailable. "
+                "Open Settings and choose another quality level."
+            ),
+        )
+
+    planner_provider = (
+        runtime_settings[
+            "planner_provider"
+        ]
+    )
+
+    planner_status = (
+        get_planner_status()
+        .get(
+            "providers",
+            {},
+        )
+        .get(
+            planner_provider,
+            {},
+        )
+    )
+
+    if not planner_status.get(
+        "configured"
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Connect {planner_provider.title()} in Settings before "
+                "creating a generation job."
+            ),
+        )
+
+    if runtime_settings.get(
+        "auto_generate_images"
+    ):
+        image_provider = (
+            runtime_settings[
+                "image_provider"
+            ]
+        )
+
+        image_status = (
+            get_image_provider_status()
+            .get(
+                "providers",
+                {},
+            )
+            .get(
+                image_provider,
+                {},
+            )
+        )
+
+        if not image_status.get(
+            "configured"
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Connect {image_provider.title()} in Settings before "
+                    "generating images."
+                ),
+            )
 
     if (
         clean_requested_count

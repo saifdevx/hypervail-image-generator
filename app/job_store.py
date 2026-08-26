@@ -239,12 +239,22 @@ def build_generation_snapshot(
     return {
         "aspect_ratio":
             aspect_ratio,
+        "planner_tier_snapshot":
+            runtime_settings.get(
+                "planner_tier",
+                "economy",
+            ),
         "planner_provider_snapshot":
             planner_provider,
         "planner_model_snapshot":
             planner_model,
         "planner_reasoning_snapshot":
             planner_reasoning,
+        "image_tier_snapshot":
+            runtime_settings.get(
+                "image_tier",
+                "economy",
+            ),
         "image_provider_snapshot":
             image_provider,
         "image_model_snapshot":
@@ -276,11 +286,15 @@ def ensure_job_schema():
                 "TEXT",
             "aspect_ratio":
                 "TEXT",
+            "planner_tier_snapshot":
+                "TEXT",
             "planner_provider_snapshot":
                 "TEXT",
             "planner_model_snapshot":
                 "TEXT",
             "planner_reasoning_snapshot":
+                "TEXT",
+            "image_tier_snapshot":
                 "TEXT",
             "image_provider_snapshot":
                 "TEXT",
@@ -422,9 +436,11 @@ def create_prepared_job(
                 description,
                 requested_count,
                 aspect_ratio,
+                planner_tier_snapshot,
                 planner_provider_snapshot,
                 planner_model_snapshot,
                 planner_reasoning_snapshot,
+                image_tier_snapshot,
                 image_provider_snapshot,
                 image_model_snapshot,
                 image_quality_snapshot,
@@ -438,7 +454,7 @@ def create_prepared_job(
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?
+                ?, ?, ?, ?
             )
             """,
             (
@@ -453,6 +469,9 @@ def create_prepared_job(
                     "aspect_ratio"
                 ],
                 snapshots[
+                    "planner_tier_snapshot"
+                ],
+                snapshots[
                     "planner_provider_snapshot"
                 ],
                 snapshots[
@@ -460,6 +479,9 @@ def create_prepared_job(
                 ],
                 snapshots[
                     "planner_reasoning_snapshot"
+                ],
+                snapshots[
+                    "image_tier_snapshot"
                 ],
                 snapshots[
                     "image_provider_snapshot"
@@ -571,9 +593,11 @@ def get_job(
                 gj.description,
                 gj.requested_count,
                 gj.aspect_ratio,
+                gj.planner_tier_snapshot,
                 gj.planner_provider_snapshot,
                 gj.planner_model_snapshot,
                 gj.planner_reasoning_snapshot,
+                gj.image_tier_snapshot,
                 gj.image_provider_snapshot,
                 gj.image_model_snapshot,
                 gj.image_quality_snapshot,

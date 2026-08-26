@@ -20,6 +20,26 @@
     >
 
     <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="/static/icons/favicon-32.png"
+    >
+
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="64x64"
+        href="/static/icons/favicon-64.png"
+    >
+
+    <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href="/static/icons/apple-touch-icon.png"
+    >
+
+    <link
         rel="stylesheet"
         href="/static/styles.css"
     >
@@ -42,7 +62,12 @@
     <div class="auth-panel">
 
         <div class="auth-brand">
-            <div class="brand-mark">IA</div>
+            <div class="brand-mark brand-logo-mark">
+                <img
+                    src="/static/icons/hyperex-logo.png"
+                    alt="Hyperex"
+                >
+            </div>
 
             <div>
                 <strong>HYPEREX</strong>
@@ -140,7 +165,12 @@
     <aside class="sidebar">
 
         <div class="brand">
-            <div class="brand-mark">IA</div>
+            <div class="brand-mark brand-logo-mark">
+                <img
+                    src="/static/icons/hyperex-logo.png"
+                    alt="Hyperex"
+                >
+            </div>
 
             <div>
                 <strong>HYPEREX</strong>
@@ -265,21 +295,21 @@
 
                     <div class="provider-strip">
 
-                        <div class="provider-strip-item">
+                        <div class="provider-strip-item provider-strip-planner">
                             <span>PLANNER</span>
                             <strong id="createPlannerSummary">
                                 Loading…
                             </strong>
                         </div>
 
-                        <div class="provider-strip-item">
+                        <div class="provider-strip-item provider-strip-image">
                             <span>IMAGE ENGINE</span>
                             <strong id="createImageSummary">
                                 Loading…
                             </strong>
                         </div>
 
-                        <div class="provider-strip-item">
+                        <div class="provider-strip-item provider-strip-estimate">
                             <span>ESTIMATE</span>
                             <strong id="createCostEstimate">
                                 —
@@ -299,7 +329,7 @@
 
                     <!-- WORKFLOW -->
 
-                    <section class="studio-section">
+                    <section class="studio-section studio-workflow-section">
 
                         <div class="studio-section-heading">
                             <span>01</span>
@@ -327,7 +357,7 @@
 
                     <!-- REFERENCES -->
 
-                    <section class="studio-section">
+                    <section class="studio-section studio-reference-section">
 
                         <div class="studio-section-heading split-heading">
                             <div class="heading-left">
@@ -381,7 +411,7 @@
 
                     <!-- DIRECTION + COUNT -->
 
-                    <section class="studio-section compact-grid-section">
+                    <section class="studio-section compact-grid-section studio-direction-section">
 
                         <div class="direction-block">
 
@@ -871,8 +901,12 @@
                         class="job-empty"
                         id="jobEmptyState"
                     >
-                        <span class="job-empty-mark">
-                            IA
+                        <span class="job-empty-mark job-empty-logo">
+                            <img
+                                src="/static/icons/hyperex-logo.png"
+                                alt=""
+                                aria-hidden="true"
+                            >
                         </span>
 
                         <h3>Ready to create</h3>
@@ -1371,9 +1405,9 @@
                     <h1>Settings.</h1>
 
                     <p>
-                        Connect your own AI providers, choose the
-                        planner and image engine, and control generation
-                        safety. Saved keys are encrypted server-side.
+                        Connect your AI accounts, choose how much quality
+                        you want, and set simple spending limits. Hyperex
+                        handles the technical model settings for you.
                     </p>
                 </div>
 
@@ -1393,7 +1427,7 @@
 
                     <!-- PROVIDER CONNECTIONS -->
 
-                    <section class="settings-card provider-key-card">
+                    <section class="settings-card provider-key-card settings-card-keys">
 
                         <header class="settings-card-header">
                             <div>
@@ -1494,7 +1528,7 @@
 
                     <!-- PLANNER -->
 
-                    <section class="settings-card">
+                    <section class="settings-card settings-card-planner">
 
                         <header class="settings-card-header">
                             <div>
@@ -1511,23 +1545,51 @@
                                 class="provider-status"
                                 id="plannerProviderStatus"
                             >
-                                CHECKING
+                                LOADING
                             </span>
                         </header>
 
-                        <div class="settings-form-grid">
+                        <div class="settings-form-grid model-tier-settings-grid">
 
                             <label>
                                 <span>Provider</span>
-                                <select id="plannerProviderSelect"></select>
+                                <select id="plannerProviderSelect"><option>Loading providers…</option></select>
                             </label>
 
-                            <label>
-                                <span>Model</span>
-                                <select id="plannerModelSelect"></select>
-                            </label>
+                            <div class="tier-picker-field">
+                                <span class="settings-field-label">Quality level</span>
+
+                                <select
+                                    class="tier-select-source"
+                                    id="plannerModelSelect"
+                                    aria-hidden="true"
+                                    tabindex="-1"
+                                ></select>
+
+                                <div
+                                    class="tier-choice-grid"
+                                    id="plannerTierChoices"
+                                    role="group"
+                                    aria-label="Prompt quality level"
+                                >
+                                    <div class="tier-loading">
+                                        Loading quality levels…
+                                    </div>
+                                </div>
+                            </div>
+
+                            <article class="model-tier-current">
+                                <span>MODEL USED</span>
+                                <strong id="plannerResolvedModel">
+                                    Loading…
+                                </strong>
+                                <small id="plannerTierNote">
+                                    Loading your saved choice…
+                                </small>
+                            </article>
 
                             <label
+                                class="hidden-element"
                                 id="openaiReasoningField"
                             >
                                 <span>OpenAI reasoning</span>
@@ -1561,7 +1623,7 @@
 
                     <!-- IMAGE PROVIDER -->
 
-                    <section class="settings-card">
+                    <section class="settings-card settings-card-image">
 
                         <header class="settings-card-header">
                             <div>
@@ -1578,47 +1640,84 @@
                                 class="provider-status"
                                 id="imageProviderStatus"
                             >
-                                CHECKING
+                                LOADING
                             </span>
                         </header>
 
-                        <div class="settings-form-grid">
+                        <div class="settings-form-grid model-tier-settings-grid">
 
                             <label>
                                 <span>Provider</span>
-                                <select id="imageProviderSelect"></select>
+                                <select id="imageProviderSelect"><option>Loading providers…</option></select>
                             </label>
 
-                            <label>
-                                <span>Model</span>
-                                <select id="imageModelSelect"></select>
-                            </label>
+                            <div class="tier-picker-field">
+                                <span class="settings-field-label">Quality level</span>
 
-                            <label
-                                id="openaiQualityField"
-                            >
-                                <span>Quality</span>
-                                <select id="openaiQualitySelect"></select>
-                            </label>
+                                <select
+                                    class="tier-select-source"
+                                    id="imageModelSelect"
+                                    aria-hidden="true"
+                                    tabindex="-1"
+                                ></select>
 
-                            <label>
-                                <span>Resolution / size</span>
-                                <select id="imageSizeSelect"></select>
-                            </label>
+                                <div
+                                    class="tier-choice-grid"
+                                    id="imageTierChoices"
+                                    role="group"
+                                    aria-label="Image quality level"
+                                >
+                                    <div class="tier-loading">
+                                        Loading quality levels…
+                                    </div>
+                                </div>
+                            </div>
 
-                            <label
-                                id="geminiAspectField"
-                            >
-                                <span>Aspect ratio</span>
-                                <select id="geminiAspectSelect"></select>
-                            </label>
+                            <article class="model-tier-current">
+                                <span>MODEL USED</span>
+                                <strong id="imageResolvedModel">
+                                    Loading…
+                                </strong>
+                                <small id="imageTierNote">
+                                    Loading your saved choice…
+                                </small>
+                            </article>
 
                             <label>
                                 <span>Parallel images</span>
                                 <select id="batchConcurrencySelect"></select>
                             </label>
 
+                            <!-- Legacy controls stay hidden for compatibility.
+                                 Hyperex now resolves model/quality from the
+                                 user-facing quality tier. -->
+                            <label
+                                class="hidden-element"
+                                id="openaiQualityField"
+                            >
+                                <span>Quality</span>
+                                <select id="openaiQualitySelect"></select>
+                            </label>
+
+                            <label class="hidden-element">
+                                <span>Resolution / size</span>
+                                <select id="imageSizeSelect"></select>
+                            </label>
+
+                            <label
+                                class="hidden-element"
+                                id="geminiAspectField"
+                            >
+                                <span>Aspect ratio</span>
+                                <select id="geminiAspectSelect"></select>
+                            </label>
+
                         </div>
+
+                        <p class="settings-tier-help">
+                            Quality level controls the model and its cost/quality
+                            preset. Choose the output aspect ratio on Create.
+                        </p>
 
                         <div class="provider-connection-strip">
                             <span id="imageConnectionSummary">
@@ -1645,7 +1744,7 @@
 
                     <!-- SAFETY -->
 
-                    <section class="settings-card">
+                    <section class="settings-card settings-card-safety">
 
                         <header class="settings-card-header">
                             <div>
@@ -1715,17 +1814,27 @@
                     </div>
 
                     <p>
-                        For local development, server-side .env keys can
-                        still be used as a fallback. For real users, use
-                        the Provider Connections card so each account can
-                        bring its own key later.
+                        Your saved provider keys are encrypted and are never
+                        shown back to the browser. Each Hyperex account keeps
+                        its own provider connections.
                     </p>
 
-                    <pre>Production server:
-APP_ENCRYPTION_KEY=...
+                    <div class="settings-beginner-guide">
+                        <div class="settings-guide-step guide-step-blue">
+                            <b>1</b>
+                            <span>Connect OpenAI, Gemini, or both.</span>
+                        </div>
 
-Users:
-Connect key inside Settings</pre>
+                        <div class="settings-guide-step guide-step-green">
+                            <b>2</b>
+                            <span>Choose Economy, Balanced, or Best Quality.</span>
+                        </div>
+
+                        <div class="settings-guide-step guide-step-orange">
+                            <b>3</b>
+                            <span>Go to Create and generate your images.</span>
+                        </div>
+                    </div>
 
                     <div class="settings-tip account-settings-tip">
                         <strong>Signed-in account</strong>
@@ -1737,16 +1846,8 @@ Connect key inside Settings</pre>
                             id="claimLocalDataButton"
                             type="button"
                         >
-                            Claim my old local data
+                            Import old local data
                         </button>
-                    </div>
-
-                    <div class="settings-tip">
-                        <strong>Recommended test setup</strong>
-                        <span>
-                            OpenAI planner: GPT-5.6 Luna<br>
-                            OpenAI image: GPT Image 2 · Low
-                        </span>
                     </div>
 
                 </aside>
@@ -2432,7 +2533,11 @@ Connect key inside Settings</pre>
      MOBILE CONTROLS
 ========================================================= -->
 
-<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+<nav
+    class="mobile-bottom-nav"
+    id="mobileBottomNav"
+    aria-label="Mobile navigation"
+>
 
     <button
         id="mobileNavCreate"
@@ -2461,6 +2566,14 @@ Connect key inside Settings</pre>
         type="button"
     >
         Settings
+    </button>
+
+    <button
+        class="hidden-element"
+        id="mobileNavAdmin"
+        type="button"
+    >
+        Admin
     </button>
 
 </nav>
