@@ -43,10 +43,11 @@ const adminUsersCount = $("adminUsersCount");
 const adminJobsCount = $("adminJobsCount");
 const adminJobsTodayCount = $("adminJobsTodayCount");
 const adminImagesCount = $("adminImagesCount");
-const adminFailuresCount = $("adminFailuresCount");
+const adminSuccessRate = $("adminSuccessRate");
+const adminSystemList = $("adminSystemList");
 const adminModelList = $("adminModelList");
-const adminFeatureList = $("adminFeatureList");
 const adminUserList = $("adminUserList");
+const adminFailureList = $("adminFailureList");
 
 const createPlannerSummary = $("createPlannerSummary");
 const createImageSummary = $("createImageSummary");
@@ -1219,664 +1220,241 @@ claimLocalDataButton.addEventListener(
 ========================================================= */
 
 async function loadAdminDashboard() {
-    if (
-        currentUser?.role
-        !==
-        "admin"
-    ) {
+    if (currentUser?.role !== "admin") {
         return;
     }
 
     try {
-        const response =
-            await fetch(
-                "/api/admin/dashboard",
-                {
-                    cache:
-                        "no-store",
-                }
-            );
+        const response = await fetch(
+            "/api/admin/dashboard",
+            { cache: "no-store" }
+        );
 
         if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
+            throw new Error(await apiError(response));
         }
 
-        const data =
-            await response.json();
+        const data = await response.json();
 
-        renderAdminOverview(
-            data.overview
-            ||
-            {}
-        );
-
-        renderAdminModels(
-            data.models
-            ||
-            []
-        );
-
-        renderAdminFeatures(
-            data.feature_flags
-            ||
-            []
-        );
-
-        renderAdminUsers(
-            data.users
-            ||
-            []
-        );
+        renderAdminOverview(data.overview || {});
+        renderAdminSystem(data.system || {});
+        renderAdminUsers(data.users || []);
+        renderAdminModels(data.models || []);
+        renderAdminFailures(data.recent_failures || []);
 
     } catch (error) {
-        showToast(
-            error.message
-        );
+        showToast(error.message);
     }
 }
 
 
-function renderAdminOverview(
-    overview
-) {
-    adminUsersCount.textContent =
-        formatNumber(
-            overview.users
-            ||
-            0
-        );
-
-    adminJobsCount.textContent =
-        formatNumber(
-            overview.jobs
-            ||
-            0
-        );
-
-    adminJobsTodayCount.textContent =
-        formatNumber(
-            overview.jobs_today
-            ||
-            0
-        );
-
-    adminImagesCount.textContent =
-        formatNumber(
-            overview.complete_images
-            ||
-            0
-        );
-
-    adminFailuresCount.textContent =
-        formatNumber(
-            overview.failed_images
-            ||
-            0
-        );
+function renderAdminOverview(overview) {
+    adminUsersCount.textContent = formatNumber(overview.users || 0);
+    adminJobsCount.textContent = formatNumber(overview.jobs || 0);
+    adminJobsTodayCount.textContent = formatNumber(overview.jobs_today || 0);
+    adminImagesCount.textContent = formatNumber(overview.complete_images || 0);
+    adminSuccessRate.textContent = `${Number(overview.success_rate ?? 100).toFixed(1)}%`;
 }
 
 
-function renderAdminModels(
-    models
-) {
-    adminModelList.innerHTML =
-        "";
+function renderAdminSystem(system) {
+    adminSystemList.innerHTML = "";
+
+    [
+        ["Authentication", system.auth],
+        ["Database", system.database],
+        ["Image storage", system.storage],
+        ["Background jobs", system.queue],
+    ].forEach(([title, item]) => {
+        item = item || {};
+
+        const row = document.createElement("article");
+        row.className = "admin-system-row";
+
+        const copy = document.createElement("div");
+        const heading = document.createElement("strong");
+        const detail = document.createElement("span");
+        heading.textContent = title;
+        detail.textContent = item.label || item.provider || "Not configured";
+        copy.append(heading, detail);
+
+        const status = document.createElement("span");
+        status.className = `admin-connection-status ${item.configured ? "connected" : "missing"}`;
+        status.textContent = item.configured ? "Connected" : "Needs setup";
+
+        row.append(copy, status);
+        adminSystemList.appendChild(row);
+    });
+}
+
+
+function tierLabel(tier) {
+    if (tier === "premium") return "Best Quality";
+    if (tier === "balanced") return "Balanced";
+    return "Economy";
+}
+
+
+function renderAdminModels(models) {
+    adminModelList.innerHTML = "";
 
     if (!models.length) {
-        adminModelList.innerHTML = `
-            <div class="loading-state">
-                No model registry entries found.
-            </div>
-        `;
-
+        adminModelList.innerHTML = `<div class="loading-state">No AI models configured.</div>`;
         return;
     }
 
-    models.forEach(
-        model => {
-            const row =
-                document.createElement(
-                    "article"
-                );
+    models.forEach(model => {
+        const row = document.createElement("article");
+        row.className = "admin-model-row simple";
 
-            row.className =
-                "admin-model-row";
+        const meta = document.createElement("div");
+        meta.className = "admin-row-meta";
+        const heading = document.createElement("strong");
+        const tier = document.createElement("span");
+        heading.textContent = `${capitalize(model.provider)} · ${model.capability === "planner" ? "Prompt Planner" : "Image Generator"}`;
+        tier.textContent = tierLabel(model.tier);
+        meta.append(heading, tier);
 
-            const meta =
-                document.createElement(
-                    "div"
-                );
+        const modelInput = document.createElement("input");
+        modelInput.type = "text";
+        modelInput.value = model.model_id || "";
+        modelInput.placeholder = "Provider model ID";
 
-            meta.className =
-                "admin-row-meta";
+        const enabledLabel = document.createElement("label");
+        enabledLabel.className = "admin-inline-check";
+        const enabled = document.createElement("input");
+        enabled.type = "checkbox";
+        enabled.checked = Boolean(model.enabled);
+        const enabledText = document.createElement("span");
+        enabledText.textContent = "Available";
+        enabledLabel.append(enabled, enabledText);
 
-            const heading =
-                document.createElement(
-                    "strong"
-                );
+        const save = document.createElement("button");
+        save.type = "button";
+        save.textContent = "Save";
+        save.onclick = async () => {
+            save.disabled = true;
+            try {
+                const response = await fetch(`/api/admin/models/${model.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model_id: modelInput.value.trim(),
+                        enabled: enabled.checked,
+                    }),
+                });
+                if (!response.ok) throw new Error(await apiError(response));
+                await response.json();
+                showToast(`${tierLabel(model.tier)} model saved.`);
+                await Promise.all([loadAdminDashboard(), loadSettings()]);
+            } catch (error) {
+                showToast(error.message);
+            } finally {
+                save.disabled = false;
+            }
+        };
 
-            heading.textContent =
-                `${capitalize(model.provider)} · ${capitalize(model.capability)}`;
-
-            const tier =
-                document.createElement(
-                    "span"
-                );
-
-            tier.textContent =
-                model.tier
-                ===
-                "premium"
-                    ?
-                    "BEST QUALITY"
-                    :
-                    model.tier
-                        .toUpperCase();
-
-            meta.append(
-                heading,
-                tier
-            );
-
-            const modelInput =
-                document.createElement(
-                    "input"
-                );
-
-            modelInput.type =
-                "text";
-
-            modelInput.value =
-                model.model_id
-                ||
-                "";
-
-            modelInput.placeholder =
-                "API model id";
-
-            const nameInput =
-                document.createElement(
-                    "input"
-                );
-
-            nameInput.type =
-                "text";
-
-            nameInput.value =
-                model.display_name
-                ||
-                "";
-
-            nameInput.placeholder =
-                "User label";
-
-            const enabledLabel =
-                document.createElement(
-                    "label"
-                );
-
-            enabledLabel.className =
-                "admin-inline-check";
-
-            const enabled =
-                document.createElement(
-                    "input"
-                );
-
-            enabled.type =
-                "checkbox";
-
-            enabled.checked =
-                Boolean(
-                    model.enabled
-                );
-
-            const enabledText =
-                document.createElement(
-                    "span"
-                );
-
-            enabledText.textContent =
-                "Enabled";
-
-            enabledLabel.append(
-                enabled,
-                enabledText
-            );
-
-            const save =
-                document.createElement(
-                    "button"
-                );
-
-            save.type =
-                "button";
-
-            save.textContent =
-                "Save";
-
-            save.addEventListener(
-                "click",
-                async () => {
-                    save.disabled =
-                        true;
-
-                    try {
-                        const response =
-                            await fetch(
-                                `/api/admin/models/${model.id}`,
-                                {
-                                    method:
-                                        "PATCH",
-
-                                    headers: {
-                                        "Content-Type":
-                                            "application/json",
-                                    },
-
-                                    body:
-                                        JSON.stringify({
-                                            model_id:
-                                                modelInput
-                                                    .value
-                                                    .trim(),
-
-                                            display_name:
-                                                nameInput
-                                                    .value
-                                                    .trim(),
-
-                                            enabled:
-                                                enabled
-                                                    .checked,
-                                        }),
-                                }
-                            );
-
-                        if (!response.ok) {
-                            throw new Error(
-                                await apiError(
-                                    response
-                                )
-                            );
-                        }
-
-                        await response.json();
-
-                        showToast(
-                            "Model registry updated."
-                        );
-
-                        await Promise.all([
-                            loadAdminDashboard(),
-                            loadSettings(),
-                        ]);
-
-                    } catch (error) {
-                        showToast(
-                            error.message
-                        );
-
-                    } finally {
-                        save.disabled =
-                            false;
-                    }
-                }
-            );
-
-            row.append(
-                meta,
-                modelInput,
-                nameInput,
-                enabledLabel,
-                save
-            );
-
-            adminModelList.appendChild(
-                row
-            );
-        }
-    );
+        row.append(meta, modelInput, enabledLabel, save);
+        adminModelList.appendChild(row);
+    });
 }
 
 
-function renderAdminFeatures(
-    features
-) {
-    adminFeatureList.innerHTML =
-        "";
-
-    features.forEach(
-        feature => {
-            const row =
-                document.createElement(
-                    "article"
-                );
-
-            row.className =
-                "admin-feature-row";
-
-            const copy =
-                document.createElement(
-                    "div"
-                );
-
-            const title =
-                document.createElement(
-                    "strong"
-                );
-
-            title.textContent =
-                feature.key;
-
-            const description =
-                document.createElement(
-                    "span"
-                );
-
-            description.textContent =
-                feature.description
-                ||
-                "";
-
-            copy.append(
-                title,
-                description
-            );
-
-            const toggle =
-                document.createElement(
-                    "input"
-                );
-
-            toggle.type =
-                "checkbox";
-
-            toggle.checked =
-                Boolean(
-                    feature.enabled
-                );
-
-            toggle.addEventListener(
-                "change",
-                async () => {
-                    toggle.disabled =
-                        true;
-
-                    try {
-                        const response =
-                            await fetch(
-                                `/api/admin/features/${encodeURIComponent(feature.key)}`,
-                                {
-                                    method:
-                                        "PATCH",
-
-                                    headers: {
-                                        "Content-Type":
-                                            "application/json",
-                                    },
-
-                                    body:
-                                        JSON.stringify({
-                                            enabled:
-                                                toggle
-                                                    .checked,
-                                        }),
-                                }
-                            );
-
-                        if (!response.ok) {
-                            throw new Error(
-                                await apiError(
-                                    response
-                                )
-                            );
-                        }
-
-                        await response.json();
-
-                        showToast(
-                            "Feature flag updated."
-                        );
-
-                    } catch (error) {
-                        toggle.checked =
-                            !toggle.checked;
-
-                        showToast(
-                            error.message
-                        );
-
-                    } finally {
-                        toggle.disabled =
-                            false;
-                    }
-                }
-            );
-
-            row.append(
-                copy,
-                toggle
-            );
-
-            adminFeatureList.appendChild(
-                row
-            );
-        }
-    );
-}
-
-
-function renderAdminUsers(
-    users
-) {
-    adminUserList.innerHTML =
-        "";
+function renderAdminUsers(users) {
+    adminUserList.innerHTML = "";
 
     if (!users.length) {
-        adminUserList.innerHTML = `
-            <div class="loading-state">
-                No users yet.
-            </div>
-        `;
-
+        adminUserList.innerHTML = `<div class="loading-state">No users yet.</div>`;
         return;
     }
 
-    users.forEach(
-        user => {
-            const row =
-                document.createElement(
-                    "article"
-                );
+    users.forEach(user => {
+        const row = document.createElement("article");
+        row.className = "admin-user-row simple";
 
-            row.className =
-                "admin-user-row";
+        const copy = document.createElement("div");
+        copy.className = "admin-user-copy";
+        const email = document.createElement("strong");
+        const meta = document.createElement("span");
+        email.textContent = user.email || user.user_id;
+        meta.textContent = `${formatNumber(user.job_count || 0)} jobs · ${formatNumber(user.image_count || 0)} images`;
+        copy.append(email, meta);
 
-            const copy =
-                document.createElement(
-                    "div"
-                );
+        const role = document.createElement("select");
+        ["user", "support", "admin"].forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value === "admin" ? "Admin" : value === "support" ? "Support" : "User";
+            option.selected = user.role === value;
+            role.appendChild(option);
+        });
 
-            copy.className =
-                "admin-user-copy";
+        const status = document.createElement("select");
+        ["active", "suspended"].forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value === "active" ? "Active" : "Suspended";
+            option.selected = user.status === value;
+            status.appendChild(option);
+        });
 
-            const email =
-                document.createElement(
-                    "strong"
-                );
+        const save = document.createElement("button");
+        save.type = "button";
+        save.textContent = "Save";
+        save.onclick = async () => {
+            save.disabled = true;
+            try {
+                const response = await fetch(`/api/admin/users/${encodeURIComponent(user.user_id)}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ role: role.value, status: status.value }),
+                });
+                if (!response.ok) throw new Error(await apiError(response));
+                await response.json();
+                showToast("User updated.");
+                await loadAdminDashboard();
+            } catch (error) {
+                showToast(error.message);
+            } finally {
+                save.disabled = false;
+            }
+        };
 
-            email.textContent =
-                user.email
-                ||
-                user.user_id;
+        row.append(copy, role, status, save);
+        adminUserList.appendChild(row);
+    });
+}
 
-            const meta =
-                document.createElement(
-                    "span"
-                );
 
-            meta.textContent =
-                `${formatNumber(user.job_count || 0)} jobs · ${formatNumber(user.image_count || 0)} images`;
+function renderAdminFailures(failures) {
+    adminFailureList.innerHTML = "";
 
-            copy.append(
-                email,
-                meta
-            );
+    if (!failures.length) {
+        adminFailureList.innerHTML = `
+            <div class="admin-empty-success">
+                <strong>No recent generation errors.</strong>
+                <span>Everything looks healthy.</span>
+            </div>
+        `;
+        return;
+    }
 
-            const role =
-                document.createElement(
-                    "select"
-                );
+    failures.forEach(item => {
+        const row = document.createElement("article");
+        row.className = "admin-failure-row";
 
-            [
-                "user",
-                "support",
-                "admin",
-            ].forEach(
-                optionValue => {
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
+        const title = document.createElement("strong");
+        title.textContent = `Job #${item.job_id} · ${item.user_email || "Unknown user"}`;
 
-                    option.value =
-                        optionValue;
+        const meta = document.createElement("span");
+        meta.textContent = `${providerLabel(item.provider || "")} · ${item.model || "model unavailable"}`;
 
-                    option.textContent =
-                        capitalize(
-                            optionValue
-                        );
+        const error = document.createElement("p");
+        error.textContent = friendlyError(item.error_message || "Generation failed.");
 
-                    option.selected =
-                        user.role
-                        ===
-                        optionValue;
-
-                    role.appendChild(
-                        option
-                    );
-                }
-            );
-
-            const status =
-                document.createElement(
-                    "select"
-                );
-
-            [
-                "active",
-                "suspended",
-            ].forEach(
-                optionValue => {
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-                    option.value =
-                        optionValue;
-
-                    option.textContent =
-                        capitalize(
-                            optionValue
-                        );
-
-                    option.selected =
-                        user.status
-                        ===
-                        optionValue;
-
-                    status.appendChild(
-                        option
-                    );
-                }
-            );
-
-            const save =
-                document.createElement(
-                    "button"
-                );
-
-            save.type =
-                "button";
-
-            save.textContent =
-                "Save";
-
-            save.addEventListener(
-                "click",
-                async () => {
-                    save.disabled =
-                        true;
-
-                    try {
-                        const response =
-                            await fetch(
-                                `/api/admin/users/${encodeURIComponent(user.user_id)}`,
-                                {
-                                    method:
-                                        "PATCH",
-
-                                    headers: {
-                                        "Content-Type":
-                                            "application/json",
-                                    },
-
-                                    body:
-                                        JSON.stringify({
-                                            role:
-                                                role.value,
-                                            status:
-                                                status.value,
-                                        }),
-                                }
-                            );
-
-                        if (!response.ok) {
-                            throw new Error(
-                                await apiError(
-                                    response
-                                )
-                            );
-                        }
-
-                        await response.json();
-
-                        showToast(
-                            "User access updated."
-                        );
-
-                        await loadAdminDashboard();
-
-                    } catch (error) {
-                        showToast(
-                            error.message
-                        );
-
-                    } finally {
-                        save.disabled =
-                            false;
-                    }
-                }
-            );
-
-            row.append(
-                copy,
-                role,
-                status,
-                save
-            );
-
-            adminUserList.appendChild(
-                row
-            );
-        }
-    );
+        row.append(title, meta, error);
+        adminFailureList.appendChild(row);
+    });
 }
 
 
@@ -5578,6 +5156,9 @@ async function runImageBatch(
     imageBatchRequestRunning =
         true;
 
+    let keepPolling =
+        false;
+
     imageBatchSection.classList.remove(
         "hidden-element"
     );
@@ -5627,7 +5208,36 @@ async function runImageBatch(
             );
         }
 
-        await response.json();
+        const dispatch =
+            await response.json();
+
+        if (
+            dispatch.status
+            ===
+            "queued"
+        ) {
+            keepPolling =
+                true;
+
+            startImageBatchPolling(
+                jobId
+            );
+
+            setPipelineStep(
+                pipelineImages,
+                "active",
+                "Queued"
+            );
+
+            jobPanelStatus.textContent =
+                "QUEUED";
+
+            showToast(
+                "Generation queued. You can leave this page; Hyperex will continue processing it."
+            );
+
+            return true;
+        }
 
         const finalStatus =
             await refreshImageBatch(
@@ -5703,7 +5313,9 @@ async function runImageBatch(
             "GENERATE"
         );
 
-        stopImageBatchPolling();
+        if (!keepPolling) {
+            stopImageBatchPolling();
+        }
     }
 }
 
@@ -6756,11 +6368,36 @@ confirmRegenerateButton.addEventListener(
                 );
             }
 
-            await response.json();
+            const dispatch =
+                await response.json();
 
             closeModal(
                 regenerateModal
             );
+
+            if (
+                dispatch.status
+                ===
+                "queued"
+            ) {
+                if (
+                    currentJob
+                    &&
+                    Number(currentJob.id)
+                    ===
+                    Number(regenerateJobId)
+                ) {
+                    startImageBatchPolling(
+                        currentJob.id
+                    );
+                }
+
+                showToast(
+                    "Regeneration queued. Hyperex will update the job when it finishes."
+                );
+
+                return;
+            }
 
             if (
                 currentJob

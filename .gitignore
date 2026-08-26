@@ -1,28 +1,22 @@
-# Hyperex secrets
 .env
 *.env
 !.env.example
 
-# Private built-in workflow instructions
 profiles/private/*.txt
-
-# Encrypted local credential master key
 data/.credential_key
-
-# Local runtime data
 data/*.db
 data/*.db-*
 data/uploads/
 data/outputs/
 
-# Python
-__pycache__/
-*.py[cod]
 .venv/
 venv/
 env/
-
-# Editors / OS
+__pycache__/
+*.py[cod]
 .vscode/
 .DS_Store
 Thumbs.db
+
+node_modules/
+.wrangler/

@@ -10,7 +10,14 @@ from app.job_store import (
 from app.request_context import (
     get_current_owner_id,
 )
+from app.platform.storage_backend import (
+    get_storage_backend,
+)
 
+
+STORAGE = get_storage_backend(
+    BASE_DIR
+)
 
 OUTPUTS_DIR = DATA_DIR / "outputs"
 
@@ -103,12 +110,11 @@ def delete_generated_image(
         connection.close()
 
     deleted_file = (
-        _safe_delete_file(
-            row[
-                "file_path"
-            ],
-            OUTPUTS_DIR,
+        STORAGE.delete(
+            row["file_path"]
         )
+        if row["file_path"]
+        else False
     )
 
     return {
@@ -199,27 +205,13 @@ def delete_job(
     finally:
         connection.close()
 
-    upload_dir = (
-        UPLOADS_DIR
-        /
-        f"job_{job_id:06d}"
-    )
-
-    output_dir = (
-        OUTPUTS_DIR
-        /
-        f"job_{job_id:06d}"
-    )
-
-    shutil.rmtree(
-        upload_dir,
-        ignore_errors=True,
-    )
-
-    shutil.rmtree(
-        output_dir,
-        ignore_errors=True,
-    )
+    try:
+        STORAGE.delete_job_objects(
+            owner_id,
+            job_id,
+        )
+    except Exception:
+        pass
 
     return {
         "job_id":
@@ -310,6 +302,13 @@ def recover_stale_generations(
 
 
 def cleanup_orphan_directories():
+    if STORAGE.name != "local":
+        return {
+            "removed_count": 0,
+            "removed": [],
+            "note": "R2 objects are deleted with their jobs; local orphan scan skipped.",
+        }
+
     connection = get_connection()
 
     try:

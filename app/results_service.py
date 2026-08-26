@@ -150,7 +150,8 @@ def build_job_zip(
                 get_generated_image_file(
                     int(
                         image["id"]
-                    )
+                    ),
+                    include_bytes=True,
                 )
             )
 
@@ -158,9 +159,7 @@ def build_job_zip(
                 continue
 
             suffix = (
-                generated[
-                    "path"
-                ].suffix.lower()
+                generated.get("extension")
                 or
                 ".jpg"
             )
@@ -173,9 +172,7 @@ def build_job_zip(
 
             archive.writestr(
                 filename,
-                generated[
-                    "path"
-                ].read_bytes(),
+                generated["bytes"],
             )
 
             package = (

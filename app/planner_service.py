@@ -119,10 +119,9 @@ def _build_gemini_contents(
         )
 
         image_bytes = (
-            reference[
-                "absolute_path"
-            ]
-            .read_bytes()
+            reference.get("data")
+            if reference.get("data") is not None
+            else reference["absolute_path"].read_bytes()
         )
 
         contents.append(
