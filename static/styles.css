@@ -183,6 +183,50 @@ img {
 }
 
 
+
+.brand-logo-mark {
+    padding: 0;
+
+    overflow: hidden;
+
+    border:
+        1px solid
+        rgba(246, 246, 246, 0.12);
+
+    border-radius: 12px;
+
+    background: var(--black);
+
+    box-shadow:
+        0
+        12px
+        32px
+        rgba(255, 68, 0, 0.18);
+}
+
+
+.brand-logo-mark img,
+.job-empty-logo img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+}
+
+
+.job-empty-logo {
+    padding: 0;
+
+    overflow: hidden;
+
+    border-radius: 13px;
+
+    background: var(--black);
+}
+
+
 .brand strong {
     display: block;
 
@@ -6752,333 +6796,759 @@ button:hover {
 
 
 /* =========================================================
-   HYPEREX — SIMPLE ADMIN DASHBOARD
+   HYPEREX — ADMIN DASHBOARD / CLEAR COLOR SYSTEM
 ========================================================= */
 
-.admin-shell {
-    width: min(1180px, calc(100% - 48px));
-    margin: 0 auto 80px;
+#adminView {
+    --admin-surface: #111214;
+    --admin-surface-2: #17181B;
+    --admin-surface-3: #202126;
+
+    --admin-border:
+        rgba(246, 246, 246, 0.11);
+
+    --admin-text: #F7F5F2;
+    --admin-muted: #A8A39F;
+
+    --admin-blue: #84A1FF;
+    --admin-blue-bg: #18203A;
+
+    --admin-green: #66D89D;
+    --admin-green-bg: #13281E;
+
+    --admin-amber: #F7C66B;
+    --admin-amber-bg: #2D2413;
+
+    --admin-red: #FF7A83;
+    --admin-red-bg: #32181B;
+
+    --admin-cream: #F3ECE6;
+    --admin-cream-text: #171412;
+
+    --admin-orange: #FF5B1A;
+    --admin-orange-soft: #2C180F;
 }
+
+
+#adminView .page-header h1 {
+    color: var(--admin-text);
+}
+
+
+#adminView .page-header p {
+    color: var(--admin-muted);
+}
+
+
+#adminView .page-kicker {
+    color: var(--orange);
+}
+
+
+.admin-shell {
+    width:
+        min(
+            1180px,
+            calc(100% - 48px)
+        );
+
+    margin:
+        0
+        auto
+        80px;
+}
+
+
+/* -------------------------
+   TOP METRICS
+------------------------- */
 
 .admin-overview-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+
+    grid-template-columns:
+        repeat(
+            5,
+            minmax(0, 1fr)
+        );
+
     gap: 10px;
 }
 
+
 .admin-overview-grid article {
-    min-height: 126px;
+    min-height: 132px;
+
     display: flex;
     flex-direction: column;
+
     padding: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: var(--white);
+
+    border:
+        1px solid
+        var(--admin-border);
+
+    background: var(--admin-surface-2);
+
+    color: var(--admin-text);
 }
 
+
+.admin-overview-grid article:nth-child(1) {
+    background: var(--admin-cream);
+    color: var(--admin-cream-text);
+}
+
+
+.admin-overview-grid article:nth-child(2) {
+    background: var(--admin-blue-bg);
+    border-color:
+        rgba(132, 161, 255, 0.26);
+}
+
+
+.admin-overview-grid article:nth-child(3) {
+    background: var(--admin-surface-3);
+}
+
+
+.admin-overview-grid article:nth-child(4) {
+    background: var(--admin-green-bg);
+    border-color:
+        rgba(102, 216, 157, 0.24);
+}
+
+
+.admin-overview-grid article:nth-child(5) {
+    background: var(--orange);
+    border-color: var(--orange);
+
+    color: #090706;
+}
+
+
 .admin-overview-grid article > span {
-    color: rgba(0, 0, 0, 0.52);
-    font-size: 7px;
+    color: inherit;
+
+    opacity: 0.62;
+
+    font-size: 8px;
     font-weight: 950;
+
     letter-spacing: 0.08em;
 }
 
+
 .admin-overview-grid article > strong {
-    margin-top: 16px;
-    color: var(--black);
-    font-size: 31px;
-    font-weight: 650;
-    letter-spacing: -0.04em;
+    margin-top: 17px;
+
+    color: inherit;
+
+    font-size: 32px;
+    font-weight: 680;
+
+    letter-spacing: -0.045em;
 }
+
 
 .admin-overview-grid article > small {
     margin-top: auto;
-    padding-top: 11px;
-    color: rgba(0, 0, 0, 0.47);
-    font-size: 7px;
+
+    padding-top: 12px;
+
+    color: inherit;
+
+    opacity: 0.62;
+
+    font-size: 8px;
+
     line-height: 1.45;
 }
 
+
+/* -------------------------
+   MAIN ADMIN SECTIONS
+------------------------- */
+
 .admin-section {
     margin-top: 18px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: var(--white);
+
+    overflow: hidden;
+
+    border:
+        1px solid
+        var(--admin-border);
+
+    background: var(--admin-surface);
+
+    color: var(--admin-text);
 }
+
 
 .admin-section > header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+
     gap: 28px;
-    padding: 19px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+    padding: 20px;
+
+    border-bottom:
+        1px solid
+        var(--admin-border);
+
+    background: var(--admin-surface-2);
 }
+
 
 .admin-section > header span {
     color: var(--orange);
-    font-size: 7px;
+
+    font-size: 8px;
     font-weight: 950;
+
     letter-spacing: 0.08em;
 }
 
+
 .admin-section > header h2 {
-    margin: 5px 0 0;
-    font-size: 19px;
-    font-weight: 650;
+    margin:
+        5px
+        0
+        0;
+
+    color: var(--admin-text);
+
+    font-size: 20px;
+    font-weight: 680;
 }
 
+
 .admin-section > header p {
-    width: min(420px, 50%);
+    width:
+        min(
+            430px,
+            50%
+        );
+
     margin: 0;
-    color: rgba(0, 0, 0, 0.5);
-    font-size: 8px;
+
+    color: var(--admin-muted);
+
+    font-size: 9px;
+
     line-height: 1.6;
 }
 
+
+/* -------------------------
+   SYSTEM CONNECTIONS
+------------------------- */
+
 .admin-system-list {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
 }
 
+
 .admin-system-row {
-    min-height: 82px;
+    min-height: 92px;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
+
     gap: 12px;
-    padding: 15px;
-    border-right: 1px solid rgba(0, 0, 0, 0.09);
+
+    padding: 16px;
+
+    border-right:
+        1px solid
+        var(--admin-border);
+
+    background: var(--admin-surface);
 }
+
+
+.admin-system-row:nth-child(even) {
+    background: var(--admin-surface-2);
+}
+
 
 .admin-system-row:last-child {
     border-right: 0;
 }
 
+
 .admin-system-row strong {
     display: block;
-    font-size: 9px;
+
+    color: var(--admin-text);
+
+    font-size: 10px;
+    font-weight: 820;
 }
+
 
 .admin-system-row div > span {
     display: block;
+
     margin-top: 5px;
-    color: rgba(0, 0, 0, 0.5);
+
+    color: var(--admin-muted);
+
     font-size: 8px;
 }
 
+
 .admin-connection-status {
+    min-height: 26px;
+
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 1px solid rgba(0, 0, 0, 0.13);
+
+    padding:
+        0
+        9px;
+
+    border:
+        1px solid
+        var(--admin-border);
+
+    background: var(--admin-surface-3);
+    color: var(--admin-muted);
+
     font-size: 7px;
-    font-weight: 900;
+    font-weight: 950;
+
     white-space: nowrap;
 }
 
+
 .admin-connection-status.connected {
-    border-color: rgba(52, 201, 133, 0.42);
-    background: rgba(52, 201, 133, 0.09);
-    color: var(--success);
+    border-color:
+        rgba(102, 216, 157, 0.38);
+
+    background: var(--admin-green-bg);
+    color: var(--admin-green);
 }
 
+
 .admin-connection-status.missing {
-    border-color: rgba(255, 193, 90, 0.45);
-    background: rgba(255, 193, 90, 0.09);
-    color: #9b6712;
+    border-color:
+        rgba(247, 198, 107, 0.38);
+
+    background: var(--admin-amber-bg);
+    color: var(--admin-amber);
 }
+
+
+/* -------------------------
+   AI MODEL TIERS
+------------------------- */
 
 .admin-model-guide {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
     gap: 1px;
-    background: rgba(0, 0, 0, 0.08);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+    background: var(--admin-border);
+
+    border-bottom:
+        1px solid
+        var(--admin-border);
 }
 
+
 .admin-model-guide > div {
-    padding: 12px 15px;
-    background: var(--cream);
+    padding:
+        14px
+        16px;
 }
+
+
+.admin-model-guide > div:nth-child(1) {
+    background: var(--admin-cream);
+    color: var(--admin-cream-text);
+}
+
+
+.admin-model-guide > div:nth-child(2) {
+    background: var(--admin-blue-bg);
+    color: var(--admin-text);
+}
+
+
+.admin-model-guide > div:nth-child(3) {
+    background: var(--admin-orange-soft);
+    color: var(--admin-text);
+}
+
 
 .admin-model-guide strong,
 .admin-model-guide span {
     display: block;
+
+    color: inherit;
 }
+
 
 .admin-model-guide strong {
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 850;
 }
 
+
 .admin-model-guide span {
-    margin-top: 4px;
-    color: rgba(0, 0, 0, 0.48);
-    font-size: 7px;
+    margin-top: 5px;
+
+    opacity: 0.66;
+
+    font-size: 8px;
 }
+
+
+/* -------------------------
+   USERS + MODELS
+------------------------- */
 
 .admin-model-list,
 .admin-user-list,
 .admin-failure-list {
     display: grid;
+
+    background: var(--admin-surface);
 }
+
 
 .admin-model-row.simple,
 .admin-user-row.simple {
+    min-height: 66px;
+
     display: grid;
     align-items: center;
+
     gap: 10px;
-    min-height: 62px;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+    padding:
+        11px
+        15px;
+
+    border-bottom:
+        1px solid
+        var(--admin-border);
+
+    color: var(--admin-text);
 }
+
+
+.admin-model-row.simple:nth-child(even),
+.admin-user-row.simple:nth-child(even) {
+    background: var(--admin-surface-2);
+}
+
 
 .admin-model-row.simple {
-    grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.4fr) 100px 68px;
+    grid-template-columns:
+        minmax(190px, 1fr)
+        minmax(240px, 1.4fr)
+        100px
+        68px;
 }
 
+
 .admin-user-row.simple {
-    grid-template-columns: minmax(240px, 1fr) 130px 130px 68px;
+    grid-template-columns:
+        minmax(240px, 1fr)
+        130px
+        130px
+        68px;
 }
+
 
 .admin-model-row.simple:last-child,
 .admin-user-row.simple:last-child {
     border-bottom: 0;
 }
 
+
 .admin-row-meta strong,
 .admin-user-copy strong {
     display: block;
+
     overflow: hidden;
-    font-size: 9px;
+
+    color: var(--admin-text);
+
+    font-size: 10px;
     font-weight: 850;
+
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+
 .admin-row-meta span,
 .admin-user-copy span {
     display: block;
+
     margin-top: 5px;
-    color: rgba(0, 0, 0, 0.48);
-    font-size: 7px;
+
+    color: var(--admin-muted);
+
+    font-size: 8px;
 }
+
 
 .admin-model-row input[type="text"],
 .admin-user-row select {
     width: 100%;
-    height: 36px;
-    padding: 0 9px;
-    border: 1px solid rgba(0, 0, 0, 0.16);
-    background: var(--cream);
-    color: var(--black);
-    font-size: 8px;
+    height: 38px;
+
+    padding:
+        0
+        10px;
+
+    border:
+        1px solid
+        rgba(246, 246, 246, 0.14);
+
+    background: #0C0D0F;
+    color: var(--admin-text);
+
+    font-size: 9px;
 }
+
+
+.admin-model-row input[type="text"]:focus,
+.admin-user-row select:focus {
+    border-color:
+        rgba(255, 91, 26, 0.75);
+
+    box-shadow:
+        0
+        0
+        0
+        2px
+        rgba(255, 91, 26, 0.12);
+}
+
+
+.admin-user-row select option {
+    background: #111214;
+    color: var(--admin-text);
+}
+
 
 .admin-inline-check {
     display: flex;
     align-items: center;
+
     gap: 6px;
+
+    color: var(--admin-text);
+
     font-size: 8px;
     font-weight: 800;
 }
+
 
 .admin-inline-check input {
     accent-color: var(--orange);
 }
 
+
 .admin-model-row button,
 .admin-user-row button {
-    min-height: 34px;
-    border: 1px solid var(--black);
-    background: var(--black);
-    color: var(--white);
-    font-size: 7px;
-    font-weight: 900;
+    min-height: 36px;
+
+    border:
+        1px solid
+        rgba(255, 91, 26, 0.45);
+
+    background: var(--orange);
+    color: #090706;
+
+    font-size: 8px;
+    font-weight: 950;
 }
 
-.admin-failure-row {
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+.admin-model-row button:hover,
+.admin-user-row button:hover {
+    background: #FF6B2D;
 }
+
+
+/* -------------------------
+   RECENT ERRORS
+------------------------- */
+
+.admin-failure-list {
+    background: var(--admin-red-bg);
+}
+
+
+.admin-failure-row {
+    padding:
+        15px
+        17px;
+
+    border-bottom:
+        1px solid
+        rgba(255, 122, 131, 0.16);
+
+    color: var(--admin-text);
+}
+
 
 .admin-failure-row:last-child {
     border-bottom: 0;
 }
+
 
 .admin-failure-row strong,
 .admin-failure-row span {
     display: block;
 }
 
+
 .admin-failure-row strong {
-    font-size: 9px;
+    color: var(--admin-text);
+
+    font-size: 10px;
 }
+
 
 .admin-failure-row span {
     margin-top: 4px;
-    color: rgba(0, 0, 0, 0.48);
-    font-size: 7px;
+
+    color:
+        rgba(247, 245, 242, 0.62);
+
+    font-size: 8px;
 }
 
+
 .admin-failure-row p {
-    margin: 8px 0 0;
-    color: var(--danger);
-    font-size: 8px;
+    margin:
+        8px
+        0
+        0;
+
+    color: var(--admin-red);
+
+    font-size: 9px;
+
     line-height: 1.5;
 }
 
+
 .admin-empty-success {
-    padding: 24px 18px;
+    padding:
+        26px
+        18px;
+
+    background: var(--admin-green-bg);
 }
+
 
 .admin-empty-success strong,
 .admin-empty-success span {
     display: block;
 }
 
+
 .admin-empty-success strong {
-    color: var(--success);
-    font-size: 10px;
+    color: var(--admin-green);
+
+    font-size: 11px;
 }
+
 
 .admin-empty-success span {
     margin-top: 5px;
-    color: rgba(0, 0, 0, 0.48);
+
+    color:
+        rgba(247, 245, 242, 0.64);
+
     font-size: 8px;
 }
 
-@media (max-width: 1050px) {
+
+/* -------------------------
+   RESPONSIVE
+------------------------- */
+
+@media
+(max-width: 1050px) {
     .admin-overview-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
     }
 
+
     .admin-system-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
     }
+
 
     .admin-system-row:nth-child(2) {
         border-right: 0;
     }
 
+
     .admin-model-row.simple,
     .admin-user-row.simple {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:
+            1fr
+            1fr;
     }
 }
 
-@media (max-width: 720px) {
+
+@media
+(max-width: 720px) {
     .admin-shell {
-        width: calc(100% - 24px);
+        width:
+            calc(
+                100%
+                -
+                24px
+            );
     }
+
 
     .admin-section > header {
         display: block;
     }
 
+
     .admin-section > header p {
         width: auto;
+
         margin-top: 10px;
     }
+
 
     .admin-system-list,
     .admin-model-guide,
@@ -7087,8 +7557,1438 @@ button:hover {
         grid-template-columns: 1fr;
     }
 
+
     .admin-system-row {
         border-right: 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+        border-bottom:
+            1px solid
+            var(--admin-border);
     }
+
+
+    .admin-overview-grid article {
+        min-height: 112px;
+    }
+}
+
+
+/* =========================================================
+   HYPEREX — CHECKPOINT 0.5 PRODUCT LOCK
+   Responsive polish + tier selector + bottom-space fix
+========================================================= */
+
+/* Remove the large decorative page tail. Fixed mobile controls
+   reserve their own space only where they are actually needed. */
+.app-view {
+    padding-bottom: 28px;
+}
+
+.admin-shell {
+    margin-bottom: 28px;
+}
+
+
+/* -------------------------
+   USER-FACING MODEL TIERS
+------------------------- */
+
+.model-tier-settings-grid {
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+}
+
+
+.model-tier-current {
+    min-height: 82px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    padding:
+        13px
+        14px;
+
+    border:
+        1px solid
+        rgba(246, 246, 246, 0.13);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(122, 155, 255, 0.09),
+            rgba(246, 246, 246, 0.025)
+        );
+}
+
+
+.model-tier-current > span {
+    color: var(--info);
+
+    font-size: 7px;
+    font-weight: 950;
+
+    letter-spacing: 0.09em;
+}
+
+
+.model-tier-current > strong {
+    margin-top: 7px;
+
+    overflow-wrap: anywhere;
+
+    color: var(--white);
+
+    font-size: 11px;
+    font-weight: 800;
+}
+
+
+.model-tier-current > small {
+    margin-top: 6px;
+
+    color: var(--muted);
+
+    font-size: 8px;
+
+    line-height: 1.5;
+}
+
+
+.settings-tier-help {
+    margin:
+        0
+        14px
+        14px;
+
+    padding:
+        11px
+        12px;
+
+    border-left:
+        2px solid
+        var(--info);
+
+    background:
+        rgba(122, 155, 255, 0.07);
+
+    color: var(--muted);
+
+    font-size: 9px;
+
+    line-height: 1.55;
+}
+
+
+/* Better wrapping across desktop/tablet headers. */
+.page-header {
+    flex-wrap: wrap;
+}
+
+
+.page-header > div:first-child {
+    min-width: 0;
+    flex:
+        1
+        1
+        520px;
+}
+
+
+.page-header > .header-action,
+.page-header > .header-status,
+.page-header > .history-header-stat {
+    flex:
+        0
+        0
+        auto;
+}
+
+
+/* Prevent long model IDs/emails from forcing layouts wider. */
+.settings-card,
+.settings-stack,
+.admin-section,
+.admin-model-row,
+.admin-user-row,
+.provider-key-item,
+.history-card,
+.result-card {
+    min-width: 0;
+}
+
+
+/* -------------------------
+   TABLET
+------------------------- */
+
+@media
+(max-width: 900px) {
+    .model-tier-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-overview-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+    .admin-system-list {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+    .admin-model-row.simple,
+    .admin-user-row.simple {
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 1fr);
+    }
+
+    .history-filter-bar {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+    .history-search-field {
+        grid-column:
+            1
+            /
+            -1;
+    }
+}
+
+
+/* -------------------------
+   MOBILE PRODUCT LOCK
+------------------------- */
+
+@media
+(max-width: 720px) {
+
+    html,
+    body {
+        min-height: 100%;
+    }
+
+
+    body {
+        /* Old Phase 13 CSS reserved 128px here and each view reserved
+           another 120px, creating the large black tail. */
+        padding-bottom: 0 !important;
+    }
+
+
+    .main-content {
+        min-height: 100dvh;
+    }
+
+
+    .app-view {
+        min-height: 100dvh;
+
+        padding-bottom:
+            calc(
+                76px
+                +
+                env(safe-area-inset-bottom)
+            )
+            !important;
+    }
+
+
+    #generateView {
+        /* Create alone needs extra room for the Generate dock. */
+        padding-bottom:
+            calc(
+                142px
+                +
+                env(safe-area-inset-bottom)
+            )
+            !important;
+    }
+
+
+    .page-header,
+    .create-shell,
+    .manager-layout,
+    .settings-layout,
+    .history-shell,
+    .history-placeholder,
+    .admin-shell {
+        width:
+            calc(
+                100%
+                -
+                24px
+            )
+            !important;
+    }
+
+
+    .page-header {
+        gap: 17px;
+
+        padding:
+            22px
+            0
+            18px;
+    }
+
+
+    .page-header > div:first-child {
+        flex-basis: 100%;
+    }
+
+
+    .page-header h1 {
+        font-size:
+            clamp(
+                34px,
+                12vw,
+                44px
+            );
+
+        line-height: 0.98;
+    }
+
+
+    .page-header p {
+        margin-top: 12px;
+
+        font-size: 12px;
+
+        line-height: 1.55;
+    }
+
+
+    .page-header > .header-action,
+    .page-header > .header-status,
+    .page-header > .history-header-stat {
+        width: 100%;
+
+        justify-content: center;
+    }
+
+
+    .studio-section,
+    .settings-card,
+    .job-panel,
+    .profile-library,
+    .profile-editor,
+    .history-filter-bar {
+        border-left-width: 1px;
+        border-right-width: 1px;
+    }
+
+
+
+    .model-tier-settings-grid,
+    .settings-form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+
+    .model-tier-current {
+        min-height: 76px;
+    }
+
+
+    .settings-card-header {
+        gap: 10px;
+    }
+
+
+    .settings-card-header h2 {
+        font-size: 16px;
+    }
+
+
+    .provider-connection-strip {
+        display: grid;
+
+        grid-template-columns: 1fr;
+
+        gap: 9px;
+    }
+
+
+    .provider-connection-strip button {
+        width: 100%;
+
+        min-height: 44px;
+    }
+
+
+    .provider-key-actions {
+        grid-template-columns:
+            1fr
+            1fr;
+    }
+
+
+    .provider-key-actions button,
+    .settings-form-grid select,
+    .settings-form-grid input,
+    .settings-form-grid textarea {
+        min-height: 44px;
+    }
+
+
+    /* Admin is a first-class mobile destination for administrators. */
+    .mobile-bottom-nav {
+        min-height: 64px;
+
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(0, 1fr)
+            )
+            !important;
+
+        gap: 3px;
+    }
+
+
+    .mobile-bottom-nav.admin-mode {
+        grid-template-columns:
+            repeat(
+                5,
+                minmax(0, 1fr)
+            )
+            !important;
+    }
+
+
+    .mobile-bottom-nav button {
+        min-width: 0;
+
+        padding:
+            0
+            4px;
+
+        font-size: 7.5px;
+
+        white-space: nowrap;
+    }
+
+
+    .mobile-bottom-nav.admin-mode button {
+        font-size: 7px;
+    }
+
+
+    .mobile-generate-dock {
+        left: 10px;
+        right: 10px;
+
+        bottom:
+            calc(
+                72px
+                +
+                env(safe-area-inset-bottom)
+            );
+    }
+
+
+    .mobile-generate-dock button {
+        min-height: 52px;
+
+        border-radius: 0;
+    }
+
+
+    /* Admin cards read vertically instead of pretending to be tables. */
+    .admin-overview-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            )
+            !important;
+
+        gap: 8px;
+    }
+
+
+    .admin-overview-grid article {
+        min-height: 116px;
+
+        padding: 14px;
+    }
+
+
+    .admin-overview-grid article > strong {
+        font-size: 27px;
+    }
+
+
+    .admin-overview-grid article:nth-child(5) {
+        grid-column:
+            1
+            /
+            -1;
+    }
+
+
+    .admin-system-list,
+    .admin-model-guide,
+    .admin-model-row.simple,
+    .admin-user-row.simple {
+        grid-template-columns: 1fr !important;
+    }
+
+
+    .admin-system-row {
+        min-height: 72px;
+
+        border-right: 0;
+
+        border-bottom:
+            1px solid
+            var(--admin-border);
+    }
+
+
+    .admin-model-row.simple,
+    .admin-user-row.simple {
+        gap: 9px;
+
+        padding:
+            14px;
+    }
+
+
+    .admin-model-row input[type="text"],
+    .admin-user-row select,
+    .admin-model-row button,
+    .admin-user-row button {
+        min-height: 44px;
+    }
+
+
+    .admin-section > header {
+        padding: 16px;
+    }
+
+
+    .admin-section > header h2 {
+        font-size: 18px;
+    }
+
+
+    /* Results/history are touch-first. */
+    .result-actions,
+    .history-output-actions {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            )
+            !important;
+    }
+
+
+    .results-toolbar,
+    .history-card-actions,
+    .history-detail-toolbar {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+        gap: 7px;
+    }
+
+
+    .results-toolbar > *,
+    .history-card-actions > *,
+    .history-detail-toolbar > * {
+        min-width: 0;
+
+        width: 100%;
+    }
+
+
+    .reference-grid,
+    .image-batch-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+
+    .history-reference-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+
+    /* Phone modals: leave a small frame instead of 100vh sheets with
+       controls pushed below the viewport. */
+    .modal-overlay {
+        padding:
+            max(
+                10px,
+                env(safe-area-inset-top)
+            )
+            10px
+            max(
+                10px,
+                env(safe-area-inset-bottom)
+            )
+            !important;
+    }
+
+
+    .modal-card,
+    .compare-card,
+    .preview-modal-card,
+    .history-detail-card {
+        width: 100% !important;
+
+        min-height: 0 !important;
+        height: auto !important;
+
+        max-height:
+            calc(
+                100dvh
+                -
+                20px
+                -
+                env(safe-area-inset-top)
+                -
+                env(safe-area-inset-bottom)
+            )
+            !important;
+
+        overflow-y: auto;
+
+        overscroll-behavior: contain;
+    }
+
+
+    .preview-modal-card,
+    .history-detail-card {
+        height:
+            calc(
+                100dvh
+                -
+                20px
+                -
+                env(safe-area-inset-top)
+                -
+                env(safe-area-inset-bottom)
+            )
+            !important;
+    }
+
+
+    .modal-header,
+    .preview-modal-header,
+    .history-detail-header {
+        position: sticky;
+        top: 0;
+
+        z-index: 3;
+
+        background: var(--panel);
+    }
+
+
+    .modal-actions,
+    .preview-actions {
+        position: sticky;
+        bottom: 0;
+
+        z-index: 3;
+
+        background: var(--panel);
+    }
+
+
+    .modal-actions {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+
+    .modal-actions button,
+    .preview-actions button,
+    .preview-actions a {
+        min-height: 44px;
+    }
+
+
+    .final-input-preview,
+    .modal-instruction,
+    .regenerate-direction {
+        max-height: 42dvh;
+
+        overflow: auto;
+    }
+
+
+    /* Toast stays above mobile navigation. */
+    .toast {
+        left: 10px;
+        right: 10px;
+        bottom:
+            calc(
+                76px
+                +
+                env(safe-area-inset-bottom)
+            );
+
+        max-width: none;
+    }
+
+
+    body[data-hyperex-view="generate"]
+    .toast {
+        bottom:
+            calc(
+                140px
+                +
+                env(safe-area-inset-bottom)
+            );
+    }
+}
+
+
+/* Very narrow phones: avoid tiny two-column media cards. */
+@media
+(max-width: 430px) {
+    .reference-grid,
+    .image-batch-grid,
+    .history-reference-grid,
+    .admin-overview-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+
+    .admin-overview-grid article:nth-child(5) {
+        grid-column: auto;
+    }
+
+
+    .results-toolbar,
+    .history-card-actions,
+    .history-detail-toolbar,
+    .modal-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================================
+   HYPEREX — CHECKPOINT 0.5 STABILITY + BEGINNER UI
+   Contrast-safe semantic color pass
+========================================================= */
+
+:root {
+    --blue-soft: #EAF0FF;
+    --blue-ink: #365ACB;
+    --green-soft: #E8F7EF;
+    --green-ink: #18784A;
+    --amber-soft: #FFF4D9;
+    --amber-ink: #8A5A00;
+    --red-soft: #FFE8EA;
+    --red-ink: #A72F3A;
+}
+
+
+/* -------------------------
+   CREATE: more visual guidance
+------------------------- */
+
+.provider-strip {
+    gap: 1px;
+
+    border-color:
+        rgba(246, 246, 246, 0.11);
+
+    background:
+        rgba(246, 246, 246, 0.11);
+}
+
+
+.provider-strip-item {
+    border-right: 0;
+}
+
+
+.provider-strip-planner {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(122, 155, 255, 0.22),
+            #111827
+        );
+}
+
+
+.provider-strip-planner span {
+    color: #9CB4FF;
+}
+
+
+.provider-strip-image {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(52, 201, 133, 0.19),
+            #102019
+        );
+}
+
+
+.provider-strip-image span {
+    color: #77D9A9;
+}
+
+
+.provider-strip-estimate {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 193, 90, 0.17),
+            #211A0E
+        );
+}
+
+
+.provider-strip-estimate span {
+    color: #F4C66D;
+}
+
+
+.studio-workflow-section {
+    border-left:
+        3px solid
+        var(--orange);
+}
+
+
+.studio-reference-section {
+    border-left:
+        3px solid
+        var(--info);
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(122, 155, 255, 0.045),
+            rgba(246, 246, 246, 0.012)
+        );
+}
+
+
+.studio-direction-section {
+    border-left:
+        3px solid
+        var(--success);
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(52, 201, 133, 0.035),
+            rgba(246, 246, 246, 0.01)
+        );
+}
+
+
+.reference-add:hover,
+.reference-add:focus-visible {
+    border-color: var(--info);
+
+    background:
+        rgba(122, 155, 255, 0.08);
+}
+
+
+.header-status {
+    border-color:
+        rgba(52, 201, 133, 0.28);
+
+    background:
+        rgba(52, 201, 133, 0.08);
+}
+
+
+/* -------------------------
+   SETTINGS: readable mixed-color cards
+------------------------- */
+
+.settings-card {
+    overflow: hidden;
+
+    border:
+        1px solid
+        rgba(0, 0, 0, 0.13);
+}
+
+
+.settings-card-keys {
+    background: #F5EFEA;
+}
+
+
+.settings-card-planner {
+    background: var(--blue-soft);
+}
+
+
+.settings-card-image {
+    background: #FFF0E8;
+}
+
+
+.settings-card-safety {
+    background: var(--amber-soft);
+}
+
+
+.settings-card-planner .settings-provider-label {
+    color: var(--blue-ink);
+}
+
+
+.settings-card-safety .settings-provider-label {
+    color: var(--amber-ink);
+}
+
+
+.settings-card-header h2,
+.settings-card p,
+.settings-card strong,
+.settings-card span,
+.settings-card small,
+.settings-card label {
+    text-shadow: none;
+}
+
+
+.settings-form-grid select,
+.provider-key-item input {
+    color-scheme: light;
+
+    background: #FFFFFF;
+    color: #111111;
+
+    border-color:
+        rgba(17, 17, 17, 0.2);
+}
+
+
+.settings-form-grid select option {
+    background: #FFFFFF;
+    color: #111111;
+}
+
+
+.settings-form-grid label > span,
+.settings-field-label {
+    color:
+        rgba(17, 17, 17, 0.66) !important;
+}
+
+
+.tier-select-source {
+    display: none !important;
+}
+
+
+.tier-picker-field {
+    min-width: 0;
+
+    grid-column:
+        1
+        /
+        -1;
+
+    display: grid;
+
+    gap: 8px;
+}
+
+
+.settings-field-label {
+    display: block;
+
+    font-size: 7px;
+    font-weight: 950;
+
+    letter-spacing: 0.06em;
+}
+
+
+.tier-choice-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 8px;
+}
+
+
+.tier-choice {
+    min-width: 0;
+    min-height: 96px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    padding: 12px;
+
+    border:
+        1px solid
+        rgba(17, 17, 17, 0.14);
+
+    text-align: left;
+
+    transition:
+        transform 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+
+.tier-choice:hover {
+    transform:
+        translateY(-1px);
+}
+
+
+.tier-choice strong,
+.tier-choice span,
+.tier-choice small {
+    display: block;
+}
+
+
+.tier-choice strong {
+    color: #111111;
+
+    font-size: 11px;
+    font-weight: 900;
+}
+
+
+.tier-choice span {
+    margin-top: 5px;
+
+    color:
+        rgba(17, 17, 17, 0.68);
+
+    font-size: 8px;
+    font-weight: 750;
+}
+
+
+.tier-choice small {
+    width: 100%;
+
+    margin-top: auto;
+    padding-top: 10px;
+
+    overflow: hidden;
+
+    color:
+        rgba(17, 17, 17, 0.52);
+
+    font-size: 7px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.tier-choice-economy {
+    background: var(--green-soft);
+}
+
+
+.tier-choice-economy.selected {
+    border-color: var(--green-ink);
+
+    box-shadow:
+        inset
+        0
+        0
+        0
+        1px
+        var(--green-ink);
+}
+
+
+.tier-choice-balanced {
+    background: #DDE7FF;
+}
+
+
+.tier-choice-balanced.selected {
+    border-color: var(--blue-ink);
+
+    box-shadow:
+        inset
+        0
+        0
+        0
+        1px
+        var(--blue-ink);
+}
+
+
+.tier-choice-premium {
+    background: #FF7040;
+}
+
+
+.tier-choice-premium strong,
+.tier-choice-premium span,
+.tier-choice-premium small {
+    color: #120806;
+}
+
+
+.tier-choice-premium.selected {
+    border-color: #111111;
+
+    box-shadow:
+        inset
+        0
+        0
+        0
+        2px
+        #111111;
+}
+
+
+.tier-loading,
+.tier-unavailable-note {
+    grid-column:
+        1
+        /
+        -1;
+
+    min-height: 54px;
+
+    display: flex;
+    align-items: center;
+
+    padding:
+        0
+        13px;
+
+    border:
+        1px solid
+        rgba(17, 17, 17, 0.14);
+
+    background: #FFFFFF;
+    color:
+        rgba(17, 17, 17, 0.64);
+
+    font-size: 9px;
+}
+
+
+.tier-unavailable-note {
+    border-color:
+        rgba(255, 193, 90, 0.8);
+
+    background: var(--amber-soft);
+    color: var(--amber-ink);
+}
+
+
+/* The previous 0.5 card assumed a dark parent and used white text.
+   Settings cards are intentionally light, so make every model detail
+   contrast-safe. */
+.model-tier-current {
+    grid-column:
+        1
+        /
+        -1;
+
+    border-color:
+        rgba(17, 17, 17, 0.14);
+
+    background:
+        rgba(255, 255, 255, 0.72);
+}
+
+
+.model-tier-current > span {
+    color: var(--blue-ink);
+}
+
+
+.settings-card-image
+.model-tier-current > span {
+    color: var(--orange);
+}
+
+
+.model-tier-current > strong {
+    color: #111111;
+}
+
+
+.model-tier-current > small {
+    color:
+        rgba(17, 17, 17, 0.62);
+}
+
+
+.settings-tier-help {
+    border-left-color: var(--orange);
+
+    background:
+        rgba(255, 255, 255, 0.58);
+
+    color:
+        rgba(17, 17, 17, 0.68);
+}
+
+
+.provider-connection-strip {
+    background:
+        rgba(255, 255, 255, 0.46);
+}
+
+
+.provider-connection-strip span {
+    color:
+        rgba(17, 17, 17, 0.68);
+}
+
+
+.provider-key-item:first-child {
+    border-top:
+        3px solid
+        var(--info);
+}
+
+
+.provider-key-item:last-child {
+    border-top:
+        3px solid
+        var(--success);
+}
+
+
+/* -------------------------
+   SETTINGS GUIDE: non-technical beginner copy
+------------------------- */
+
+.settings-guide {
+    background:
+        linear-gradient(
+            180deg,
+            #151922,
+            #101010
+        );
+}
+
+
+.settings-beginner-guide {
+    display: grid;
+
+    gap: 7px;
+
+    margin-top: 16px;
+}
+
+
+.settings-guide-step {
+    min-height: 54px;
+
+    display: grid;
+    grid-template-columns:
+        28px
+        minmax(0, 1fr);
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding:
+        9px
+        10px;
+
+    border:
+        1px solid
+        rgba(246, 246, 246, 0.1);
+}
+
+
+.settings-guide-step b {
+    width: 28px;
+    height: 28px;
+
+    display: grid;
+    place-items: center;
+
+    font-size: 9px;
+}
+
+
+.settings-guide-step span {
+    color: #E8E5E2;
+
+    font-size: 8px;
+
+    line-height: 1.45;
+}
+
+
+.guide-step-blue {
+    background:
+        rgba(122, 155, 255, 0.09);
+}
+
+
+.guide-step-blue b {
+    background: var(--info);
+    color: #080B12;
+}
+
+
+.guide-step-green {
+    background:
+        rgba(52, 201, 133, 0.08);
+}
+
+
+.guide-step-green b {
+    background: var(--success);
+    color: #07120C;
+}
+
+
+.guide-step-orange {
+    background:
+        rgba(255, 68, 0, 0.1);
+}
+
+
+.guide-step-orange b {
+    background: var(--orange);
+    color: #090706;
+}
+
+
+.connection-list strong.connected {
+    color: var(--success);
+}
+
+
+.connection-list strong.not-connected {
+    color: var(--warning);
+}
+
+
+/* -------------------------
+   LOADING / EMPTY STATES
+------------------------- */
+
+.loading-state {
+    color: var(--muted);
+}
+
+
+.settings-card .loading-state {
+    color:
+        rgba(17, 17, 17, 0.62);
+}
+
+
+/* -------------------------
+   MOBILE
+------------------------- */
+
+@media
+(max-width: 720px) {
+    .provider-strip {
+        grid-template-columns:
+            1fr
+            1fr;
+    }
+
+
+    .provider-strip-action {
+        min-height: 48px;
+
+        grid-column:
+            1
+            /
+            -1;
+    }
+
+
+    .tier-choice-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .tier-choice {
+        min-height: 82px;
+    }
+
+
+    .settings-card-header {
+        align-items: center;
+    }
+
+
+    .settings-guide {
+        position: static;
+    }
+}
+
+/* Subtle second brand-support glow so the app is not visually only orange/black. */
+body {
+    background:
+        radial-gradient(
+            circle at 82% -8%,
+            rgba(255, 68, 0, 0.13),
+            transparent 30rem
+        ),
+        radial-gradient(
+            circle at 34% 92%,
+            rgba(122, 155, 255, 0.07),
+            transparent 34rem
+        ),
+        var(--black);
 }
