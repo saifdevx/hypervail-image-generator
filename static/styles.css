@@ -8992,3 +8992,128 @@ body {
         ),
         var(--black);
 }
+
+
+/* =========================================================
+   HYPEREX — NEW GENERATION
+========================================================= */
+
+.workflow-heading {
+    width: 100%;
+
+    align-items: center;
+}
+
+
+.workflow-heading-copy {
+    min-width: 0;
+
+    flex: 1;
+}
+
+
+.new-generation-button {
+    min-height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    margin-left: auto;
+
+    padding:
+        0
+        14px;
+
+    border:
+        1px solid
+        rgba(102, 216, 157, 0.40);
+
+    background: #13281E;
+    color: #EAFBF1;
+
+    font-size: 8px;
+    font-weight: 950;
+
+    letter-spacing: 0.035em;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background 150ms ease,
+        border-color 150ms ease,
+        transform 150ms ease;
+}
+
+
+.new-generation-button > span {
+    color: #66D89D;
+
+    font-size: 16px;
+    font-weight: 800;
+
+    line-height: 1;
+}
+
+
+.new-generation-button:hover,
+.new-generation-button:focus-visible {
+    border-color:
+        rgba(102, 216, 157, 0.78);
+
+    background: #193425;
+
+    transform:
+        translateY(-1px);
+}
+
+
+.new-generation-button:active {
+    transform: none;
+}
+
+
+.new-generation-button:disabled {
+    cursor: wait;
+
+    opacity: 0.55;
+
+    transform: none;
+}
+
+
+@media
+(max-width: 720px) {
+    .workflow-heading {
+        display: grid;
+
+        grid-template-columns:
+            auto
+            minmax(0, 1fr);
+
+        align-items: start;
+    }
+
+
+    .new-generation-button {
+        grid-column:
+            1
+            /
+            -1;
+
+        width: 100%;
+
+        margin:
+            12px
+            0
+            0;
+
+        min-height: 44px;
+
+        font-size: 9px;
+    }
+}
