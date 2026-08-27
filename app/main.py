@@ -133,6 +133,7 @@ from app.request_context import (
 )
 from app.account_service import (
     claim_local_data,
+    get_local_data_import_status,
 )
 from app.user_service import (
     ensure_user_schema,
@@ -1304,11 +1305,31 @@ def account_details():
     }
 
 
+@app.get(
+    "/api/account/local-import-status"
+)
+def account_local_import_status():
+    require_admin()
+
+    return get_local_data_import_status()
+
+
 @app.post(
     "/api/account/claim-local-data"
 )
 def account_claim_local_data():
-    return claim_local_data()
+    require_admin()
+
+    try:
+        return claim_local_data()
+
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=403,
+            detail=str(
+                error
+            ),
+        )
 
 
 # ============================================================
