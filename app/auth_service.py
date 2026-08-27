@@ -1,4 +1,5 @@
 import os
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -13,12 +14,16 @@ REFRESH_COOKIE = "hyperex_refresh"
 LOCAL_USER_ID = "local"
 LOCAL_USER_EMAIL = "local@hyperex.dev"
 
+OOB_COOLDOWN_SECONDS = 60
+_oob_cooldowns: dict[str, float] = {}
+
 
 @dataclass
 class AuthSession:
     authenticated: bool
     user_id: str | None = None
     email: str | None = None
+    email_verified: bool = True
     access_token: str | None = None
     refresh_token: str | None = None
     expires_in: int | None = None
@@ -59,8 +64,10 @@ class LocalAuthAdapter:
                 authenticated=True,
                 user_id=LOCAL_USER_ID,
                 email=LOCAL_USER_EMAIL,
+                email_verified=True,
             ),
             "needs_confirmation": False,
+            "verification_sent": False,
         }
 
     async def sign_in(
@@ -74,6 +81,7 @@ class LocalAuthAdapter:
                 authenticated=True,
                 user_id=LOCAL_USER_ID,
                 email=LOCAL_USER_EMAIL,
+                email_verified=True,
             ),
         }
 
@@ -85,6 +93,7 @@ class LocalAuthAdapter:
             authenticated=True,
             user_id=LOCAL_USER_ID,
             email=LOCAL_USER_EMAIL,
+            email_verified=True,
         )
 
 
@@ -102,6 +111,16 @@ class FirebaseAuthAdapter:
     LOOKUP_URL = (
         "https://identitytoolkit.googleapis.com/"
         "v1/accounts:lookup"
+    )
+
+    SEND_OOB_URL = (
+        "https://identitytoolkit.googleapis.com/"
+        "v1/accounts:sendOobCode"
+    )
+
+    UPDATE_URL = (
+        "https://identitytoolkit.googleapis.com/"
+        "v1/accounts:update"
     )
 
     REFRESH_URL = (
@@ -124,20 +143,30 @@ class FirebaseAuthAdapter:
         )
 
     @staticmethod
-    def _safe_error(
+    def _firebase_error_code(
         response: httpx.Response,
     ):
         try:
             payload = response.json()
         except Exception:
-            return (
-                "Firebase Authentication request failed "
-                f"({response.status_code})."
-            )
+            return ""
 
-        message = (
+        return str(
             payload.get("error", {})
             .get("message")
+            or
+            ""
+        )
+
+    @classmethod
+    def _safe_error(
+        cls,
+        response: httpx.Response,
+    ):
+        message = (
+            cls._firebase_error_code(
+                response
+            )
         )
 
         if not message:
@@ -150,33 +179,55 @@ class FirebaseAuthAdapter:
             "EMAIL_EXISTS":
                 "That email already has an account.",
             "EMAIL_NOT_FOUND":
-                "No account exists for that email.",
+                "The email or password is incorrect.",
             "INVALID_PASSWORD":
-                "The password is incorrect.",
+                "The email or password is incorrect.",
             "INVALID_LOGIN_CREDENTIALS":
                 "The email or password is incorrect.",
             "USER_DISABLED":
-                "This Firebase account is disabled.",
+                "This account is disabled.",
             "OPERATION_NOT_ALLOWED":
                 (
                     "Email/password sign-in is not enabled "
-                    "in Firebase Authentication."
+                    "for this Firebase project."
                 ),
             "WEAK_PASSWORD":
                 "Use a stronger password.",
             "TOO_MANY_ATTEMPTS_TRY_LATER":
                 (
-                    "Firebase temporarily blocked this request "
-                    "after too many attempts. Try again later."
+                    "Too many attempts. Please wait a little "
+                    "and try again."
+                ),
+            "INVALID_EMAIL":
+                "Enter a valid email address.",
+            "INVALID_ID_TOKEN":
+                "Your session expired. Sign in again.",
+            "USER_NOT_FOUND":
+                "Your account could not be found. Sign in again.",
+            "CREDENTIAL_TOO_OLD_LOGIN_AGAIN":
+                (
+                    "For security, sign out and sign in again "
+                    "before changing your password."
                 ),
         }
 
+        # Some Firebase errors include suffix/detail text after a colon.
+        base_code = (
+            message.split(
+                " : ",
+                1,
+            )[0]
+        )
+
         return friendly.get(
             message,
-            message.replace(
-                "_",
-                " ",
-            ).title(),
+            friendly.get(
+                base_code,
+                message.replace(
+                    "_",
+                    " ",
+                ).title(),
+            ),
         )
 
     @staticmethod
@@ -239,6 +290,12 @@ class FirebaseAuthAdapter:
                 or
                 ""
             ),
+            email_verified=bool(
+                payload.get(
+                    "emailVerified",
+                    False,
+                )
+            ),
             access_token=
                 access_token,
             refresh_token=
@@ -286,13 +343,48 @@ class FirebaseAuthAdapter:
             )
         )
 
+        verification = {
+            "ok": False,
+            "error":
+                "Account created, but the verification email could not be sent.",
+        }
+
+        if (
+            session.authenticated
+            and
+            session.access_token
+        ):
+            verification = (
+                await
+                self.send_verification(
+                    session.access_token
+                )
+            )
+
         return {
             "ok":
                 session.authenticated,
             "session":
                 session,
             "needs_confirmation":
-                False,
+                True,
+            "verification_sent":
+                bool(
+                    verification.get(
+                        "ok"
+                    )
+                ),
+            "verification_error":
+                (
+                    None
+                    if verification.get(
+                        "ok"
+                    )
+                    else
+                    verification.get(
+                        "error"
+                    )
+                ),
         }
 
     async def sign_in(
@@ -331,6 +423,175 @@ class FirebaseAuthAdapter:
                 response.json()
             )
         )
+
+        if (
+            session.authenticated
+            and
+            session.access_token
+        ):
+            lookup = await self._lookup(
+                session.access_token
+            )
+
+            if lookup.authenticated:
+                session.email = (
+                    lookup.email
+                    or
+                    session.email
+                )
+                session.email_verified = (
+                    lookup.email_verified
+                )
+
+        return {
+            "ok":
+                session.authenticated,
+            "session":
+                session,
+        }
+
+    async def send_verification(
+        self,
+        access_token: str,
+    ):
+        async with httpx.AsyncClient(
+            timeout=20.0
+        ) as client:
+            response = await client.post(
+                self._url(
+                    self.SEND_OOB_URL
+                ),
+                json={
+                    "requestType":
+                        "VERIFY_EMAIL",
+                    "idToken":
+                        access_token,
+                },
+            )
+
+        if response.status_code >= 400:
+            return {
+                "ok": False,
+                "error":
+                    self._safe_error(
+                        response
+                    ),
+            }
+
+        payload = response.json()
+
+        return {
+            "ok": True,
+            "email":
+                payload.get(
+                    "email"
+                ),
+        }
+
+    async def send_password_reset(
+        self,
+        email: str,
+    ):
+        async with httpx.AsyncClient(
+            timeout=20.0
+        ) as client:
+            response = await client.post(
+                self._url(
+                    self.SEND_OOB_URL
+                ),
+                json={
+                    "requestType":
+                        "PASSWORD_RESET",
+                    "email":
+                        email,
+                },
+            )
+
+        if response.status_code >= 400:
+            code = (
+                self._firebase_error_code(
+                    response
+                )
+            )
+
+            # Do not reveal whether an email is registered.
+            if (
+                code == "EMAIL_NOT_FOUND"
+            ):
+                return {
+                    "ok": True,
+                    "generic": True,
+                }
+
+            return {
+                "ok": False,
+                "error":
+                    self._safe_error(
+                        response
+                    ),
+            }
+
+        return {
+            "ok": True,
+            "generic": True,
+        }
+
+    async def change_password(
+        self,
+        access_token: str,
+        new_password: str,
+    ):
+        async with httpx.AsyncClient(
+            timeout=20.0
+        ) as client:
+            response = await client.post(
+                self._url(
+                    self.UPDATE_URL
+                ),
+                json={
+                    "idToken":
+                        access_token,
+                    "password":
+                        new_password,
+                    "returnSecureToken":
+                        True,
+                },
+            )
+
+        if response.status_code >= 400:
+            return {
+                "ok": False,
+                "error":
+                    self._safe_error(
+                        response
+                    ),
+            }
+
+        session = (
+            self._session_from_payload(
+                response.json()
+            )
+        )
+
+        # The update response may not always contain the verification field.
+        if (
+            session.authenticated
+            and
+            session.access_token
+        ):
+            lookup = await self._lookup(
+                session.access_token
+            )
+
+            if lookup.authenticated:
+                session.email = (
+                    lookup.email
+                    or
+                    session.email
+                )
+                session.email_verified = (
+                    lookup.email_verified
+                )
 
         return {
             "ok":
@@ -388,6 +649,12 @@ class FirebaseAuthAdapter:
                 or
                 ""
             ),
+            email_verified=bool(
+                user.get(
+                    "emailVerified",
+                    False,
+                )
+            ),
             access_token=
                 access_token,
         )
@@ -428,16 +695,24 @@ class FirebaseAuthAdapter:
             )
         )
 
-        if not session.email:
+        if (
+            session.authenticated
+            and
+            session.access_token
+        ):
             lookup = await self._lookup(
                 session.access_token
-                or
-                ""
             )
 
-            session.email = (
-                lookup.email
-            )
+            if lookup.authenticated:
+                session.email = (
+                    lookup.email
+                    or
+                    session.email
+                )
+                session.email_verified = (
+                    lookup.email_verified
+                )
 
         return session
 
@@ -551,6 +826,40 @@ def auth_is_configured():
     )
 
 
+def _cooldown_remaining(
+    key: str,
+):
+    now = time.monotonic()
+    last = _oob_cooldowns.get(
+        key
+    )
+
+    if last is None:
+        return 0
+
+    elapsed = now - last
+
+    if elapsed >= OOB_COOLDOWN_SECONDS:
+        return 0
+
+    return max(
+        1,
+        int(
+            OOB_COOLDOWN_SECONDS
+            -
+            elapsed
+        ),
+    )
+
+
+def _mark_cooldown(
+    key: str,
+):
+    _oob_cooldowns[
+        key
+    ] = time.monotonic()
+
+
 async def sign_up(
     email: str,
     password: str,
@@ -568,10 +877,38 @@ async def sign_up(
                 ),
         }
 
-    return await adapter.sign_up(
+    result = await adapter.sign_up(
         email,
         password,
     )
+
+    if (
+        get_auth_provider()
+        ==
+        "firebase"
+        and
+        result.get(
+            "verification_sent"
+        )
+    ):
+        session = result.get(
+            "session"
+        )
+
+        if session:
+            _mark_cooldown(
+                "verify:"
+                +
+                str(
+                    session.user_id
+                    or
+                    session.email
+                    or
+                    ""
+                )
+            )
+
+    return result
 
 
 async def sign_in(
@@ -594,6 +931,191 @@ async def sign_in(
     return await adapter.sign_in(
         email,
         password,
+    )
+
+
+async def send_verification_email(
+    session: AuthSession,
+):
+    if (
+        get_auth_provider()
+        !=
+        "firebase"
+    ):
+        return {
+            "ok": True,
+            "already_verified": True,
+            "retry_after": 0,
+        }
+
+    if session.email_verified:
+        return {
+            "ok": True,
+            "already_verified": True,
+            "retry_after": 0,
+        }
+
+    if (
+        not session.authenticated
+        or
+        not session.access_token
+    ):
+        return {
+            "ok": False,
+            "error":
+                "Sign in again before requesting another verification email.",
+        }
+
+    key = (
+        "verify:"
+        +
+        str(
+            session.user_id
+            or
+            session.email
+            or
+            ""
+        )
+    )
+
+    remaining = (
+        _cooldown_remaining(
+            key
+        )
+    )
+
+    if remaining:
+        return {
+            "ok": False,
+            "cooldown": True,
+            "retry_after":
+                remaining,
+            "error":
+                (
+                    "Please wait before requesting "
+                    "another verification email."
+                ),
+        }
+
+    adapter = get_auth_adapter()
+
+    result = (
+        await
+        adapter.send_verification(
+            session.access_token
+        )
+    )
+
+    if result.get(
+        "ok"
+    ):
+        _mark_cooldown(
+            key
+        )
+        result[
+            "retry_after"
+        ] = OOB_COOLDOWN_SECONDS
+
+    return result
+
+
+async def send_password_reset_email(
+    email: str,
+):
+    if (
+        get_auth_provider()
+        !=
+        "firebase"
+    ):
+        return {
+            "ok": True,
+            "retry_after": 0,
+        }
+
+    clean_email = (
+        email
+        .strip()
+        .lower()
+    )
+
+    key = (
+        "reset:"
+        +
+        clean_email
+    )
+
+    remaining = (
+        _cooldown_remaining(
+            key
+        )
+    )
+
+    if remaining:
+        return {
+            "ok": False,
+            "cooldown": True,
+            "retry_after":
+                remaining,
+            "error":
+                "Please wait before requesting another reset email.",
+        }
+
+    adapter = get_auth_adapter()
+
+    result = (
+        await
+        adapter.send_password_reset(
+            clean_email
+        )
+    )
+
+    if result.get(
+        "ok"
+    ):
+        _mark_cooldown(
+            key
+        )
+        result[
+            "retry_after"
+        ] = OOB_COOLDOWN_SECONDS
+
+    return result
+
+
+async def change_password(
+    session: AuthSession,
+    new_password: str,
+):
+    if (
+        get_auth_provider()
+        !=
+        "firebase"
+    ):
+        return {
+            "ok": False,
+            "error":
+                "Password changes are only available with Firebase authentication.",
+        }
+
+    if (
+        not session.authenticated
+        or
+        not session.access_token
+    ):
+        return {
+            "ok": False,
+            "error":
+                "Your session expired. Sign in again.",
+        }
+
+    adapter = get_auth_adapter()
+
+    return (
+        await
+        adapter.change_password(
+            session.access_token,
+            new_password,
+        )
     )
 
 

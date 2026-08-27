@@ -118,6 +118,9 @@ from app.auth_service import (
     get_auth_public_config,
     sign_up,
     sign_in,
+    send_verification_email,
+    send_password_reset_email,
+    change_password,
     resolve_request_session,
     apply_session_cookies,
     clear_session_cookies,
@@ -238,6 +241,20 @@ class AuthCredentialsRequest(BaseModel):
     )
     password: str = Field(
         min_length=6,
+        max_length=200,
+    )
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(
+        min_length=3,
+        max_length=320,
+    )
+
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str = Field(
+        min_length=8,
         max_length=200,
     )
 
@@ -417,7 +434,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.0-phase2-checkpoint05-stable",
+    version="0.14.0-phase2-checkpoint06-auth",
     lifespan=lifespan,
 )
 
@@ -466,6 +483,25 @@ async def auth_and_security(
                 content={
                     "detail":
                         "Authentication required."
+                },
+            )
+
+        if (
+            get_auth_provider()
+            ==
+            "firebase"
+            and
+            not session.email_verified
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "code":
+                        "email_verification_required",
+                    "detail":
+                        (
+                            "Verify your email before using Hyperex."
+                        ),
                 },
             )
 
@@ -798,6 +834,10 @@ async def auth_session(
                             else
                             "active"
                         ),
+                    "email_verified":
+                        bool(
+                            session.email_verified
+                        ),
                 }
                 if session.authenticated
                 else
@@ -878,6 +918,29 @@ async def auth_signup(
                     and
                     session.authenticated
                 ),
+            "email":
+                (
+                    session.email
+                    if session
+                    else
+                    payload.email.strip()
+                ),
+            "email_verified":
+                bool(
+                    session
+                    and
+                    session.email_verified
+                ),
+            "verification_sent":
+                bool(
+                    result.get(
+                        "verification_sent"
+                    )
+                ),
+            "verification_error":
+                result.get(
+                    "verification_error"
+                ),
         }
     )
 
@@ -950,6 +1013,10 @@ async def auth_login(
                         else
                         "user"
                     ),
+                "email_verified":
+                    bool(
+                        session.email_verified
+                    ),
             },
         }
     )
@@ -957,6 +1024,222 @@ async def auth_login(
     apply_session_cookies(
         response,
         session,
+        request,
+    )
+
+    return response
+
+
+@app.post(
+    "/api/auth/verification/resend"
+)
+async def auth_resend_verification(
+    request: Request,
+):
+    session = (
+        await
+        resolve_request_session(
+            request
+        )
+    )
+
+    if not session.authenticated:
+        raise HTTPException(
+            status_code=401,
+            detail="Sign in again to verify your email.",
+        )
+
+    result = (
+        await
+        send_verification_email(
+            session
+        )
+    )
+
+    if (
+        not result.get(
+            "ok"
+        )
+        and
+        result.get(
+            "cooldown"
+        )
+    ):
+        return {
+            "ok": True,
+            "cooldown": True,
+            "already_verified": False,
+            "retry_after":
+                int(
+                    result.get(
+                        "retry_after",
+                        60,
+                    )
+                    or
+                    60
+                ),
+        }
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Could not send the verification email."
+            ),
+        )
+
+    return {
+        "ok": True,
+        "cooldown": False,
+        "already_verified":
+            bool(
+                result.get(
+                    "already_verified"
+                )
+            ),
+        "retry_after":
+            int(
+                result.get(
+                    "retry_after",
+                    0,
+                )
+                or
+                0
+            ),
+    }
+
+
+@app.post(
+    "/api/auth/password-reset"
+)
+async def auth_password_reset(
+    payload: PasswordResetRequest,
+):
+    result = (
+        await
+        send_password_reset_email(
+            payload.email.strip()
+        )
+    )
+
+    # Always keep the public response generic so account existence
+    # cannot be inferred from this endpoint.
+    if (
+        not result.get(
+            "ok"
+        )
+        and
+        not result.get(
+            "cooldown"
+        )
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Could not send password reset instructions."
+            ),
+        )
+
+    return {
+        "ok": True,
+        "message":
+            (
+                "If an account exists for that email, "
+                "password reset instructions have been sent."
+            ),
+        "retry_after":
+            int(
+                result.get(
+                    "retry_after",
+                    60,
+                )
+                or
+                60
+            ),
+    }
+
+
+@app.post(
+    "/api/auth/change-password"
+)
+async def auth_change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+):
+    session = (
+        await
+        resolve_request_session(
+            request
+        )
+    )
+
+    if not session.authenticated:
+        raise HTTPException(
+            status_code=401,
+            detail="Sign in again before changing your password.",
+        )
+
+    if (
+        get_auth_provider()
+        ==
+        "firebase"
+        and
+        not session.email_verified
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Verify your email before changing your password.",
+        )
+
+    result = (
+        await
+        change_password(
+            session,
+            payload.new_password,
+        )
+    )
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Password change failed."
+            ),
+        )
+
+    updated_session = (
+        result[
+            "session"
+        ]
+    )
+
+    response = JSONResponse(
+        content={
+            "ok": True,
+            "message":
+                "Password updated.",
+        }
+    )
+
+    apply_session_cookies(
+        response,
+        updated_session,
         request,
     )
 
