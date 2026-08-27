@@ -32,11 +32,28 @@ const authPasswordInput = $("authPasswordInput");
 const authSubmitButton = $("authSubmitButton");
 const authMessage = $("authMessage");
 const authLocalNote = $("authLocalNote");
+const authTabs = $("authTabs");
+const forgotPasswordButton = $("forgotPasswordButton");
+const forgotPasswordPanel = $("forgotPasswordPanel");
+const forgotPasswordEmailInput = $("forgotPasswordEmailInput");
+const sendPasswordResetButton = $("sendPasswordResetButton");
+const forgotPasswordBackButton = $("forgotPasswordBackButton");
+const forgotPasswordMessage = $("forgotPasswordMessage");
+
+const verificationGate = $("verificationGate");
+const verificationEmail = $("verificationEmail");
+const verificationMessage = $("verificationMessage");
+const checkVerificationButton = $("checkVerificationButton");
+const resendVerificationButton = $("resendVerificationButton");
+const verificationLogoutButton = $("verificationLogoutButton");
 
 const sidebarUserEmail = $("sidebarUserEmail");
 const settingsUserEmail = $("settingsUserEmail");
 const logoutButton = $("logoutButton");
 const claimLocalDataButton = $("claimLocalDataButton");
+const accountSecurityEmail = $("accountSecurityEmail");
+const accountVerificationBadge = $("accountVerificationBadge");
+const changePasswordButton = $("changePasswordButton");
 
 const refreshAdminButton = $("refreshAdminButton");
 const adminUsersCount = $("adminUsersCount");
@@ -213,6 +230,17 @@ const maxOutputCountSelect = $("maxOutputCountSelect");
 const draftAutosaveCheckbox = $("draftAutosaveCheckbox");
 
 
+/* Change Password Modal */
+
+const changePasswordModal = $("changePasswordModal");
+const closeChangePasswordModal = $("closeChangePasswordModal");
+const cancelChangePasswordButton = $("cancelChangePasswordButton");
+const changePasswordSubmitButton = $("changePasswordSubmitButton");
+const newPasswordInput = $("newPasswordInput");
+const confirmNewPasswordInput = $("confirmNewPasswordInput");
+const changePasswordMessage = $("changePasswordMessage");
+
+
 /* New Profile Modal */
 
 const newProfileModal = $("newProfileModal");
@@ -316,6 +344,8 @@ let authProvider = "local";
 let currentUser = null;
 let authFormMode = "login";
 let applicationStarted = false;
+let verificationCooldownTimer = null;
+let passwordResetCooldownTimer = null;
 
 let selectedProfileId = null;
 let selectedProfileVersionId = null;
@@ -830,6 +860,42 @@ function setAuthMessage(
 }
 
 
+function setForgotPasswordMessage(
+    message,
+    state = ""
+) {
+    forgotPasswordMessage.textContent =
+        message;
+
+    forgotPasswordMessage.className =
+        "auth-message";
+
+    if (state) {
+        forgotPasswordMessage.classList.add(
+            state
+        );
+    }
+}
+
+
+function setVerificationMessage(
+    message,
+    state = ""
+) {
+    verificationMessage.textContent =
+        message;
+
+    verificationMessage.className =
+        "auth-message";
+
+    if (state) {
+        verificationMessage.classList.add(
+            state
+        );
+    }
+}
+
+
 function setAuthFormMode(
     mode
 ) {
@@ -874,6 +940,13 @@ function setAuthFormMode(
             :
             "new-password";
 
+    forgotPasswordButton.classList.toggle(
+        "hidden-element",
+        authFormMode
+        !==
+        "login"
+    );
+
     setAuthMessage(
         authFormMode
         ===
@@ -881,8 +954,184 @@ function setAuthFormMode(
             ?
             "Sign in to continue."
             :
-            "Create an account. Your provider keys and jobs will belong only to you."
+            "Create your account, then verify your email before using Hyperex."
     );
+}
+
+
+function showForgotPasswordPanel() {
+    const email =
+        authEmailInput
+            .value
+            .trim();
+
+    forgotPasswordEmailInput.value =
+        email;
+
+    authTabs.classList.add(
+        "hidden-element"
+    );
+
+    authForm.classList.add(
+        "hidden-element"
+    );
+
+    authMessage.classList.add(
+        "hidden-element"
+    );
+
+    forgotPasswordPanel.classList.remove(
+        "hidden-element"
+    );
+
+    setForgotPasswordMessage(
+        "Enter your email and we'll send secure reset instructions."
+    );
+
+    requestAnimationFrame(
+        () =>
+            forgotPasswordEmailInput.focus()
+    );
+}
+
+
+function hideForgotPasswordPanel() {
+    forgotPasswordPanel.classList.add(
+        "hidden-element"
+    );
+
+    authTabs.classList.remove(
+        "hidden-element"
+    );
+
+    authForm.classList.remove(
+        "hidden-element"
+    );
+
+    authMessage.classList.remove(
+        "hidden-element"
+    );
+
+    setAuthFormMode(
+        "login"
+    );
+}
+
+
+function startButtonCooldown(
+    button,
+    seconds,
+    normalLabel,
+    timerName
+) {
+    const duration =
+        Math.max(
+            1,
+            Number(
+                seconds
+                ||
+                60
+            )
+        );
+
+    if (
+        timerName
+        ===
+        "verification"
+        &&
+        verificationCooldownTimer
+    ) {
+        clearInterval(
+            verificationCooldownTimer
+        );
+    }
+
+    if (
+        timerName
+        ===
+        "reset"
+        &&
+        passwordResetCooldownTimer
+    ) {
+        clearInterval(
+            passwordResetCooldownTimer
+        );
+    }
+
+    let remaining =
+        duration;
+
+    button.disabled =
+        true;
+
+    const render =
+        () => {
+            button.textContent =
+                `${normalLabel} · ${remaining}s`;
+
+            remaining -=
+                1;
+
+            if (
+                remaining < 0
+            ) {
+                if (
+                    timerName
+                    ===
+                    "verification"
+                    &&
+                    verificationCooldownTimer
+                ) {
+                    clearInterval(
+                        verificationCooldownTimer
+                    );
+
+                    verificationCooldownTimer =
+                        null;
+                }
+
+                if (
+                    timerName
+                    ===
+                    "reset"
+                    &&
+                    passwordResetCooldownTimer
+                ) {
+                    clearInterval(
+                        passwordResetCooldownTimer
+                    );
+
+                    passwordResetCooldownTimer =
+                        null;
+                }
+
+                button.disabled =
+                    false;
+
+                button.textContent =
+                    normalLabel;
+            }
+        };
+
+    render();
+
+    const timer =
+        setInterval(
+            render,
+            1000
+        );
+
+    if (
+        timerName
+        ===
+        "verification"
+    ) {
+        verificationCooldownTimer =
+            timer;
+    } else {
+        passwordResetCooldownTimer =
+            timer;
+    }
 }
 
 
@@ -905,6 +1154,48 @@ function renderAuthenticatedUser() {
 
     settingsUserEmail.textContent =
         email;
+
+    accountSecurityEmail.textContent =
+        email;
+
+    const verified =
+        authProvider
+        ===
+        "local"
+        ||
+        currentUser?.email_verified
+        ===
+        true;
+
+    accountVerificationBadge.textContent =
+        authProvider
+        ===
+        "local"
+            ?
+            "LOCAL MODE"
+            :
+            verified
+                ?
+                "VERIFIED"
+                :
+                "VERIFY EMAIL";
+
+    accountVerificationBadge.classList.toggle(
+        "verified",
+        verified
+    );
+
+    accountVerificationBadge.classList.toggle(
+        "warning",
+        !verified
+    );
+
+    changePasswordButton.classList.toggle(
+        "hidden-element",
+        authProvider
+        ===
+        "local"
+    );
 
     logoutButton.classList.toggle(
         "hidden-element",
@@ -951,6 +1242,10 @@ function showAuthenticatedApp() {
         "hidden-element"
     );
 
+    verificationGate.classList.add(
+        "hidden-element"
+    );
+
     appShell.classList.remove(
         "hidden-element"
     );
@@ -964,8 +1259,38 @@ function showAuthGate() {
         "hidden-element"
     );
 
+    verificationGate.classList.add(
+        "hidden-element"
+    );
+
     authGate.classList.remove(
         "hidden-element"
+    );
+
+    hideForgotPasswordPanel();
+}
+
+
+function showVerificationGate() {
+    appShell.classList.add(
+        "hidden-element"
+    );
+
+    authGate.classList.add(
+        "hidden-element"
+    );
+
+    verificationGate.classList.remove(
+        "hidden-element"
+    );
+
+    verificationEmail.textContent =
+        currentUser?.email
+        ||
+        "your email";
+
+    setVerificationMessage(
+        "Open the verification email, click the link, then return here."
     );
 }
 
@@ -1032,6 +1357,20 @@ async function bootApplication() {
         return;
     }
 
+    if (
+        authProvider
+        ===
+        "firebase"
+        &&
+        currentUser?.email_verified
+        !==
+        true
+    ) {
+        showVerificationGate();
+
+        return;
+    }
+
     showAuthenticatedApp();
 
     if (
@@ -1053,6 +1392,21 @@ async function bootApplication() {
 }
 
 
+async function logoutAndReload() {
+    try {
+        await fetch(
+            "/api/auth/logout",
+            {
+                method:
+                    "POST",
+            }
+        );
+    } finally {
+        window.location.reload();
+    }
+}
+
+
 authLoginTab.addEventListener(
     "click",
     () =>
@@ -1068,6 +1422,109 @@ authSignupTab.addEventListener(
         setAuthFormMode(
             "signup"
         )
+);
+
+
+forgotPasswordButton.addEventListener(
+    "click",
+    showForgotPasswordPanel
+);
+
+
+forgotPasswordBackButton.addEventListener(
+    "click",
+    hideForgotPasswordPanel
+);
+
+
+sendPasswordResetButton.addEventListener(
+    "click",
+    async () => {
+        const email =
+            forgotPasswordEmailInput
+                .value
+                .trim();
+
+        if (!email) {
+            setForgotPasswordMessage(
+                "Enter your email address.",
+                "error"
+            );
+
+            return;
+        }
+
+        sendPasswordResetButton.disabled =
+            true;
+
+        sendPasswordResetButton.textContent =
+            "SENDING…";
+
+        try {
+            const response =
+                await fetch(
+                    "/api/auth/password-reset",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify({
+                                email:
+                                    email,
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const result =
+                await response.json();
+
+            setForgotPasswordMessage(
+                result.message
+                ||
+                (
+                    "If an account exists for that email, "
+                    +
+                    "password reset instructions have been sent."
+                ),
+                "success"
+            );
+
+            startButtonCooldown(
+                sendPasswordResetButton,
+                result.retry_after
+                ||
+                60,
+                "SEND RESET LINK →",
+                "reset"
+            );
+
+        } catch (error) {
+            sendPasswordResetButton.disabled =
+                false;
+
+            sendPasswordResetButton.textContent =
+                "SEND RESET LINK →";
+
+            setForgotPasswordMessage(
+                error.message,
+                "error"
+            );
+        }
+    }
 );
 
 
@@ -1155,23 +1612,16 @@ authForm.addEventListener(
 
             if (
                 result.needs_confirmation
+                &&
+                result.verification_sent
             ) {
-                setAuthMessage(
-                    "Account created. Check your email to confirm it, then sign in.",
-                    "success"
+                startButtonCooldown(
+                    resendVerificationButton,
+                    60,
+                    "Resend verification email",
+                    "verification"
                 );
-
-                setAuthFormMode(
-                    "login"
-                );
-
-                return;
             }
-
-            setAuthMessage(
-                "Signed in.",
-                "success"
-            );
 
             await bootApplication();
 
@@ -1198,21 +1648,138 @@ authForm.addEventListener(
 );
 
 
-logoutButton.addEventListener(
+checkVerificationButton.addEventListener(
     "click",
     async () => {
+        checkVerificationButton.disabled =
+            true;
+
+        checkVerificationButton.textContent =
+            "CHECKING…";
+
         try {
-            await fetch(
-                "/api/auth/logout",
-                {
-                    method:
-                        "POST",
-                }
+            const session =
+                await getAuthSession();
+
+            if (
+                session.authenticated
+                &&
+                session.user?.email_verified
+                ===
+                true
+            ) {
+                setVerificationMessage(
+                    "Email verified. Opening Hyperex…",
+                    "success"
+                );
+
+                await bootApplication();
+
+                return;
+            }
+
+            setVerificationMessage(
+                "Not verified yet. Open the email link first, then check again.",
+                "error"
             );
+
         } finally {
-            window.location.reload();
+            checkVerificationButton.disabled =
+                false;
+
+            checkVerificationButton.textContent =
+                "I'VE VERIFIED MY EMAIL →";
         }
     }
+);
+
+
+resendVerificationButton.addEventListener(
+    "click",
+    async () => {
+        resendVerificationButton.disabled =
+            true;
+
+        resendVerificationButton.textContent =
+            "SENDING…";
+
+        try {
+            const response =
+                await fetch(
+                    "/api/auth/verification/resend",
+                    {
+                        method:
+                            "POST",
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const result =
+                await response.json();
+
+            if (
+                result.already_verified
+            ) {
+                await bootApplication();
+
+                return;
+            }
+
+            if (
+                result.cooldown
+            ) {
+                setVerificationMessage(
+                    "A verification email was already sent. Check your inbox and spam folder.",
+                    "success"
+                );
+            } else {
+                setVerificationMessage(
+                    "Verification email sent. Check your inbox and spam folder.",
+                    "success"
+                );
+            }
+
+            startButtonCooldown(
+                resendVerificationButton,
+                result.retry_after
+                ||
+                60,
+                "Resend verification email",
+                "verification"
+            );
+
+        } catch (error) {
+            resendVerificationButton.disabled =
+                false;
+
+            resendVerificationButton.textContent =
+                "Resend verification email";
+
+            setVerificationMessage(
+                error.message,
+                "error"
+            );
+        }
+    }
+);
+
+
+verificationLogoutButton.addEventListener(
+    "click",
+    logoutAndReload
+);
+
+
+logoutButton.addEventListener(
+    "click",
+    logoutAndReload
 );
 
 
@@ -1275,6 +1842,125 @@ claimLocalDataButton.addEventListener(
         } finally {
             claimLocalDataButton.disabled =
                 false;
+        }
+    }
+);
+
+
+changePasswordButton.addEventListener(
+    "click",
+    () => {
+        newPasswordInput.value =
+            "";
+
+        confirmNewPasswordInput.value =
+            "";
+
+        changePasswordMessage.textContent =
+            "Use at least 8 characters and avoid reusing another password.";
+
+        openModal(
+            changePasswordModal
+        );
+
+        requestAnimationFrame(
+            () =>
+                newPasswordInput.focus()
+        );
+    }
+);
+
+
+changePasswordSubmitButton.addEventListener(
+    "click",
+    async () => {
+        const password =
+            newPasswordInput.value;
+
+        const confirmation =
+            confirmNewPasswordInput.value;
+
+        if (
+            password.length < 8
+        ) {
+            changePasswordMessage.textContent =
+                "Use at least 8 characters.";
+
+            return;
+        }
+
+        if (
+            password
+            !==
+            confirmation
+        ) {
+            changePasswordMessage.textContent =
+                "The passwords do not match.";
+
+            return;
+        }
+
+        changePasswordSubmitButton.disabled =
+            true;
+
+        changePasswordSubmitButton.textContent =
+            "UPDATING…";
+
+        try {
+            const response =
+                await fetch(
+                    "/api/auth/change-password",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify({
+                                new_password:
+                                    password,
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            closeModal(
+                changePasswordModal
+            );
+
+            newPasswordInput.value =
+                "";
+
+            confirmNewPasswordInput.value =
+                "";
+
+            showToast(
+                "Password updated."
+            );
+
+        } catch (error) {
+            changePasswordMessage.textContent =
+                error.message;
+
+        } finally {
+            changePasswordSubmitButton.disabled =
+                false;
+
+            changePasswordSubmitButton.textContent =
+                "Update password";
         }
     }
 );
@@ -10154,6 +10840,7 @@ function closeModal(
     compareModal,
     newProfileModal,
     historyDetailModal,
+    changePasswordModal,
 ].forEach(
     modal => {
         modal.addEventListener(
@@ -10171,6 +10858,24 @@ function closeModal(
             }
         );
     }
+);
+
+
+closeChangePasswordModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            changePasswordModal
+        )
+);
+
+
+cancelChangePasswordButton.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            changePasswordModal
+        )
 );
 
 
@@ -10242,6 +10947,7 @@ document.addEventListener(
                 regenerateModal,
                 compareModal,
                 newProfileModal,
+                changePasswordModal,
             ].forEach(
                 closeModal
             );

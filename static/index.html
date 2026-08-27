@@ -85,7 +85,7 @@
             </p>
         </div>
 
-        <div class="auth-tabs">
+        <div class="auth-tabs" id="authTabs">
             <button
                 class="active"
                 id="authLoginTab"
@@ -137,7 +137,62 @@
             >
                 SIGN IN →
             </button>
+
+            <button
+                class="auth-text-action"
+                id="forgotPasswordButton"
+                type="button"
+            >
+                Forgot password?
+            </button>
         </form>
+
+        <div
+            class="forgot-password-panel hidden-element"
+            id="forgotPasswordPanel"
+        >
+            <div class="auth-mini-heading">
+                <span>PASSWORD RECOVERY</span>
+                <h2>Reset your password.</h2>
+                <p>
+                    Enter your account email. If an account exists,
+                    Firebase will send secure reset instructions.
+                </p>
+            </div>
+
+            <label>
+                <span>EMAIL</span>
+
+                <input
+                    id="forgotPasswordEmailInput"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                >
+            </label>
+
+            <button
+                id="sendPasswordResetButton"
+                type="button"
+            >
+                SEND RESET LINK →
+            </button>
+
+            <button
+                class="auth-text-action"
+                id="forgotPasswordBackButton"
+                type="button"
+            >
+                ← Back to sign in
+            </button>
+
+            <div
+                class="auth-message"
+                id="forgotPasswordMessage"
+            >
+                We never reveal whether an email is registered.
+            </div>
+        </div>
 
         <div
             class="auth-message"
@@ -151,6 +206,77 @@
             id="authLocalNote"
         >
             LOCAL DEVELOPMENT MODE · Authentication is bypassed.
+        </div>
+
+    </div>
+</section>
+
+
+<section
+    class="verification-gate hidden-element"
+    id="verificationGate"
+>
+    <div class="verification-panel">
+
+        <div class="auth-brand">
+            <div class="brand-mark brand-logo-mark">
+                <img
+                    src="/static/icons/hyperex-logo.png"
+                    alt="Hyperex"
+                >
+            </div>
+
+            <div>
+                <strong>HYPEREX</strong>
+                <span>Account Security</span>
+            </div>
+        </div>
+
+        <div class="verification-icon">
+            ✉
+        </div>
+
+        <div class="verification-copy">
+            <span>ONE MORE STEP</span>
+            <h1>Verify your email.</h1>
+
+            <p>
+                We sent a verification link to
+                <strong id="verificationEmail">your email</strong>.
+                Open that message, verify your address, then come back here.
+            </p>
+        </div>
+
+        <div class="verification-actions">
+            <button
+                id="checkVerificationButton"
+                type="button"
+            >
+                I'VE VERIFIED MY EMAIL →
+            </button>
+
+            <button
+                class="secondary"
+                id="resendVerificationButton"
+                type="button"
+            >
+                Resend verification email
+            </button>
+
+            <button
+                class="auth-text-action"
+                id="verificationLogoutButton"
+                type="button"
+            >
+                Use a different account
+            </button>
+        </div>
+
+        <div
+            class="auth-message"
+            id="verificationMessage"
+        >
+            The link is handled securely by Firebase.
         </div>
 
     </div>
@@ -1435,6 +1561,62 @@
 
                 <div class="settings-stack">
 
+                    <!-- ACCOUNT & SECURITY -->
+
+                    <section class="settings-card account-security-card">
+
+                        <header class="settings-card-header">
+                            <div>
+                                <span class="settings-provider-label">
+                                    ACCOUNT & SECURITY
+                                </span>
+
+                                <h2>
+                                    Your Hyperex account
+                                </h2>
+                            </div>
+
+                            <span
+                                class="account-verification-badge"
+                                id="accountVerificationBadge"
+                            >
+                                CHECKING
+                            </span>
+                        </header>
+
+                        <div class="account-security-grid">
+
+                            <div class="account-security-info">
+                                <span>EMAIL</span>
+                                <strong id="accountSecurityEmail">
+                                    —
+                                </strong>
+                                <small>
+                                    Verified accounts can use all Hyperex features.
+                                </small>
+                            </div>
+
+                            <div class="account-security-info">
+                                <span>PASSWORD</span>
+                                <strong>••••••••</strong>
+                                <small>
+                                    Change your password anytime.
+                                </small>
+                            </div>
+
+                            <button
+                                class="account-security-action"
+                                id="changePasswordButton"
+                                type="button"
+                            >
+                                Change password
+                            </button>
+
+                        </div>
+
+                    </section>
+
+
                     <!-- PROVIDER CONNECTIONS -->
 
                     <section class="settings-card provider-key-card settings-card-keys">
@@ -2028,6 +2210,90 @@
 
     </main>
 
+</div>
+
+
+<!-- =========================================================
+     CHANGE PASSWORD MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="changePasswordModal"
+    aria-hidden="true"
+>
+    <div class="modal-card auth-security-modal">
+
+        <header class="modal-header">
+            <div>
+                <span>ACCOUNT SECURITY</span>
+                <h2>Change password</h2>
+            </div>
+
+            <button
+                id="closeChangePasswordModal"
+                type="button"
+            >
+                ×
+            </button>
+        </header>
+
+        <div class="auth-security-form">
+
+            <label>
+                <span>NEW PASSWORD</span>
+
+                <input
+                    class="modal-input"
+                    id="newPasswordInput"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="At least 8 characters"
+                >
+            </label>
+
+            <label>
+                <span>CONFIRM PASSWORD</span>
+
+                <input
+                    class="modal-input"
+                    id="confirmNewPasswordInput"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="Type it again"
+                >
+            </label>
+
+            <div
+                class="connection-result"
+                id="changePasswordMessage"
+            >
+                Use a password you do not reuse elsewhere.
+            </div>
+
+            <div class="modal-actions">
+                <button
+                    class="modal-cancel"
+                    id="cancelChangePasswordButton"
+                    type="button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    class="modal-create"
+                    id="changePasswordSubmitButton"
+                    type="button"
+                >
+                    Update password
+                </button>
+            </div>
+
+        </div>
+
+    </div>
 </div>
 
 
