@@ -1,4 +1,4 @@
-const CACHE_NAME = "hyperex-shell-v7";
+const CACHE_NAME = "hyperex-shell-v8";
 
 const SHELL = [
     "/",
