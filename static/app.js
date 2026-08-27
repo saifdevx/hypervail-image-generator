@@ -55,6 +55,7 @@ const createCostEstimate = $("createCostEstimate");
 const openSettingsFromCreate = $("openSettingsFromCreate");
 
 const profileOptions = $("profileOptions");
+const newGenerationButton = $("newGenerationButton");
 
 const imageInput = $("imageInput");
 const replaceImageInput = $("replaceImageInput");
@@ -649,12 +650,61 @@ async function restoreLastJob() {
     }
 
     try {
-        const response =
-            await fetch(
-                `/api/jobs/${jobId}`
+        const [
+            jobResponse,
+            batchResponse,
+        ] =
+            await Promise.all([
+                fetch(
+                    `/api/jobs/${jobId}`
+                ),
+                fetch(
+                    `/api/jobs/${jobId}/image-batch`
+                ),
+            ]);
+
+        if (!jobResponse.ok) {
+            localStorage.removeItem(
+                LAST_JOB_KEY
             );
 
-        if (!response.ok) {
+            return false;
+        }
+
+        const job =
+            await jobResponse.json();
+
+        const batch =
+            batchResponse.ok
+                ?
+                await batchResponse.json()
+                :
+                null;
+
+        const finishedStatuses =
+            new Set([
+                "complete",
+                "partial_failed",
+                "failed",
+            ]);
+
+        /*
+         * A completed job belongs in History.
+         * Do not automatically reopen it every time the user starts Hyperex.
+         *
+         * We still restore unfinished/running jobs so refresh recovery remains.
+         */
+        if (
+            batch
+            &&
+            finishedStatuses.has(
+                String(
+                    batch.status
+                    ||
+                    ""
+                ).toLowerCase()
+            )
+        ) {
             localStorage.removeItem(
                 LAST_JOB_KEY
             );
@@ -663,14 +713,7 @@ async function restoreLastJob() {
         }
 
         currentJob =
-            await response.json();
-
-        localStorage.setItem(
-            LAST_JOB_KEY,
-            String(
-                currentJob.id
-            )
-        );
+            job;
 
         renderPreparedJob(
             currentJob
@@ -726,17 +769,7 @@ async function restoreLastJob() {
             }
         }
 
-        const batchResponse =
-            await fetch(
-                `/api/jobs/${jobId}/image-batch`
-            );
-
-        if (
-            batchResponse.ok
-        ) {
-            const batch =
-                await batchResponse.json();
-
+        if (batch) {
             renderImageBatch(
                 batch
             );
@@ -745,6 +778,10 @@ async function restoreLastJob() {
                 batch.status
                 ===
                 "generating"
+                ||
+                batch.status
+                ===
+                "queued"
             ) {
                 setPipelineStep(
                     pipelineImages,
@@ -760,7 +797,12 @@ async function restoreLastJob() {
 
         return true;
 
-    } catch {
+    } catch (error) {
+        console.warn(
+            "Last-job recovery skipped:",
+            error
+        );
+
         return false;
     }
 }
@@ -4781,6 +4823,14 @@ function setGenerateBusy(
 function renderPreparedJob(
     job
 ) {
+    if (newGenerationButton) {
+        newGenerationButton.classList.add(
+            "hidden-element"
+        );
+
+        newGenerationButton.disabled =
+            true;
+    }
     jobEmptyState.classList.add(
         "hidden-element"
     );
@@ -5564,6 +5614,8 @@ function renderImageBatch(
             &&
             complete === total
         );
+
+    updateNewGenerationButton();
 }
 
 
@@ -6050,6 +6102,9 @@ function resetCurrentJobView() {
     currentPromptPackages =
         [];
 
+    lastRenderedBatch =
+        null;
+
     selectedCompareIds.clear();
 
     localStorage.removeItem(
@@ -6085,6 +6140,200 @@ function resetCurrentJobView() {
 
     promptPackagesSection.classList.add(
         "hidden-element"
+    );
+
+    storedReferenceGrid.innerHTML =
+        "";
+
+    plannerRawOutput.textContent =
+        "";
+
+    promptPackageGrid.innerHTML =
+        "";
+
+    imageBatchGrid.innerHTML =
+        "";
+
+    resultsGrid.innerHTML =
+        "";
+
+    updateNewGenerationButton();
+}
+
+
+function updateNewGenerationButton() {
+    if (!newGenerationButton) {
+        return;
+    }
+
+    const complete =
+        Number(
+            lastRenderedBatch
+                ?.complete_count
+            ||
+            0
+        );
+
+    const active =
+        Number(
+            lastRenderedBatch
+                ?.generating_count
+            ||
+            0
+        )
+        +
+        Number(
+            lastRenderedBatch
+                ?.queued_count
+            ||
+            0
+        );
+
+    const available =
+        Boolean(
+            currentJob
+        )
+        &&
+        complete > 0
+        &&
+        active === 0;
+
+    newGenerationButton.classList.toggle(
+        "hidden-element",
+        !available
+    );
+
+    newGenerationButton.disabled =
+        !available;
+}
+
+
+function startNewGenerationWorkspace() {
+    if (
+        !currentJob
+        ||
+        !lastRenderedBatch
+    ) {
+        return;
+    }
+
+    const complete =
+        Number(
+            lastRenderedBatch.complete_count
+            ||
+            0
+        );
+
+    const active =
+        Number(
+            lastRenderedBatch.generating_count
+            ||
+            0
+        )
+        +
+        Number(
+            lastRenderedBatch.queued_count
+            ||
+            0
+        );
+
+    if (
+        complete < 1
+        ||
+        active > 0
+    ) {
+        return;
+    }
+
+    /*
+     * Preserve:
+     * - selected workflow
+     * - output count
+     * - aspect ratio
+     * - auto-generate choice
+     * - Planner/Image provider + quality settings
+     *
+     * Clear only project/job-specific Create state.
+     */
+
+    selectedImages =
+        [];
+
+    replaceTargetIndex =
+        null;
+
+    draggedReferenceIndex =
+        null;
+
+    activeFinalPackage =
+        null;
+
+    previewResults =
+        [];
+
+    previewPackageLookup =
+        [];
+
+    previewJobId =
+        null;
+
+    regenerateTarget =
+        null;
+
+    regenerateJobId =
+        null;
+
+    description.value =
+        "";
+
+    characterCount.textContent =
+        "0 characters";
+
+    imageInput.value =
+        "";
+
+    replaceImageInput.value =
+        "";
+
+    /*
+     * Remove the old content draft so the previous description
+     * cannot come back after refresh.
+     */
+    localStorage.removeItem(
+        CREATE_DRAFT_KEY
+    );
+
+    resetPipeline();
+    resetCurrentJobView();
+    renderReferenceCards();
+
+    /*
+     * Save only the retained workflow/count/ratio choices
+     * with an empty description.
+     */
+    saveCreateDraft();
+
+    showToast(
+        "New generation ready. Add your new references."
+    );
+
+    requestAnimationFrame(
+        () => {
+            uploadZone.scrollIntoView({
+                behavior:
+                    "smooth",
+                block:
+                    "center",
+            });
+        }
+    );
+}
+
+
+if (newGenerationButton) {
+    newGenerationButton.addEventListener(
+        "click",
+        startNewGenerationWorkspace
     );
 }
 
@@ -10217,7 +10466,7 @@ async function startApplication() {
         );
     } else if (restoredJob) {
         showToast(
-            "Last job restored."
+            "Unfinished job restored."
         );
     }
 
