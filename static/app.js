@@ -51,6 +51,7 @@ const sidebarUserEmail = $("sidebarUserEmail");
 const settingsUserEmail = $("settingsUserEmail");
 const logoutButton = $("logoutButton");
 const claimLocalDataButton = $("claimLocalDataButton");
+const localImportStatusText = $("localImportStatusText");
 const accountSecurityEmail = $("accountSecurityEmail");
 const accountVerificationBadge = $("accountVerificationBadge");
 const changePasswordButton = $("changePasswordButton");
@@ -1204,11 +1205,14 @@ function renderAuthenticatedUser() {
         "local"
     );
 
-    claimLocalDataButton.classList.toggle(
-        "hidden-element",
-        authProvider
-        ===
-        "local"
+    // Old pre-Firebase data migration is an admin-only maintenance action.
+    // Keep it hidden until the backend confirms there is importable data.
+    claimLocalDataButton.classList.add(
+        "hidden-element"
+    );
+
+    localImportStatusText.classList.add(
+        "hidden-element"
     );
 
     const isAdmin =
@@ -1233,6 +1237,16 @@ function renderAuthenticatedUser() {
             "admin-mode",
             isAdmin
         );
+    }
+
+    if (
+        isAdmin
+        &&
+        authProvider
+        !==
+        "local"
+    ) {
+        void loadLocalImportStatus();
     }
 }
 
@@ -1783,22 +1797,233 @@ logoutButton.addEventListener(
 );
 
 
+function localImportSummary(
+    counts
+) {
+    const safe =
+        counts
+        ||
+        {};
+
+    const parts =
+        [];
+
+    const profiles =
+        Number(
+            safe.profiles
+            ||
+            0
+        );
+
+    const jobs =
+        Number(
+            safe.jobs
+            ||
+            0
+        );
+
+    const images =
+        Number(
+            safe.images
+            ||
+            0
+        );
+
+    const providerConnections =
+        Number(
+            safe.provider_connections
+            ||
+            0
+        );
+
+    if (profiles) {
+        parts.push(
+            `${profiles} profile${profiles === 1 ? "" : "s"}`
+        );
+    }
+
+    if (jobs) {
+        parts.push(
+            `${jobs} job${jobs === 1 ? "" : "s"}`
+        );
+    }
+
+    if (images) {
+        parts.push(
+            `${images} generated image${images === 1 ? "" : "s"}`
+        );
+    }
+
+    if (providerConnections) {
+        parts.push(
+            `${providerConnections} saved provider connection${providerConnections === 1 ? "" : "s"}`
+        );
+    }
+
+    return (
+        parts.join(
+            " · "
+        )
+        ||
+        "old local account data"
+    );
+}
+
+
+async function loadLocalImportStatus() {
+    claimLocalDataButton.classList.add(
+        "hidden-element"
+    );
+
+    localImportStatusText.classList.add(
+        "hidden-element"
+    );
+
+    if (
+        authProvider
+        ===
+        "local"
+        ||
+        currentUser?.role
+        !==
+        "admin"
+    ) {
+        return null;
+    }
+
+    try {
+        const response =
+            await fetch(
+                "/api/account/local-import-status",
+                {
+                    cache:
+                        "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            if (
+                response.status
+                ===
+                403
+            ) {
+                return null;
+            }
+
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const status =
+            await response.json();
+
+        localImportStatusText.classList.remove(
+            "hidden-element"
+        );
+
+        if (
+            status.completed
+        ) {
+            localImportStatusText.textContent =
+                "Old local data was already imported. This migration is closed.";
+
+            return status;
+        }
+
+        if (
+            status.available
+        ) {
+            localImportStatusText.textContent =
+                (
+                    "Admin-only migration available · "
+                    +
+                    localImportSummary(
+                        status.counts
+                    )
+                );
+
+            claimLocalDataButton.classList.remove(
+                "hidden-element"
+            );
+
+            return status;
+        }
+
+        localImportStatusText.textContent =
+            "No old local data is waiting to be imported.";
+
+        return status;
+
+    } catch (error) {
+        console.warn(
+            "Local import status check failed:",
+            error
+        );
+
+        return null;
+    }
+}
+
+
 claimLocalDataButton.addEventListener(
     "click",
     async () => {
-        const confirmed =
-            window.confirm(
-                "Claim the old local single-user profiles, jobs, settings and saved provider connections into this account?"
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
         claimLocalDataButton.disabled =
             true;
 
         try {
+            const status =
+                await loadLocalImportStatus();
+
+            if (
+                !status
+                ||
+                !status.available
+            ) {
+                showToast(
+                    status?.completed
+                        ?
+                        "Old local data was already imported."
+                        :
+                        "There is no old local data available to import."
+                );
+
+                return;
+            }
+
+            const summary =
+                localImportSummary(
+                    status.counts
+                );
+
+            const confirmed =
+                window.confirm(
+                    (
+                        "Import the old pre-Firebase local data into THIS admin account?\n\n"
+                        +
+                        `${summary}\n\n`
+                        +
+                        "This includes old custom profiles, jobs/history, favorites, "
+                        +
+                        "saved Settings and encrypted provider connections.\n\n"
+                        +
+                        "Hero and UGC built-in workflows are not moved.\n\n"
+                        +
+                        "If this admin account already has matching Settings or saved "
+                        +
+                        "provider keys, the old local values will replace them.\n\n"
+                        +
+                        "This is a one-time migration and cannot be claimed by another user afterward."
+                    )
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
             const response =
                 await fetch(
                     "/api/account/claim-local-data",
@@ -1819,20 +2044,53 @@ claimLocalDataButton.addEventListener(
             const result =
                 await response.json();
 
-            showToast(
+            if (
                 result.claimed
-                    ?
-                    "Old local data moved into this account."
-                    :
-                    "There was no local data to claim."
-            );
+            ) {
+                localImportStatusText.classList.remove(
+                    "hidden-element"
+                );
 
-            await Promise.all([
-                loadProfiles(),
-                loadManagerProfiles(),
-                loadHistory(),
-                loadSettings(),
-            ]);
+                localImportStatusText.textContent =
+                    "Old local data imported successfully. This migration is now closed.";
+
+                claimLocalDataButton.classList.add(
+                    "hidden-element"
+                );
+
+                providerConnections =
+                    null;
+
+                providerConnectionsLoadedAt =
+                    0;
+
+                showToast(
+                    "Old local data moved into this admin account."
+                );
+
+                await Promise.all([
+                    loadProfiles(),
+                    loadManagerProfiles(),
+                    loadHistory(),
+                    loadSettings(),
+                    loadProviderConnections(
+                        true
+                    ),
+                ]);
+
+            } else {
+                await loadLocalImportStatus();
+
+                showToast(
+                    result.reason
+                    ===
+                    "already_completed"
+                        ?
+                        "Old local data was already imported."
+                        :
+                        "There was no old local data to import."
+                );
+            }
 
         } catch (error) {
             showToast(
