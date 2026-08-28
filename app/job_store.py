@@ -1,10 +1,14 @@
 from pathlib import Path
+import threading
 import uuid
 
 from app.database import get_connection
 from app.builtin_workflows import (
     is_builtin_workflow_name,
     load_builtin_instruction,
+)
+from app.managed_workflow_service import (
+    get_managed_workflow_instruction,
 )
 from app.request_context import (
     get_current_owner_id,
@@ -38,6 +42,10 @@ SUPPORTED_JOB_ASPECT_RATIOS = {
     "9:16",
     "16:9",
 }
+
+
+_SCHEMA_READY = False
+_SCHEMA_LOCK = threading.RLock()
 
 
 def detect_image_type(data: bytes):
@@ -270,74 +278,85 @@ def build_generation_snapshot(
     }
 
 
-def ensure_job_schema():
-    connection = get_connection()
+def ensure_job_schema(force: bool = False):
+    global _SCHEMA_READY
 
-    try:
-        columns = {
-            row["name"]
-            for row in connection.execute(
-                "PRAGMA table_info(generation_jobs)"
-            ).fetchall()
-        }
+    if _SCHEMA_READY and not force:
+        return
 
-        additions = {
-            "owner_id":
-                "TEXT",
-            "aspect_ratio":
-                "TEXT",
-            "planner_tier_snapshot":
-                "TEXT",
-            "planner_provider_snapshot":
-                "TEXT",
-            "planner_model_snapshot":
-                "TEXT",
-            "planner_reasoning_snapshot":
-                "TEXT",
-            "image_tier_snapshot":
-                "TEXT",
-            "image_provider_snapshot":
-                "TEXT",
-            "image_model_snapshot":
-                "TEXT",
-            "image_quality_snapshot":
-                "TEXT",
-            "image_size_snapshot":
-                "TEXT",
-            "image_output_format_snapshot":
-                "TEXT",
-            "batch_concurrency_snapshot":
-                "INTEGER",
-        }
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY and not force:
+            return
 
-        for name, type_name in (
-            additions.items()
-        ):
-            if name in columns:
-                continue
+        connection = get_connection()
+
+        try:
+            columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(generation_jobs)"
+                ).fetchall()
+            }
+
+            additions = {
+                "owner_id":
+                    "TEXT",
+                "aspect_ratio":
+                    "TEXT",
+                "planner_tier_snapshot":
+                    "TEXT",
+                "planner_provider_snapshot":
+                    "TEXT",
+                "planner_model_snapshot":
+                    "TEXT",
+                "planner_reasoning_snapshot":
+                    "TEXT",
+                "image_tier_snapshot":
+                    "TEXT",
+                "image_provider_snapshot":
+                    "TEXT",
+                "image_model_snapshot":
+                    "TEXT",
+                "image_quality_snapshot":
+                    "TEXT",
+                "image_size_snapshot":
+                    "TEXT",
+                "image_output_format_snapshot":
+                    "TEXT",
+                "batch_concurrency_snapshot":
+                    "INTEGER",
+            }
+
+            for name, type_name in (
+                additions.items()
+            ):
+                if name in columns:
+                    continue
+
+                connection.execute(
+                    f"""
+                    ALTER TABLE generation_jobs
+                    ADD COLUMN {name} {type_name}
+                    """
+                )
 
             connection.execute(
-                f"""
-                ALTER TABLE generation_jobs
-                ADD COLUMN {name} {type_name}
                 """
+                UPDATE generation_jobs
+                SET owner_id = ?
+                WHERE owner_id IS NULL
+                """,
+                (
+                    LOCAL_OWNER_ID,
+                ),
             )
 
-        connection.execute(
-            """
-            UPDATE generation_jobs
-            SET owner_id = ?
-            WHERE owner_id IS NULL
-            """,
-            (
-                LOCAL_OWNER_ID,
-            ),
-        )
+            connection.commit()
 
-        connection.commit()
+        finally:
+            connection.close()
 
-    finally:
-        connection.close()
+        _SCHEMA_READY = True
 
 
 def create_prepared_job(
@@ -364,10 +383,19 @@ def create_prepared_job(
                 gp.name,
                 gp.active_version_id,
                 pv.version_number,
-                pv.system_instruction
+                pv.system_instruction,
+                mw.workflow_type
+                    AS managed_workflow_type,
+                mw.status
+                    AS managed_status
             FROM generation_profiles gp
+
             JOIN profile_versions pv
                 ON pv.id = gp.active_version_id
+
+            LEFT JOIN managed_workflows mw
+                ON mw.profile_id = gp.id
+
             WHERE
                 gp.id = ?
                 AND gp.is_active = 1
@@ -375,10 +403,7 @@ def create_prepared_job(
                     gp.owner_id = ?
                     OR (
                         gp.owner_id IS NULL
-                        AND gp.name IN (
-                            'Hero Images',
-                            'UGC Images'
-                        )
+                        AND mw.status = 'published'
                     )
                 )
             """,
@@ -394,9 +419,32 @@ def create_prepared_job(
                     "profile_unavailable"
             }
 
-        if is_builtin_workflow_name(
+        if profile[
+            "managed_workflow_type"
+        ]:
+            system_instruction = (
+                get_managed_workflow_instruction(
+                    profile[
+                        "id"
+                    ],
+                    profile[
+                        "active_version_id"
+                    ],
+                )
+            )
+
+            if not system_instruction:
+                return {
+                    "status":
+                        "managed_instruction_missing",
+                    "profile_name":
+                        profile["name"],
+                }
+
+        elif is_builtin_workflow_name(
             profile["name"]
         ):
+            # Compatibility fallback for pre-managed Hero / UGC records.
             system_instruction = (
                 load_builtin_instruction(
                     profile["name"]

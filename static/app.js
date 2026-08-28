@@ -62,10 +62,18 @@ const adminJobsCount = $("adminJobsCount");
 const adminJobsTodayCount = $("adminJobsTodayCount");
 const adminImagesCount = $("adminImagesCount");
 const adminSuccessRate = $("adminSuccessRate");
+const adminWorkflowsCount = $("adminWorkflowsCount");
 const adminSystemList = $("adminSystemList");
 const adminModelList = $("adminModelList");
 const adminUserList = $("adminUserList");
 const adminFailureList = $("adminFailureList");
+
+const addAdminWorkflowButton = $("addAdminWorkflowButton");
+const adminPublishedWorkflowCount = $("adminPublishedWorkflowCount");
+const adminDraftWorkflowCount = $("adminDraftWorkflowCount");
+const adminPrivateWorkflowCount = $("adminPrivateWorkflowCount");
+const adminTemplateWorkflowCount = $("adminTemplateWorkflowCount");
+const adminWorkflowList = $("adminWorkflowList");
 
 const createPlannerSummary = $("createPlannerSummary");
 const createImageSummary = $("createImageSummary");
@@ -178,6 +186,7 @@ const saveVersionButton = $("saveVersionButton");
 const archiveProfileButton = $("archiveProfileButton");
 const restoreProfileButton = $("restoreProfileButton");
 const deleteProfileButton = $("deleteProfileButton");
+const customizeTemplateButton = $("customizeTemplateButton");
 const privateProfileNotice = $("privateProfileNotice");
 
 
@@ -229,6 +238,31 @@ const providerKeyResult = $("providerKeyResult");
 const confirmBatchOverSelect = $("confirmBatchOverSelect");
 const maxOutputCountSelect = $("maxOutputCountSelect");
 const draftAutosaveCheckbox = $("draftAutosaveCheckbox");
+
+
+/* Admin Workflow Modal */
+
+const adminWorkflowModal = $("adminWorkflowModal");
+const closeAdminWorkflowModal = $("closeAdminWorkflowModal");
+const adminWorkflowModalTitle = $("adminWorkflowModalTitle");
+const adminWorkflowNameInput = $("adminWorkflowNameInput");
+const adminWorkflowSortOrderInput = $("adminWorkflowSortOrderInput");
+const adminWorkflowDescriptionInput = $("adminWorkflowDescriptionInput");
+const adminWorkflowPrivateType = $("adminWorkflowPrivateType");
+const adminWorkflowTemplateType = $("adminWorkflowTemplateType");
+const adminWorkflowInstructionInput = $("adminWorkflowInstructionInput");
+const adminWorkflowSecurityTitle = $("adminWorkflowSecurityTitle");
+const adminWorkflowSecurityText = $("adminWorkflowSecurityText");
+const adminWorkflowVersionPanel = $("adminWorkflowVersionPanel");
+const adminWorkflowVersionList = $("adminWorkflowVersionList");
+const duplicateAdminWorkflowButton = $("duplicateAdminWorkflowButton");
+const unpublishAdminWorkflowButton = $("unpublishAdminWorkflowButton");
+const archiveAdminWorkflowButton = $("archiveAdminWorkflowButton");
+const deleteAdminWorkflowButton = $("deleteAdminWorkflowButton");
+const cancelAdminWorkflowButton = $("cancelAdminWorkflowButton");
+const saveAdminWorkflowDraftButton = $("saveAdminWorkflowDraftButton");
+const publishAdminWorkflowButton = $("publishAdminWorkflowButton");
+const adminWorkflowFormMessage = $("adminWorkflowFormMessage");
 
 
 /* Change Password Modal */
@@ -391,6 +425,11 @@ let historyOptions = null;
 let historyDetail = null;
 let historySearchTimer = null;
 
+let adminWorkflows = [];
+let editingAdminWorkflowId = null;
+let editingAdminWorkflowStatus = null;
+let editingAdminWorkflowSystem = false;
+
 let regenerateTarget = null;
 let regenerateJobId = null;
 
@@ -407,6 +446,40 @@ function isBuiltinProfile(
         &&
         profile.is_builtin
     );
+}
+
+
+function isManagedProfile(
+    profile
+) {
+    return Boolean(
+        profile
+        &&
+        profile.is_managed
+    );
+}
+
+
+function workflowTypeLabel(
+    profile
+) {
+    if (
+        profile?.workflow_type
+        ===
+        "template"
+    ) {
+        return "PUBLIC TEMPLATE";
+    }
+
+    if (
+        profile?.workflow_type
+        ===
+        "private"
+    ) {
+        return "PRIVATE WORKFLOW";
+    }
+
+    return "MY PROFILE";
 }
 
 
@@ -2229,41 +2302,1515 @@ changePasswordSubmitButton.addEventListener(
 ========================================================= */
 
 async function loadAdminDashboard() {
-    if (currentUser?.role !== "admin") {
+    if (
+        currentUser?.role
+        !==
+        "admin"
+    ) {
         return;
     }
 
     try {
-        const response = await fetch(
-            "/api/admin/dashboard",
-            { cache: "no-store" }
-        );
+        const response =
+            await fetch(
+                "/api/admin/dashboard",
+                {
+                    cache:
+                        "no-store",
+                }
+            );
 
         if (!response.ok) {
-            throw new Error(await apiError(response));
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
         }
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        renderAdminOverview(data.overview || {});
-        renderAdminSystem(data.system || {});
-        renderAdminUsers(data.users || []);
-        renderAdminModels(data.models || []);
-        renderAdminFailures(data.recent_failures || []);
+        adminWorkflows =
+            Array.isArray(
+                data.workflows
+            )
+                ?
+                data.workflows
+                :
+                [];
+
+        renderAdminOverview(
+            data.overview
+            ||
+            {}
+        );
+
+        renderAdminWorkflowSummary(
+            data.workflow_summary
+            ||
+            {}
+        );
+
+        renderAdminWorkflows(
+            adminWorkflows
+        );
+
+        renderAdminUsers(
+            data.users
+            ||
+            []
+        );
+
+        renderAdminModels(
+            data.models
+            ||
+            []
+        );
+
+        renderAdminSystem(
+            data.system
+            ||
+            {}
+        );
+
+        renderAdminFailures(
+            data.recent_failures
+            ||
+            []
+        );
 
     } catch (error) {
-        showToast(error.message);
+        showToast(
+            error.message
+        );
     }
 }
 
 
-function renderAdminOverview(overview) {
-    adminUsersCount.textContent = formatNumber(overview.users || 0);
-    adminJobsCount.textContent = formatNumber(overview.jobs || 0);
-    adminJobsTodayCount.textContent = formatNumber(overview.jobs_today || 0);
-    adminImagesCount.textContent = formatNumber(overview.complete_images || 0);
-    adminSuccessRate.textContent = `${Number(overview.success_rate ?? 100).toFixed(1)}%`;
+function renderAdminOverview(
+    overview
+) {
+    adminUsersCount.textContent =
+        formatNumber(
+            overview.users
+            ||
+            0
+        );
+
+    adminJobsCount.textContent =
+        formatNumber(
+            overview.jobs
+            ||
+            0
+        );
+
+    adminJobsTodayCount.textContent =
+        formatNumber(
+            overview.jobs_today
+            ||
+            0
+        );
+
+    adminImagesCount.textContent =
+        formatNumber(
+            overview.complete_images
+            ||
+            0
+        );
+
+    adminWorkflowsCount.textContent =
+        formatNumber(
+            overview.workflows
+            ||
+            0
+        );
+
+    adminSuccessRate.textContent =
+        `${Number(
+            overview.success_rate
+            ??
+            100
+        ).toFixed(1)}%`;
 }
+
+
+function renderAdminWorkflowSummary(
+    summary
+) {
+    adminPublishedWorkflowCount.textContent =
+        formatNumber(
+            summary.published
+            ||
+            0
+        );
+
+    adminDraftWorkflowCount.textContent =
+        formatNumber(
+            summary.drafts
+            ||
+            0
+        );
+
+    adminPrivateWorkflowCount.textContent =
+        formatNumber(
+            summary.private
+            ||
+            0
+        );
+
+    adminTemplateWorkflowCount.textContent =
+        formatNumber(
+            summary.templates
+            ||
+            0
+        );
+}
+
+
+function adminWorkflowTypeLabel(
+    workflow
+) {
+    return (
+        workflow.workflow_type
+        ===
+        "template"
+            ?
+            "Public Template"
+            :
+            "Private Workflow"
+    );
+}
+
+
+function adminWorkflowStatusLabel(
+    status
+) {
+    const value =
+        String(
+            status
+            ||
+            ""
+        ).toLowerCase();
+
+    if (
+        value
+        ===
+        "published"
+    ) {
+        return "Published";
+    }
+
+    if (
+        value
+        ===
+        "unpublished"
+    ) {
+        return "Unpublished";
+    }
+
+    if (
+        value
+        ===
+        "archived"
+    ) {
+        return "Archived";
+    }
+
+    return "Draft";
+}
+
+
+function renderAdminWorkflows(
+    workflows
+) {
+    adminWorkflowList.innerHTML =
+        "";
+
+    if (!workflows.length) {
+        adminWorkflowList.innerHTML = `
+            <div class="admin-workflow-empty">
+                <strong>No managed workflows yet.</strong>
+                <span>Create your first workflow and publish it when ready.</span>
+            </div>
+        `;
+
+        return;
+    }
+
+    workflows.forEach(
+        workflow => {
+            const row =
+                document.createElement(
+                    "article"
+                );
+
+            row.className =
+                "admin-workflow-row";
+
+            row.dataset.status =
+                workflow.status
+                ||
+                "draft";
+
+            row.dataset.type =
+                workflow.workflow_type
+                ||
+                "private";
+
+            const identity =
+                document.createElement(
+                    "div"
+                );
+
+            identity.className =
+                "admin-workflow-identity";
+
+            const titleRow =
+                document.createElement(
+                    "div"
+                );
+
+            titleRow.className =
+                "admin-workflow-title-row";
+
+            const title =
+                document.createElement(
+                    "strong"
+                );
+
+            title.textContent =
+                workflow.name;
+
+            const typeBadge =
+                document.createElement(
+                    "span"
+                );
+
+            typeBadge.className =
+                `admin-workflow-type-badge ${
+                    workflow.workflow_type
+                    ===
+                    "template"
+                        ?
+                        "template"
+                        :
+                        "private"
+                }`;
+
+            typeBadge.textContent =
+                adminWorkflowTypeLabel(
+                    workflow
+                );
+
+            titleRow.append(
+                title,
+                typeBadge
+            );
+
+            if (
+                workflow.is_system
+            ) {
+                const systemBadge =
+                    document.createElement(
+                        "span"
+                    );
+
+                systemBadge.className =
+                    "admin-workflow-system-badge";
+
+                systemBadge.textContent =
+                    "SYSTEM";
+
+                titleRow.appendChild(
+                    systemBadge
+                );
+            }
+
+            const description =
+                document.createElement(
+                    "p"
+                );
+
+            description.textContent =
+                workflow.description
+                ||
+                "No public description yet.";
+
+            identity.append(
+                titleRow,
+                description
+            );
+
+            const stats =
+                document.createElement(
+                    "div"
+                );
+
+            stats.className =
+                "admin-workflow-stats";
+
+            const usage =
+                document.createElement(
+                    "div"
+                );
+
+            usage.innerHTML =
+                `<span>USED</span><strong>${formatNumber(
+                    workflow.usage_count
+                    ||
+                    0
+                )}</strong>`;
+
+            const versions =
+                document.createElement(
+                    "div"
+                );
+
+            versions.innerHTML =
+                `<span>VERSION</span><strong>v${workflow.version_number || 1}</strong>`;
+
+            const order =
+                document.createElement(
+                    "div"
+                );
+
+            order.innerHTML =
+                `<span>ORDER</span><strong>${workflow.sort_order ?? 100}</strong>`;
+
+            stats.append(
+                usage,
+                versions,
+                order
+            );
+
+            const status =
+                document.createElement(
+                    "span"
+                );
+
+            status.className =
+                `admin-workflow-status ${
+                    workflow.status
+                    ||
+                    "draft"
+                }`;
+
+            status.textContent =
+                adminWorkflowStatusLabel(
+                    workflow.status
+                );
+
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+            actions.className =
+                "admin-workflow-actions";
+
+            const edit =
+                document.createElement(
+                    "button"
+                );
+
+            edit.type =
+                "button";
+
+            edit.textContent =
+                "Edit";
+
+            edit.addEventListener(
+                "click",
+                () =>
+                    openAdminWorkflowEditor(
+                        workflow.id
+                    )
+            );
+
+            const open =
+                document.createElement(
+                    "button"
+                );
+
+            open.type =
+                "button";
+
+            open.textContent =
+                "Open in Create";
+
+            open.disabled =
+                workflow.status
+                !==
+                "published";
+
+            open.addEventListener(
+                "click",
+                async () => {
+                    await loadProfiles(
+                        workflow.id
+                    );
+
+                    showView(
+                        "generate"
+                    );
+
+                    selectGenerateProfile(
+                        workflow.id
+                    );
+
+                    window.scrollTo({
+                        top: 0,
+                        behavior:
+                            "smooth",
+                    });
+                }
+            );
+
+            actions.append(
+                edit,
+                open
+            );
+
+            row.append(
+                identity,
+                stats,
+                status,
+                actions
+            );
+
+            adminWorkflowList.appendChild(
+                row
+            );
+        }
+    );
+}
+
+
+function setAdminWorkflowFormMessage(
+    message,
+    state = ""
+) {
+    adminWorkflowFormMessage.textContent =
+        message;
+
+    adminWorkflowFormMessage.className =
+        "connection-result";
+
+    if (state) {
+        adminWorkflowFormMessage.classList.add(
+            state
+        );
+    }
+}
+
+
+function selectedAdminWorkflowType() {
+    return (
+        adminWorkflowTemplateType.checked
+            ?
+            "template"
+            :
+            "private"
+    );
+}
+
+
+function updateAdminWorkflowSecurityNote() {
+    const type =
+        selectedAdminWorkflowType();
+
+    if (
+        type
+        ===
+        "template"
+    ) {
+        adminWorkflowSecurityTitle.textContent =
+            "PUBLIC TEMPLATE";
+
+        adminWorkflowSecurityText.textContent =
+            (
+                "Users can see the instruction and create their own editable copy. "
+                +
+                "They still cannot change the shared Admin version."
+            );
+    } else {
+        adminWorkflowSecurityTitle.textContent =
+            "PRIVATE WORKFLOW";
+
+        adminWorkflowSecurityText.textContent =
+            (
+                "The instruction is encrypted and never returned through normal user profile APIs."
+            );
+    }
+}
+
+
+function resetAdminWorkflowForm() {
+    editingAdminWorkflowId =
+        null;
+
+    editingAdminWorkflowStatus =
+        "draft";
+
+    editingAdminWorkflowSystem =
+        false;
+
+    adminWorkflowModalTitle.textContent =
+        "Add workflow";
+
+    adminWorkflowNameInput.value =
+        "";
+
+    adminWorkflowDescriptionInput.value =
+        "";
+
+    adminWorkflowSortOrderInput.value =
+        "100";
+
+    adminWorkflowInstructionInput.value =
+        "";
+
+    adminWorkflowPrivateType.checked =
+        true;
+
+    adminWorkflowTemplateType.checked =
+        false;
+
+    adminWorkflowPrivateType.disabled =
+        false;
+
+    adminWorkflowTemplateType.disabled =
+        false;
+
+    adminWorkflowVersionPanel.classList.add(
+        "hidden-element"
+    );
+
+    adminWorkflowVersionList.innerHTML =
+        "";
+
+    duplicateAdminWorkflowButton.classList.add(
+        "hidden-element"
+    );
+
+    unpublishAdminWorkflowButton.classList.add(
+        "hidden-element"
+    );
+
+    archiveAdminWorkflowButton.classList.add(
+        "hidden-element"
+    );
+
+    deleteAdminWorkflowButton.classList.add(
+        "hidden-element"
+    );
+
+    saveAdminWorkflowDraftButton.textContent =
+        "Save draft";
+
+    publishAdminWorkflowButton.textContent =
+        "Save & publish";
+
+    setAdminWorkflowFormMessage(
+        "Draft workflows are visible only to Admin."
+    );
+
+    updateAdminWorkflowSecurityNote();
+}
+
+
+function openNewAdminWorkflowModal() {
+    resetAdminWorkflowForm();
+
+    openModal(
+        adminWorkflowModal
+    );
+
+    requestAnimationFrame(
+        () =>
+            adminWorkflowNameInput.focus()
+    );
+}
+
+
+async function loadAdminWorkflowVersions(
+    profileId
+) {
+    adminWorkflowVersionPanel.classList.remove(
+        "hidden-element"
+    );
+
+    adminWorkflowVersionList.innerHTML = `
+        <div class="loading-state">
+            Loading versions…
+        </div>
+    `;
+
+    try {
+        const response =
+            await fetch(
+                `/api/admin/workflows/${profileId}/versions`,
+                {
+                    cache:
+                        "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const data =
+            await response.json();
+
+        adminWorkflowVersionList.innerHTML =
+            "";
+
+        const versions =
+            data.versions
+            ||
+            [];
+
+        if (!versions.length) {
+            adminWorkflowVersionList.innerHTML = `
+                <div class="loading-state">
+                    No previous versions.
+                </div>
+            `;
+
+            return;
+        }
+
+        versions.forEach(
+            version => {
+                const row =
+                    document.createElement(
+                        "div"
+                    );
+
+                row.className =
+                    "admin-workflow-version-row";
+
+                const copy =
+                    document.createElement(
+                        "div"
+                    );
+
+                const title =
+                    document.createElement(
+                        "strong"
+                    );
+
+                title.textContent =
+                    `Version ${version.version_number}`;
+
+                const date =
+                    document.createElement(
+                        "span"
+                    );
+
+                date.textContent =
+                    version.created_at
+                    ||
+                    "";
+
+                copy.append(
+                    title,
+                    date
+                );
+
+                const badge =
+                    document.createElement(
+                        "span"
+                    );
+
+                badge.className =
+                    "admin-workflow-version-badge";
+
+                badge.textContent =
+                    version.is_active
+                        ?
+                        "CURRENT"
+                        :
+                        "PREVIOUS";
+
+                const restore =
+                    document.createElement(
+                        "button"
+                    );
+
+                restore.type =
+                    "button";
+
+                restore.textContent =
+                    "Restore";
+
+                restore.disabled =
+                    Boolean(
+                        version.is_active
+                    );
+
+                restore.addEventListener(
+                    "click",
+                    async () => {
+                        if (
+                            !window.confirm(
+                                `Restore Version ${version.version_number} as the active workflow instruction?`
+                            )
+                        ) {
+                            return;
+                        }
+
+                        restore.disabled =
+                            true;
+
+                        try {
+                            const response =
+                                await fetch(
+                                    `/api/admin/workflows/${profileId}/rollback`,
+                                    {
+                                        method:
+                                            "POST",
+
+                                        headers: {
+                                            "Content-Type":
+                                                "application/json",
+                                        },
+
+                                        body:
+                                            JSON.stringify({
+                                                version_number:
+                                                    version.version_number,
+                                            }),
+                                    }
+                                );
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    await apiError(
+                                        response
+                                    )
+                                );
+                            }
+
+                            showToast(
+                                `Workflow restored to Version ${version.version_number}.`
+                            );
+
+                            await openAdminWorkflowEditor(
+                                profileId,
+                                false
+                            );
+
+                            await Promise.all([
+                                loadAdminDashboard(),
+                                loadProfiles(),
+                            ]);
+
+                        } catch (error) {
+                            showToast(
+                                error.message
+                            );
+
+                        } finally {
+                            restore.disabled =
+                                false;
+                        }
+                    }
+                );
+
+                row.append(
+                    copy,
+                    badge,
+                    restore
+                );
+
+                adminWorkflowVersionList.appendChild(
+                    row
+                );
+            }
+        );
+
+    } catch (error) {
+        adminWorkflowVersionList.innerHTML = `
+            <div class="loading-state">
+                Could not load versions.
+            </div>
+        `;
+
+        console.warn(
+            "Workflow version loading failed:",
+            error
+        );
+    }
+}
+
+
+async function openAdminWorkflowEditor(
+    profileId,
+    openTheModal = true
+) {
+    try {
+        const response =
+            await fetch(
+                `/api/admin/workflows/${profileId}`,
+                {
+                    cache:
+                        "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        const workflow =
+            await response.json();
+
+        editingAdminWorkflowId =
+            Number(
+                workflow.id
+            );
+
+        editingAdminWorkflowStatus =
+            workflow.status
+            ||
+            "draft";
+
+        editingAdminWorkflowSystem =
+            Boolean(
+                workflow.is_system
+            );
+
+        adminWorkflowModalTitle.textContent =
+            workflow.name;
+
+        adminWorkflowNameInput.value =
+            workflow.name
+            ||
+            "";
+
+        adminWorkflowDescriptionInput.value =
+            workflow.description
+            ||
+            "";
+
+        adminWorkflowSortOrderInput.value =
+            String(
+                workflow.sort_order
+                ??
+                100
+            );
+
+        adminWorkflowInstructionInput.value =
+            workflow.system_instruction
+            ||
+            "";
+
+        adminWorkflowPrivateType.checked =
+            workflow.workflow_type
+            !==
+            "template";
+
+        adminWorkflowTemplateType.checked =
+            workflow.workflow_type
+            ===
+            "template";
+
+        // Keep version history unambiguous: workflow type is chosen once.
+        // To create the other type, duplicate and choose the type on the new draft.
+        adminWorkflowPrivateType.disabled =
+            true;
+
+        adminWorkflowTemplateType.disabled =
+            true;
+
+        duplicateAdminWorkflowButton.classList.remove(
+            "hidden-element"
+        );
+
+        unpublishAdminWorkflowButton.classList.toggle(
+            "hidden-element",
+            workflow.status
+            !==
+            "published"
+        );
+
+        archiveAdminWorkflowButton.classList.remove(
+            "hidden-element"
+        );
+
+        archiveAdminWorkflowButton.textContent =
+            workflow.status
+            ===
+            "archived"
+                ?
+                "Restore to draft"
+                :
+                "Archive";
+
+        deleteAdminWorkflowButton.classList.toggle(
+            "hidden-element",
+            Boolean(
+                workflow.is_system
+            )
+        );
+
+        saveAdminWorkflowDraftButton.textContent =
+            workflow.status
+            ===
+            "published"
+                ?
+                "Save changes"
+                :
+                "Save";
+
+        publishAdminWorkflowButton.textContent =
+            workflow.status
+            ===
+            "published"
+                ?
+                "Save & keep published"
+                :
+                "Save & publish";
+
+        setAdminWorkflowFormMessage(
+            `${adminWorkflowTypeLabel(workflow)} · ${adminWorkflowStatusLabel(workflow.status)} · Used ${formatNumber(workflow.usage_count || 0)} times`
+        );
+
+        updateAdminWorkflowSecurityNote();
+
+        await loadAdminWorkflowVersions(
+            workflow.id
+        );
+
+        if (openTheModal) {
+            openModal(
+                adminWorkflowModal
+            );
+        }
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+    }
+}
+
+
+function adminWorkflowPayload() {
+    const name =
+        adminWorkflowNameInput
+            .value
+            .trim();
+
+    const description =
+        adminWorkflowDescriptionInput
+            .value
+            .trim();
+
+    const instruction =
+        adminWorkflowInstructionInput
+            .value
+            .trim();
+
+    const sortOrder =
+        Math.max(
+            0,
+            Number(
+                adminWorkflowSortOrderInput
+                    .value
+                ||
+                100
+            )
+        );
+
+    if (!name) {
+        throw new Error(
+            "Enter a workflow name."
+        );
+    }
+
+    if (!instruction) {
+        throw new Error(
+            "Enter a system instruction."
+        );
+    }
+
+    return {
+        name:
+            name,
+        description:
+            description,
+        system_instruction:
+            instruction,
+        workflow_type:
+            selectedAdminWorkflowType(),
+        sort_order:
+            sortOrder,
+    };
+}
+
+
+async function saveAdminWorkflow(
+    publish = false
+) {
+    const payload =
+        adminWorkflowPayload();
+
+    saveAdminWorkflowDraftButton.disabled =
+        true;
+
+    publishAdminWorkflowButton.disabled =
+        true;
+
+    try {
+        let workflow;
+
+        if (
+            editingAdminWorkflowId
+        ) {
+            const response =
+                await fetch(
+                    `/api/admin/workflows/${editingAdminWorkflowId}`,
+                    {
+                        method:
+                            "PATCH",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify(
+                                payload
+                            ),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            workflow =
+                await response.json();
+
+        } else {
+            const response =
+                await fetch(
+                    "/api/admin/workflows",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify({
+                                ...payload,
+                                status:
+                                    publish
+                                        ?
+                                        "published"
+                                        :
+                                        "draft",
+                            }),
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            workflow =
+                await response.json();
+
+            editingAdminWorkflowId =
+                Number(
+                    workflow.id
+                );
+        }
+
+        if (
+            publish
+            &&
+            workflow.status
+            !==
+            "published"
+        ) {
+            const statusResponse =
+                await fetch(
+                    `/api/admin/workflows/${workflow.id}/status`,
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify({
+                                status:
+                                    "published",
+                            }),
+                    }
+                );
+
+            if (!statusResponse.ok) {
+                throw new Error(
+                    await apiError(
+                        statusResponse
+                    )
+                );
+            }
+
+            workflow =
+                await statusResponse.json();
+        }
+
+        showToast(
+            publish
+                ?
+                "Workflow published to all users."
+                :
+                "Workflow saved."
+        );
+
+        await Promise.all([
+            loadAdminDashboard(),
+            loadProfiles(),
+            loadManagerProfiles(),
+        ]);
+
+        await openAdminWorkflowEditor(
+            workflow.id,
+            false
+        );
+
+        if (
+            !publish
+            &&
+            !editingAdminWorkflowId
+        ) {
+            closeModal(
+                adminWorkflowModal
+            );
+        }
+
+    } catch (error) {
+        setAdminWorkflowFormMessage(
+            error.message,
+            "error"
+        );
+
+    } finally {
+        saveAdminWorkflowDraftButton.disabled =
+            false;
+
+        publishAdminWorkflowButton.disabled =
+            false;
+    }
+}
+
+
+async function setAdminWorkflowStatus(
+    status
+) {
+    if (!editingAdminWorkflowId) {
+        return;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `/api/admin/workflows/${editingAdminWorkflowId}/status`,
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    body:
+                        JSON.stringify({
+                            status:
+                                status,
+                        }),
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+
+        showToast(
+            status
+            ===
+            "published"
+                ?
+                "Workflow published."
+                :
+                status
+                ===
+                "archived"
+                    ?
+                    "Workflow archived."
+                    :
+                    "Workflow unpublished."
+        );
+
+        await Promise.all([
+            loadAdminDashboard(),
+            loadProfiles(),
+            loadManagerProfiles(),
+        ]);
+
+        await openAdminWorkflowEditor(
+            editingAdminWorkflowId,
+            false
+        );
+
+    } catch (error) {
+        showToast(
+            error.message
+        );
+    }
+}
+
+
+addAdminWorkflowButton.addEventListener(
+    "click",
+    openNewAdminWorkflowModal
+);
+
+
+adminWorkflowPrivateType.addEventListener(
+    "change",
+    updateAdminWorkflowSecurityNote
+);
+
+
+adminWorkflowTemplateType.addEventListener(
+    "change",
+    updateAdminWorkflowSecurityNote
+);
+
+
+saveAdminWorkflowDraftButton.addEventListener(
+    "click",
+    () =>
+        saveAdminWorkflow(
+            false
+        )
+);
+
+
+publishAdminWorkflowButton.addEventListener(
+    "click",
+    () =>
+        saveAdminWorkflow(
+            true
+        )
+);
+
+
+unpublishAdminWorkflowButton.addEventListener(
+    "click",
+    async () => {
+        if (
+            window.confirm(
+                "Unpublish this workflow? It will disappear from new user generations but old jobs remain unchanged."
+            )
+        ) {
+            await setAdminWorkflowStatus(
+                "unpublished"
+            );
+        }
+    }
+);
+
+
+archiveAdminWorkflowButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingAdminWorkflowId) {
+            return;
+        }
+
+        if (
+            editingAdminWorkflowStatus
+            ===
+            "archived"
+        ) {
+            await setAdminWorkflowStatus(
+                "draft"
+            );
+
+            return;
+        }
+
+        if (
+            window.confirm(
+                "Archive this workflow? It will be hidden from users and kept for history."
+            )
+        ) {
+            await setAdminWorkflowStatus(
+                "archived"
+            );
+        }
+    }
+);
+
+
+duplicateAdminWorkflowButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingAdminWorkflowId) {
+            return;
+        }
+
+        duplicateAdminWorkflowButton.disabled =
+            true;
+
+        try {
+            const response =
+                await fetch(
+                    `/api/admin/workflows/${editingAdminWorkflowId}/duplicate`,
+                    {
+                        method:
+                            "POST",
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const workflow =
+                await response.json();
+
+            showToast(
+                "Draft copy created."
+            );
+
+            await loadAdminDashboard();
+
+            await openAdminWorkflowEditor(
+                workflow.id,
+                false
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            duplicateAdminWorkflowButton.disabled =
+                false;
+        }
+    }
+);
+
+
+deleteAdminWorkflowButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingAdminWorkflowId) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                "Delete this workflow permanently? This is allowed only when it has no generation history."
+            )
+        ) {
+            return;
+        }
+
+        deleteAdminWorkflowButton.disabled =
+            true;
+
+        try {
+            const response =
+                await fetch(
+                    `/api/admin/workflows/${editingAdminWorkflowId}`,
+                    {
+                        method:
+                            "DELETE",
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            await response.json();
+
+            closeModal(
+                adminWorkflowModal
+            );
+
+            showToast(
+                "Workflow deleted."
+            );
+
+            await Promise.all([
+                loadAdminDashboard(),
+                loadProfiles(),
+                loadManagerProfiles(),
+            ]);
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            deleteAdminWorkflowButton.disabled =
+                false;
+        }
+    }
+);
 
 
 function renderAdminSystem(system) {
@@ -4623,12 +6170,22 @@ function createGenerateProfileCard(
         "profile-card";
 
     if (
-        isBuiltinProfile(
-            profile
-        )
+        profile.workflow_type
+        ===
+        "private"
     ) {
         card.classList.add(
             "private-workflow"
+        );
+    }
+
+    if (
+        profile.workflow_type
+        ===
+        "template"
+    ) {
+        card.classList.add(
+            "template-workflow"
         );
     }
 
@@ -4693,15 +6250,29 @@ function createGenerateProfileCard(
         );
 
     if (
-        isBuiltinProfile(
+        isManagedProfile(
             profile
         )
     ) {
         privateBadge.className =
-            "profile-private-badge";
+            (
+                profile.workflow_type
+                ===
+                "template"
+                    ?
+                    "profile-private-badge template"
+                    :
+                    "profile-private-badge"
+            );
 
         privateBadge.textContent =
-            "BUILT-IN · PRIVATE";
+            profile.workflow_type
+            ===
+            "template"
+                ?
+                "HYPEREX · PUBLIC TEMPLATE"
+                :
+                "HYPEREX · PRIVATE";
     }
 
     const check =
@@ -4720,7 +6291,7 @@ function createGenerateProfileCard(
     );
 
     if (
-        isBuiltinProfile(
+        isManagedProfile(
             profile
         )
     ) {
@@ -4804,11 +6375,19 @@ function selectGenerateProfile(
         profile.name;
 
     summaryVersion.textContent =
-        isBuiltinProfile(
+        isManagedProfile(
             profile
         )
             ?
-            "private"
+            (
+                profile.workflow_type
+                ===
+                "template"
+                    ?
+                    `template · v${profile.active_version_number || 1}`
+                    :
+                    "private"
+            )
             :
             (
                 profile.active_version_number
@@ -10303,12 +11882,22 @@ function renderManagerProfiles() {
                 "manager-profile-item";
 
             if (
-                isBuiltinProfile(
-                    profile
-                )
+                profile.workflow_type
+                ===
+                "private"
             ) {
                 button.classList.add(
                     "private-workflow"
+                );
+            }
+
+            if (
+                profile.workflow_type
+                ===
+                "template"
+            ) {
+                button.classList.add(
+                    "template-workflow"
                 );
             }
 
@@ -10367,11 +11956,19 @@ function renderManagerProfiles() {
                 "manager-profile-status";
 
             status.textContent =
-                isBuiltinProfile(
+                isManagedProfile(
                     profile
                 )
                     ?
-                    "BUILT-IN · PRIVATE"
+                    (
+                        profile.workflow_type
+                        ===
+                        "template"
+                            ?
+                            "HYPEREX · PUBLIC TEMPLATE"
+                            :
+                            "HYPEREX · PRIVATE"
+                    )
                     :
                     (
                         Number(
@@ -10380,9 +11977,9 @@ function renderManagerProfiles() {
                         ===
                         1
                             ?
-                            "ACTIVE"
+                            "MY PROFILE · ACTIVE"
                             :
-                            "ARCHIVED"
+                            "MY PROFILE · ARCHIVED"
                     );
 
             button.append(
@@ -10460,13 +12057,27 @@ async function openProfileEditor(
             ||
             "";
 
-        const builtIn =
-            isBuiltinProfile(
+        const managed =
+            isManagedProfile(
                 profile
             );
 
+        const privateManaged =
+            managed
+            &&
+            profile.workflow_type
+            ===
+            "private";
+
+        const templateManaged =
+            managed
+            &&
+            profile.workflow_type
+            ===
+            "template";
+
         profileInstructionEditor.value =
-            builtIn
+            privateManaged
                 ?
                 ""
                 :
@@ -10477,7 +12088,7 @@ async function openProfileEditor(
                 );
 
         instructionCharacterCount.textContent =
-            builtIn
+            privateManaged
                 ?
                 "Private instruction"
                 :
@@ -10485,8 +12096,42 @@ async function openProfileEditor(
 
         privateProfileNotice.classList.toggle(
             "hidden-element",
-            !builtIn
+            !managed
         );
+
+        if (managed) {
+            const noticeTitle =
+                privateProfileNotice.querySelector(
+                    "strong"
+                );
+
+            const noticeCopy =
+                privateProfileNotice.querySelector(
+                    "span"
+                );
+
+            if (privateManaged) {
+                noticeTitle.textContent =
+                    "HYPEREX PRIVATE WORKFLOW";
+
+                noticeCopy.textContent =
+                    (
+                        "You can use this workflow for generation, but its "
+                        +
+                        "system instruction is managed privately by Hyperex."
+                    );
+            } else {
+                noticeTitle.textContent =
+                    "HYPEREX PUBLIC TEMPLATE";
+
+                noticeCopy.textContent =
+                    (
+                        "The shared template is read-only. Use Customize Template "
+                        +
+                        "to create your own editable copy."
+                    );
+            }
+        }
 
         const active =
             Number(
@@ -10495,36 +12140,44 @@ async function openProfileEditor(
             ===
             1;
 
-        profileStateBadge.textContent =
-            builtIn
-                ?
-                "BUILT-IN · PRIVATE"
-                :
-                (
-                    active
-                        ?
-                        "ACTIVE"
-                        :
-                        "ARCHIVED"
-                );
+        if (managed) {
+            profileStateBadge.textContent =
+                templateManaged
+                    ?
+                    "HYPEREX · TEMPLATE"
+                    :
+                    "HYPEREX · PRIVATE";
+        } else {
+            profileStateBadge.textContent =
+                active
+                    ?
+                    "MY PROFILE · ACTIVE"
+                    :
+                    "MY PROFILE · ARCHIVED";
+        }
+
+        customizeTemplateButton.classList.toggle(
+            "hidden-element",
+            !templateManaged
+        );
 
         archiveProfileButton.classList.toggle(
             "hidden-element",
             !active
             ||
-            builtIn
+            managed
         );
 
         restoreProfileButton.classList.toggle(
             "hidden-element",
             active
             ||
-            builtIn
+            managed
         );
 
         deleteProfileButton.classList.toggle(
             "hidden-element",
-            builtIn
+            managed
         );
 
         [
@@ -10538,16 +12191,20 @@ async function openProfileEditor(
                 item.disabled =
                     !active
                     ||
-                    builtIn;
+                    managed;
             }
         );
 
         profileInstructionEditor.placeholder =
-            builtIn
+            privateManaged
                 ?
-                "Private built-in workflow instruction."
+                "Private Hyperex workflow instruction."
                 :
-                "";
+                templateManaged
+                    ?
+                    "Public template instruction. Customize it to edit your own copy."
+                    :
+                    "";
 
         renderManagerProfiles();
 
@@ -10557,6 +12214,71 @@ async function openProfileEditor(
         );
     }
 }
+
+
+customizeTemplateButton.addEventListener(
+    "click",
+    async () => {
+        if (!editingProfileId) {
+            return;
+        }
+
+        customizeTemplateButton.disabled =
+            true;
+
+        customizeTemplateButton.textContent =
+            "Creating copy…";
+
+        try {
+            const response =
+                await fetch(
+                    `/api/profiles/${editingProfileId}/customize`,
+                    {
+                        method:
+                            "POST",
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            const profile =
+                await response.json();
+
+            showToast(
+                "Editable copy created in My Profiles."
+            );
+
+            await Promise.all([
+                loadProfiles(
+                    profile.id
+                ),
+                loadManagerProfiles(),
+            ]);
+
+            await openProfileEditor(
+                profile.id
+            );
+
+        } catch (error) {
+            showToast(
+                error.message
+            );
+
+        } finally {
+            customizeTemplateButton.disabled =
+                false;
+
+            customizeTemplateButton.textContent =
+                "Customize template";
+        }
+    }
+);
 
 
 profileInstructionEditor.addEventListener(
@@ -11099,6 +12821,7 @@ function closeModal(
     newProfileModal,
     historyDetailModal,
     changePasswordModal,
+    adminWorkflowModal,
 ].forEach(
     modal => {
         modal.addEventListener(
@@ -11116,6 +12839,24 @@ function closeModal(
             }
         );
     }
+);
+
+
+closeAdminWorkflowModal.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            adminWorkflowModal
+        )
+);
+
+
+cancelAdminWorkflowButton.addEventListener(
+    "click",
+    () =>
+        closeModal(
+            adminWorkflowModal
+        )
 );
 
 
@@ -11206,6 +12947,7 @@ document.addEventListener(
                 compareModal,
                 newProfileModal,
                 changePasswordModal,
+                adminWorkflowModal,
             ].forEach(
                 closeModal
             );

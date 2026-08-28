@@ -1228,6 +1228,14 @@
 
                             <div class="editor-header-actions">
                                 <button
+                                    class="outline-button template-customize-button hidden-element"
+                                    id="customizeTemplateButton"
+                                    type="button"
+                                >
+                                    Customize template
+                                </button>
+
+                                <button
                                     class="outline-button"
                                     id="archiveProfileButton"
                                     type="button"
@@ -2064,17 +2072,17 @@
             id="adminView"
         >
 
-            <header class="page-header">
+            <header class="page-header admin-page-header">
                 <div>
                     <span class="page-kicker">
                         HYPEREX ADMIN
                     </span>
 
-                    <h1>Dashboard.</h1>
+                    <h1>Control Center.</h1>
 
                     <p>
-                        See how Hyperex is running, manage users,
-                        and choose which AI models power each quality level.
+                        Manage users, publish workflows, choose AI models,
+                        and check whether Hyperex is running normally.
                     </p>
                 </div>
 
@@ -2090,7 +2098,10 @@
 
             <div class="admin-shell">
 
-                <section class="admin-overview-grid">
+                <!-- OVERVIEW -->
+
+                <section class="admin-overview-grid admin-overview-grid-six">
+
                     <article>
                         <span>TOTAL USERS</span>
                         <strong id="adminUsersCount">—</strong>
@@ -2104,15 +2115,21 @@
                     </article>
 
                     <article>
-                        <span>TOTAL JOBS</span>
-                        <strong id="adminJobsCount">—</strong>
-                        <small>All saved generation jobs</small>
-                    </article>
-
-                    <article>
                         <span>IMAGES MADE</span>
                         <strong id="adminImagesCount">—</strong>
                         <small>Completed generated images</small>
+                    </article>
+
+                    <article>
+                        <span>WORKFLOWS</span>
+                        <strong id="adminWorkflowsCount">—</strong>
+                        <small>Admin-managed global workflows</small>
+                    </article>
+
+                    <article>
+                        <span>TOTAL JOBS</span>
+                        <strong id="adminJobsCount">—</strong>
+                        <small>All saved generation jobs</small>
                     </article>
 
                     <article>
@@ -2120,37 +2137,22 @@
                         <strong id="adminSuccessRate">—</strong>
                         <small>Completed vs failed image attempts</small>
                     </article>
+
                 </section>
 
 
-                <section class="admin-section admin-system-section">
-                    <header>
-                        <div>
-                            <span>SYSTEM</span>
-                            <h2>Connections</h2>
-                        </div>
-                        <p>
-                            A quick check that login, database, storage and
-                            background generation are connected.
-                        </p>
-                    </header>
-
-                    <div
-                        class="admin-system-list"
-                        id="adminSystemList"
-                    ></div>
-                </section>
-
+                <!-- ACCOUNTS -->
 
                 <section class="admin-section">
                     <header>
                         <div>
-                            <span>USERS</span>
-                            <h2>Accounts</h2>
+                            <span>ACCOUNTS</span>
+                            <h2>Users & access</h2>
                         </div>
+
                         <p>
-                            See user activity, change access level, or suspend
-                            an account when needed.
+                            See user activity, promote trusted administrators,
+                            or suspend an account when necessary.
                         </p>
                     </header>
 
@@ -2161,24 +2163,97 @@
                 </section>
 
 
+                <!-- WORKFLOWS -->
+
+                <section class="admin-section admin-workflow-section">
+
+                    <header class="admin-workflow-header">
+                        <div>
+                            <span>WORKFLOWS</span>
+                            <h2>Global workflow library</h2>
+                        </div>
+
+                        <p>
+                            Add workflows once and publish them to every user.
+                            Private workflows keep their instructions hidden.
+                            Public templates can be customized into user-owned copies.
+                        </p>
+
+                        <button
+                            class="admin-primary-action"
+                            id="addAdminWorkflowButton"
+                            type="button"
+                        >
+                            + Add workflow
+                        </button>
+                    </header>
+
+                    <div class="admin-workflow-summary">
+
+                        <div>
+                            <span>PUBLISHED</span>
+                            <strong id="adminPublishedWorkflowCount">—</strong>
+                        </div>
+
+                        <div>
+                            <span>DRAFTS</span>
+                            <strong id="adminDraftWorkflowCount">—</strong>
+                        </div>
+
+                        <div>
+                            <span>PRIVATE</span>
+                            <strong id="adminPrivateWorkflowCount">—</strong>
+                        </div>
+
+                        <div>
+                            <span>PUBLIC TEMPLATES</span>
+                            <strong id="adminTemplateWorkflowCount">—</strong>
+                        </div>
+
+                    </div>
+
+                    <div
+                        class="admin-workflow-list"
+                        id="adminWorkflowList"
+                    >
+                        <div class="loading-state">
+                            Loading workflows…
+                        </div>
+                    </div>
+
+                </section>
+
+
+                <!-- AI MODELS -->
+
                 <section class="admin-section">
                     <header>
                         <div>
                             <span>AI MODELS</span>
                             <h2>Quality levels</h2>
                         </div>
+
                         <p>
-                            Economy uses fewer credits, Balanced gives stronger
-                            results, and Best Quality is the premium option.
-                            Change the API model ID here when providers release
-                            better models.
+                            Users choose Economy, Balanced, or Best Quality.
+                            You control which actual API model powers each level.
                         </p>
                     </header>
 
                     <div class="admin-model-guide">
-                        <div><strong>Economy</strong><span>Lowest usage</span></div>
-                        <div><strong>Balanced</strong><span>Recommended default</span></div>
-                        <div><strong>Best Quality</strong><span>Strongest results</span></div>
+                        <div>
+                            <strong>Economy</strong>
+                            <span>Lowest usage</span>
+                        </div>
+
+                        <div>
+                            <strong>Balanced</strong>
+                            <span>Recommended default</span>
+                        </div>
+
+                        <div>
+                            <strong>Best Quality</strong>
+                            <span>Strongest results</span>
+                        </div>
                     </div>
 
                     <div
@@ -2192,12 +2267,37 @@
                 </section>
 
 
+                <!-- SYSTEM -->
+
+                <section class="admin-section admin-system-section">
+                    <header>
+                        <div>
+                            <span>SYSTEM</span>
+                            <h2>Connections</h2>
+                        </div>
+
+                        <p>
+                            A simple health check for login, database,
+                            image storage and background generation.
+                        </p>
+                    </header>
+
+                    <div
+                        class="admin-system-list"
+                        id="adminSystemList"
+                    ></div>
+                </section>
+
+
+                <!-- ERRORS -->
+
                 <section class="admin-section">
                     <header>
                         <div>
                             <span>RECENT ERRORS</span>
                             <h2>What needs attention</h2>
                         </div>
+
                         <p>
                             Only recent failed image generations appear here.
                             Successful jobs do not clutter this list.
@@ -2216,6 +2316,244 @@
 
     </main>
 
+</div>
+
+
+<!-- =========================================================
+     ADMIN WORKFLOW MODAL
+========================================================= -->
+
+<div
+    class="modal-overlay"
+    id="adminWorkflowModal"
+    aria-hidden="true"
+>
+    <div class="modal-card modal-wide admin-workflow-modal-card">
+
+        <header class="modal-header">
+            <div>
+                <span>ADMIN WORKFLOW</span>
+                <h2 id="adminWorkflowModalTitle">
+                    Add workflow
+                </h2>
+            </div>
+
+            <button
+                id="closeAdminWorkflowModal"
+                type="button"
+            >
+                ×
+            </button>
+        </header>
+
+
+        <div class="admin-workflow-form">
+
+            <div class="admin-workflow-form-row">
+
+                <label>
+                    <span>WORKFLOW NAME</span>
+                    <input
+                        class="modal-input"
+                        id="adminWorkflowNameInput"
+                        maxlength="120"
+                        placeholder="Example: Fashion Editorial"
+                    >
+                </label>
+
+                <label>
+                    <span>DISPLAY ORDER</span>
+                    <input
+                        class="modal-input"
+                        id="adminWorkflowSortOrderInput"
+                        type="number"
+                        min="0"
+                        max="9999"
+                        value="100"
+                    >
+                </label>
+
+            </div>
+
+
+            <label>
+                <span>DESCRIPTION USERS WILL SEE</span>
+
+                <textarea
+                    class="modal-small-textarea"
+                    id="adminWorkflowDescriptionInput"
+                    maxlength="800"
+                    placeholder="Explain what this workflow creates in simple language."
+                ></textarea>
+            </label>
+
+
+            <div class="admin-workflow-choice-row">
+
+                <label class="admin-choice-card">
+                    <input
+                        id="adminWorkflowPrivateType"
+                        type="radio"
+                        name="admin-workflow-type"
+                        value="private"
+                        checked
+                    >
+
+                    <span>
+                        <strong>Private Workflow</strong>
+                        <small>
+                            Everyone can use it, but users never see or edit
+                            the system instruction.
+                        </small>
+                    </span>
+                </label>
+
+                <label class="admin-choice-card">
+                    <input
+                        id="adminWorkflowTemplateType"
+                        type="radio"
+                        name="admin-workflow-type"
+                        value="template"
+                    >
+
+                    <span>
+                        <strong>Public Template</strong>
+                        <small>
+                            Everyone can use it and create their own editable
+                            copy without changing the shared original.
+                        </small>
+                    </span>
+                </label>
+
+            </div>
+
+
+            <label>
+                <span>SYSTEM INSTRUCTION</span>
+
+                <textarea
+                    class="admin-workflow-instruction"
+                    id="adminWorkflowInstructionInput"
+                    spellcheck="false"
+                    placeholder="Enter the full system instruction used for new generation jobs."
+                ></textarea>
+            </label>
+
+
+            <div class="admin-workflow-security-note">
+                <strong id="adminWorkflowSecurityTitle">
+                    PRIVATE WORKFLOW
+                </strong>
+
+                <span id="adminWorkflowSecurityText">
+                    This instruction is encrypted and is never returned to normal users.
+                </span>
+            </div>
+
+
+            <section
+                class="admin-workflow-version-panel hidden-element"
+                id="adminWorkflowVersionPanel"
+            >
+                <header>
+                    <div>
+                        <span>VERSION HISTORY</span>
+                        <strong>
+                            Restore an earlier instruction
+                        </strong>
+                    </div>
+
+                    <small>
+                        Old jobs remain unchanged because every job keeps its own snapshot.
+                    </small>
+                </header>
+
+                <div
+                    class="admin-workflow-version-list"
+                    id="adminWorkflowVersionList"
+                ></div>
+            </section>
+
+
+            <div class="admin-workflow-modal-footer">
+
+                <div class="admin-workflow-secondary-actions">
+
+                    <button
+                        class="modal-cancel hidden-element"
+                        id="duplicateAdminWorkflowButton"
+                        type="button"
+                    >
+                        Duplicate
+                    </button>
+
+                    <button
+                        class="modal-cancel hidden-element"
+                        id="unpublishAdminWorkflowButton"
+                        type="button"
+                    >
+                        Unpublish
+                    </button>
+
+                    <button
+                        class="modal-cancel hidden-element"
+                        id="archiveAdminWorkflowButton"
+                        type="button"
+                    >
+                        Archive
+                    </button>
+
+                    <button
+                        class="danger-button hidden-element"
+                        id="deleteAdminWorkflowButton"
+                        type="button"
+                    >
+                        Delete
+                    </button>
+
+                </div>
+
+                <div class="modal-actions admin-workflow-save-actions">
+
+                    <button
+                        class="modal-cancel"
+                        id="cancelAdminWorkflowButton"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        class="black-button"
+                        id="saveAdminWorkflowDraftButton"
+                        type="button"
+                    >
+                        Save
+                    </button>
+
+                    <button
+                        class="modal-create"
+                        id="publishAdminWorkflowButton"
+                        type="button"
+                    >
+                        Save & publish
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="connection-result"
+                id="adminWorkflowFormMessage"
+            >
+                Draft workflows are visible only to Admin.
+            </div>
+
+        </div>
+
+    </div>
 </div>
 
 

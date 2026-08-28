@@ -14,35 +14,53 @@ from app.platform.queue_backend import (
     get_queue_provider,
     queue_is_configured,
 )
+from app.managed_workflow_service import (
+    get_workflow_summary,
+    list_admin_workflows,
+)
 
 
 def get_admin_overview():
     connection = get_connection()
 
     try:
-        users = int((connection.execute(
-            "SELECT COUNT(*) AS count FROM app_users"
-        ).fetchone()["count"] or 0))
-
-        jobs = int((connection.execute(
-            "SELECT COUNT(*) AS count FROM generation_jobs"
-        ).fetchone()["count"] or 0))
-
-        today_jobs = int((connection.execute(
+        # Keep the Admin overview to one Turso round-trip. The previous
+        # implementation issued five sequential COUNT queries; that was fine
+        # for local SQLite but multiplied network latency in the cloud.
+        row = connection.execute(
             """
-            SELECT COUNT(*) AS count
-            FROM generation_jobs
-            WHERE date(created_at) = date('now')
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM app_users
+                ) AS users,
+                (
+                    SELECT COUNT(*)
+                    FROM generation_jobs
+                ) AS jobs,
+                (
+                    SELECT COUNT(*)
+                    FROM generation_jobs
+                    WHERE date(created_at) = date('now')
+                ) AS jobs_today,
+                (
+                    SELECT COUNT(*)
+                    FROM generated_images
+                    WHERE status = 'complete'
+                ) AS complete_images,
+                (
+                    SELECT COUNT(*)
+                    FROM generated_images
+                    WHERE status = 'failed'
+                ) AS failed_images
             """
-        ).fetchone()["count"] or 0))
+        ).fetchone()
 
-        complete_images = int((connection.execute(
-            "SELECT COUNT(*) AS count FROM generated_images WHERE status = 'complete'"
-        ).fetchone()["count"] or 0))
-
-        failed_images = int((connection.execute(
-            "SELECT COUNT(*) AS count FROM generated_images WHERE status = 'failed'"
-        ).fetchone()["count"] or 0))
+        users = int(row["users"] or 0)
+        jobs = int(row["jobs"] or 0)
+        today_jobs = int(row["jobs_today"] or 0)
+        complete_images = int(row["complete_images"] or 0)
+        failed_images = int(row["failed_images"] or 0)
 
         attempted_images = complete_images + failed_images
         success_rate = (
@@ -122,10 +140,28 @@ def get_system_status():
 
 
 def get_admin_dashboard():
+    workflow_summary = (
+        get_workflow_summary()
+    )
+
     return {
-        "overview": get_admin_overview(),
+        "overview": {
+            **get_admin_overview(),
+            "workflows":
+                workflow_summary[
+                    "total"
+                ],
+            "published_workflows":
+                workflow_summary[
+                    "published"
+                ],
+        },
         "users": list_users(limit=100),
         "models": list_models(),
+        "workflows":
+            list_admin_workflows(),
+        "workflow_summary":
+            workflow_summary,
         "system": get_system_status(),
         "recent_failures": get_recent_failures(),
     }
