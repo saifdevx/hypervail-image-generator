@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 
 from app.database import get_connection
 from app.request_context import (
@@ -18,40 +20,106 @@ VALID_STATUSES = {
 }
 
 
-def ensure_user_schema():
-    connection = get_connection()
+# Schema migrations belong to process startup, not the hot request path.
+# SQLite made repeated CREATE/INDEX checks effectively invisible, but every
+# statement becomes a network round-trip once DATABASE_PROVIDER=turso.
+_SCHEMA_READY = False
+_SCHEMA_LOCK = threading.RLock()
 
-    try:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS app_users (
-                user_id TEXT PRIMARY KEY,
-                email TEXT,
-                display_name TEXT,
-                role TEXT NOT NULL
-                    DEFAULT 'user',
-                status TEXT NOT NULL
-                    DEFAULT 'active',
-                created_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP,
-                last_seen_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP
+# A short per-process cache removes duplicate app_users reads while one page
+# loads several API requests. Admin role/status changes invalidate this cache
+# immediately in the process that performs the change. A short TTL also keeps
+# multi-worker deployments eventually consistent without making auth depend on
+# a long-lived cache.
+_USER_CACHE = {}
+_USER_CACHE_LOCK = threading.RLock()
+_USER_CACHE_TTL_SECONDS = 10.0
+
+
+def _cache_user(user):
+    if not user:
+        return
+
+    payload = dict(user)
+    user_id = str(payload.get("user_id") or "")
+
+    if not user_id:
+        return
+
+    with _USER_CACHE_LOCK:
+        _USER_CACHE[user_id] = (
+            time.monotonic(),
+            payload,
+        )
+
+
+def _cached_user(user_id: str):
+    clean_id = str(user_id or "")
+    if not clean_id:
+        return None
+
+    with _USER_CACHE_LOCK:
+        entry = _USER_CACHE.get(clean_id)
+        if entry is None:
+            return None
+
+        cached_at, payload = entry
+        if (time.monotonic() - cached_at) > _USER_CACHE_TTL_SECONDS:
+            _USER_CACHE.pop(clean_id, None)
+            return None
+
+        return dict(payload)
+
+
+def _invalidate_user_cache(user_id: str):
+    with _USER_CACHE_LOCK:
+        _USER_CACHE.pop(str(user_id or ""), None)
+
+
+def ensure_user_schema(force: bool = False):
+    global _SCHEMA_READY
+
+    if _SCHEMA_READY and not force:
+        return
+
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY and not force:
+            return
+
+        connection = get_connection()
+
+        try:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS app_users (
+                    user_id TEXT PRIMARY KEY,
+                    email TEXT,
+                    display_name TEXT,
+                    role TEXT NOT NULL
+                        DEFAULT 'user',
+                    status TEXT NOT NULL
+                        DEFAULT 'active',
+                    created_at TEXT NOT NULL
+                        DEFAULT CURRENT_TIMESTAMP,
+                    last_seen_at TEXT NOT NULL
+                        DEFAULT CURRENT_TIMESTAMP
+                )
+                """
             )
-            """
-        )
 
-        connection.execute(
-            """
-            CREATE INDEX IF NOT EXISTS
-            idx_app_users_email
-            ON app_users(email)
-            """
-        )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_app_users_email
+                ON app_users(email)
+                """
+            )
 
-        connection.commit()
+            connection.commit()
+            _SCHEMA_READY = True
 
-    finally:
-        connection.close()
+        finally:
+            connection.close()
 
 
 def _bootstrap_admin_uid():
@@ -143,72 +211,51 @@ def ensure_user(
     connection = get_connection()
 
     try:
-        connection.execute(
+        # One UPSERT replaces the old INSERT + UPDATE + optional role UPDATE
+        # + SELECT sequence. This matters for a remote Turso database because
+        # each SQL statement is a network round-trip. Existing suspension state
+        # and non-admin roles are preserved; bootstrap admins are only promoted.
+        row = connection.execute(
             """
-            INSERT OR IGNORE INTO app_users (
+            INSERT INTO app_users (
                 user_id,
                 email,
                 role,
                 status
             )
             VALUES (?, ?, ?, 'active')
+            ON CONFLICT(user_id)
+            DO UPDATE SET
+                email = CASE
+                    WHEN excluded.email != ''
+                        THEN excluded.email
+                    ELSE app_users.email
+                END,
+                last_seen_at = CURRENT_TIMESTAMP,
+                role = CASE
+                    WHEN excluded.role = 'admin'
+                        THEN 'admin'
+                    ELSE app_users.role
+                END
+            RETURNING *
             """,
             (
                 user_id,
                 clean_email,
                 role,
             ),
-        )
-
-        if clean_email:
-            connection.execute(
-                """
-                UPDATE app_users
-                SET
-                    email = ?,
-                    last_seen_at =
-                        CURRENT_TIMESTAMP
-                WHERE user_id = ?
-                """,
-                (
-                    clean_email,
-                    user_id,
-                ),
-            )
-
-        if role == "admin":
-            connection.execute(
-                """
-                UPDATE app_users
-                SET role = 'admin'
-                WHERE user_id = ?
-                """,
-                (
-                    user_id,
-                ),
-            )
+        ).fetchone()
 
         connection.commit()
 
-        row = connection.execute(
-            """
-            SELECT *
-            FROM app_users
-            WHERE user_id = ?
-            """,
-            (
-                user_id,
-            ),
-        ).fetchone()
-
-        return (
-            dict(
-                row
-            )
+        result = (
+            dict(row)
             if row
             else
             None
         )
+        _cache_user(result)
+        return result
 
     finally:
         connection.close()
@@ -218,6 +265,11 @@ def get_user(
     user_id: str,
 ):
     ensure_user_schema()
+
+    cached = _cached_user(user_id)
+    if cached is not None:
+        return cached
+
     connection = get_connection()
 
     try:
@@ -232,14 +284,14 @@ def get_user(
             ),
         ).fetchone()
 
-        return (
-            dict(
-                row
-            )
+        result = (
+            dict(row)
             if row
             else
             None
         )
+        _cache_user(result)
+        return result
 
     finally:
         connection.close()
@@ -373,29 +425,39 @@ def update_user_access(
     connection = get_connection()
 
     try:
-        cursor = connection.execute(
+        row = connection.execute(
             f"""
             UPDATE app_users
             SET
                 {", ".join(updates)}
             WHERE user_id = ?
+            RETURNING *
             """,
             tuple(
                 params
             ),
-        )
+        ).fetchone()
 
         connection.commit()
 
-        if cursor.rowcount < 1:
+        result = (
+            dict(row)
+            if row
+            else
+            None
+        )
+
+        if result is None:
+            _invalidate_user_cache(
+                user_id
+            )
             return None
+
+        _cache_user(result)
+        return result
 
     finally:
         connection.close()
-
-    return get_user(
-        user_id
-    )
 
 
 def user_is_admin(

@@ -24,7 +24,7 @@ ENV_PATH = BASE_DIR / ".env"
 
 load_dotenv(
     dotenv_path=ENV_PATH,
-    override=True,
+    override=False,
 )
 
 DEFAULT_MODEL = "gemini-3.6-flash"

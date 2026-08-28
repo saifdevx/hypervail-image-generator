@@ -155,6 +155,22 @@ from app.usage_service import (
 from app.admin_service import (
     get_admin_dashboard,
 )
+from app.managed_workflow_service import (
+    ensure_managed_workflow_schema,
+    seed_builtin_managed_workflows,
+    is_managed_profile,
+    is_global_workflow_name,
+    create_managed_workflow,
+    update_managed_workflow,
+    set_managed_workflow_status,
+    duplicate_managed_workflow,
+    list_admin_workflows,
+    get_admin_workflow,
+    list_managed_workflow_versions,
+    rollback_managed_workflow,
+    delete_managed_workflow,
+    create_user_copy_from_template,
+)
 from app.platform.queue_backend import (
     get_generation_queue,
     get_queue_provider,
@@ -274,6 +290,49 @@ class AdminUserUpdateRequest(BaseModel):
     status: str | None = None
 
 
+class AdminManagedWorkflowCreateRequest(BaseModel):
+    name: str = Field(
+        min_length=1,
+        max_length=120,
+    )
+    description: str = Field(
+        default="",
+        max_length=800,
+    )
+    system_instruction: str = Field(
+        min_length=1,
+    )
+    workflow_type: str = "private"
+    status: str = "draft"
+    sort_order: int = 100
+
+
+class AdminManagedWorkflowUpdateRequest(BaseModel):
+    name: str = Field(
+        min_length=1,
+        max_length=120,
+    )
+    description: str = Field(
+        default="",
+        max_length=800,
+    )
+    system_instruction: str = Field(
+        min_length=1,
+    )
+    workflow_type: str
+    sort_order: int = 100
+
+
+class AdminManagedWorkflowStatusRequest(BaseModel):
+    status: str
+
+
+class AdminManagedWorkflowRollbackRequest(BaseModel):
+    version_number: int = Field(
+        ge=1,
+    )
+
+
 class InternalQueueTask(BaseModel):
     task: str
     job_id: int
@@ -329,15 +388,21 @@ def require_editable_profile(
             detail="Profile not found.",
         )
 
-    if is_builtin_profile_id(
-        profile_id
+    if (
+        is_builtin_profile_id(
+            profile_id
+        )
+        or
+        is_managed_profile(
+            profile_id
+        )
     ):
         raise HTTPException(
             status_code=403,
             detail=(
-                "This is a built-in private workflow. "
-                "It can be used for generation, but it "
-                "cannot be edited, archived, or deleted."
+                "This is a Hyperex-managed workflow. "
+                "Use it as published, or customize a public template "
+                "into your own profile."
             ),
         )
 
@@ -418,8 +483,10 @@ async def lifespan(
     ensure_user_schema()
     ensure_model_registry_schema()
     ensure_usage_schema()
+    ensure_managed_workflow_schema()
     seed_default_profiles()
     sync_builtin_workflows()
+    seed_builtin_managed_workflows()
     ensure_user(
         "local",
         "local@hyperex.dev",
@@ -435,7 +502,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.0-phase2-checkpoint06-auth",
+    version="0.14.0-phase2-checkpoint07-workflows",
     lifespan=lifespan,
 )
 
@@ -506,12 +573,25 @@ async def auth_and_security(
                 },
             )
 
-        app_user = ensure_user(
+        # The user record is created/refreshed during login/session bootstrap.
+        # Protected API requests only need to read account access state.
+        # Calling ensure_user() here used to run writes for every request;
+        # that was cheap in local SQLite but very slow over remote Turso.
+        user_id = (
             session.user_id
             or
-            "",
-            session.email,
+            ""
         )
+
+        app_user = get_user(
+            user_id
+        )
+
+        if app_user is None:
+            app_user = ensure_user(
+                user_id,
+                session.email,
+            )
 
         if (
             not app_user
@@ -1346,6 +1426,295 @@ def admin_dashboard():
 
 
 @app.get(
+    "/api/admin/workflows"
+)
+def admin_workflows():
+    require_admin()
+
+    return {
+        "workflows":
+            list_admin_workflows()
+    }
+
+
+@app.get(
+    "/api/admin/workflows/{profile_id}"
+)
+def admin_workflow_details(
+    profile_id: int,
+):
+    require_admin()
+
+    workflow = get_admin_workflow(
+        profile_id
+    )
+
+    if workflow is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    return workflow
+
+
+@app.post(
+    "/api/admin/workflows",
+    status_code=201,
+)
+def admin_workflow_create(
+    request: AdminManagedWorkflowCreateRequest,
+):
+    require_admin()
+
+    try:
+        return create_managed_workflow(
+            name=request.name,
+            description=request.description,
+            system_instruction=
+                request.system_instruction,
+            workflow_type=
+                request.workflow_type,
+            status=
+                request.status,
+            sort_order=
+                request.sort_order,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(
+                error
+            ),
+        )
+
+
+@app.patch(
+    "/api/admin/workflows/{profile_id}"
+)
+def admin_workflow_update(
+    profile_id: int,
+    request: AdminManagedWorkflowUpdateRequest,
+):
+    require_admin()
+
+    try:
+        workflow = update_managed_workflow(
+            profile_id,
+            name=request.name,
+            description=request.description,
+            workflow_type=
+                request.workflow_type,
+            system_instruction=
+                request.system_instruction,
+            sort_order=
+                request.sort_order,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(
+                error
+            ),
+        )
+
+    if workflow is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    return workflow
+
+
+@app.post(
+    "/api/admin/workflows/{profile_id}/status"
+)
+def admin_workflow_status(
+    profile_id: int,
+    request: AdminManagedWorkflowStatusRequest,
+):
+    require_admin()
+
+    try:
+        workflow = (
+            set_managed_workflow_status(
+                profile_id,
+                request.status,
+            )
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(
+                error
+            ),
+        )
+
+    if workflow is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    return workflow
+
+
+@app.post(
+    "/api/admin/workflows/{profile_id}/duplicate",
+    status_code=201,
+)
+def admin_workflow_duplicate(
+    profile_id: int,
+):
+    require_admin()
+
+    workflow = (
+        duplicate_managed_workflow(
+            profile_id
+        )
+    )
+
+    if workflow is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    return workflow
+
+
+@app.get(
+    "/api/admin/workflows/{profile_id}/versions"
+)
+def admin_workflow_versions(
+    profile_id: int,
+):
+    require_admin()
+
+    workflow = get_admin_workflow(
+        profile_id
+    )
+
+    if workflow is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    return {
+        "profile_id":
+            profile_id,
+        "active_version_number":
+            workflow[
+                "version_number"
+            ],
+        "versions":
+            list_managed_workflow_versions(
+                profile_id
+            ),
+    }
+
+
+@app.post(
+    "/api/admin/workflows/{profile_id}/rollback"
+)
+def admin_workflow_rollback(
+    profile_id: int,
+    request: AdminManagedWorkflowRollbackRequest,
+):
+    require_admin()
+
+    result = rollback_managed_workflow(
+        profile_id,
+        request.version_number,
+    )
+
+    status = result.get(
+        "status"
+    )
+
+    if status == "not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Managed workflow not found.",
+        )
+
+    if status == "version_not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Workflow version not found.",
+        )
+
+    if status == "instruction_missing":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "That private workflow version cannot be restored "
+                "because its encrypted instruction is missing."
+            ),
+        )
+
+    return result
+
+
+@app.delete(
+    "/api/admin/workflows/{profile_id}"
+)
+def admin_workflow_delete(
+    profile_id: int,
+):
+    require_admin()
+
+    result = delete_managed_workflow(
+        profile_id
+    )
+
+    status = result.get(
+        "status"
+    )
+
+    messages = {
+        "not_found":
+            (
+                404,
+                "Managed workflow not found.",
+            ),
+        "system_protected":
+            (
+                409,
+                (
+                    "Hero and UGC are protected system workflows. "
+                    "You can unpublish them, but not permanently delete them."
+                ),
+            ),
+        "used_by_jobs":
+            (
+                409,
+                (
+                    "This workflow has generation history. "
+                    "Archive or unpublish it instead of deleting it."
+                ),
+            ),
+    }
+
+    if status in messages:
+        code, message = messages[
+            status
+        ]
+
+        raise HTTPException(
+            status_code=code,
+            detail=message,
+        )
+
+    return result
+
+
+@app.get(
     "/api/admin/models"
 )
 def admin_models():
@@ -1394,6 +1763,76 @@ def admin_user_update(
     request: AdminUserUpdateRequest,
 ):
     require_admin()
+
+    current_admin_id = (
+        get_current_owner_id()
+    )
+
+    bootstrap_admin_id = (
+        os.getenv(
+            "HYPEREX_ADMIN_UID"
+        )
+        or
+        ""
+    ).strip()
+
+    if (
+        user_id
+        ==
+        current_admin_id
+        and
+        (
+            (
+                request.role
+                is not None
+                and
+                request.role
+                !=
+                "admin"
+            )
+            or
+            request.status
+            ==
+            "suspended"
+        )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "You cannot remove or suspend your own Admin access "
+                "while signed in. Use another Admin account for that change."
+            ),
+        )
+
+    if (
+        bootstrap_admin_id
+        and
+        user_id
+        ==
+        bootstrap_admin_id
+        and
+        (
+            (
+                request.role
+                is not None
+                and
+                request.role
+                !=
+                "admin"
+            )
+            or
+            request.status
+            ==
+            "suspended"
+        )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This is the primary HYPEREX_ADMIN_UID account. "
+                "Change the bootstrap Admin UID before removing its Admin access."
+            ),
+        )
 
     try:
         result = update_user_access(
@@ -2188,14 +2627,20 @@ def profile_create(
             ),
         )
 
-    if is_builtin_workflow_name(
-        name
+    if (
+        is_builtin_workflow_name(
+            name
+        )
+        or
+        is_global_workflow_name(
+            name
+        )
     ):
         raise HTTPException(
             status_code=409,
             detail=(
-                "That workflow name is reserved "
-                "for a built-in private workflow."
+                "That name is already used by a Hyperex workflow. "
+                "Choose a different name for your custom profile."
             ),
         )
 
@@ -2217,6 +2662,32 @@ def profile_create(
                 error
             ),
         )
+
+
+@app.post(
+    "/api/profiles/{profile_id}/customize",
+    status_code=201,
+)
+def profile_customize_template(
+    profile_id: int,
+):
+    profile = (
+        create_user_copy_from_template(
+            profile_id
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Published public template not found."
+            ),
+        )
+
+    return sanitize_profile(
+        profile
+    )
 
 
 @app.patch(
@@ -2935,16 +3406,18 @@ async def job_create(
 
     if (
         result["status"]
-        ==
-        "builtin_instruction_missing"
+        in {
+            "builtin_instruction_missing",
+            "managed_instruction_missing",
+        }
     ):
         raise HTTPException(
             status_code=503,
             detail=(
-                "The private instruction file for "
+                "The active system instruction for "
                 f"{result.get('profile_name', 'this workflow')} "
-                "is missing. Add the private .txt file under "
-                "profiles/private/ and retry."
+                "is unavailable. Ask an Admin to open the workflow "
+                "and save a valid instruction."
             ),
         )
 

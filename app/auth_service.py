@@ -604,17 +604,30 @@ class FirebaseAuthAdapter:
         self,
         access_token: str,
     ):
-        async with httpx.AsyncClient(
-            timeout=15.0
-        ) as client:
-            response = await client.post(
-                self._url(
-                    self.LOOKUP_URL
-                ),
-                json={
-                    "idToken":
-                        access_token,
-                },
+        # Firebase lookups are used to enrich/validate an existing session.
+        # A temporary network/connectivity problem must not crash the whole
+        # FastAPI request with an uncaught httpx exception. Keep the lookup
+        # bounded and fail closed so callers can use their normal refresh or
+        # unauthenticated fallback paths.
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    8.0,
+                    connect=5.0,
+                )
+            ) as client:
+                response = await client.post(
+                    self._url(
+                        self.LOOKUP_URL
+                    ),
+                    json={
+                        "idToken":
+                            access_token,
+                    },
+                )
+        except httpx.RequestError:
+            return AuthSession(
+                authenticated=False
             )
 
         if response.status_code >= 400:

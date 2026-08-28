@@ -247,33 +247,84 @@ def _migrate_existing_ownership(
     connection,
 ):
     # Existing single-user custom profiles become local-owner data.
-    # Built-in Hero/UGC stay global (owner_id NULL).
-    connection.execute(
-        """
-        UPDATE generation_profiles
-        SET owner_id = ?
-        WHERE
-            owner_id IS NULL
-            AND name NOT IN (
+    # Built-in and Admin-managed workflows stay global (owner_id NULL).
+    managed_workflows_exist = (
+        connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE
+                type = 'table'
+                AND name = 'managed_workflows'
+            LIMIT 1
+            """
+        ).fetchone()
+        is not None
+    )
+
+    if managed_workflows_exist:
+        connection.execute(
+            """
+            UPDATE generation_profiles
+            SET owner_id = ?
+            WHERE
+                owner_id IS NULL
+                AND name NOT IN (
+                    'Hero Images',
+                    'UGC Images'
+                )
+                AND id NOT IN (
+                    SELECT profile_id
+                    FROM managed_workflows
+                )
+            """,
+            (
+                LOCAL_OWNER_ID,
+            ),
+        )
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+            SET owner_id = NULL
+            WHERE
+                name IN (
+                    'Hero Images',
+                    'UGC Images'
+                )
+                OR id IN (
+                    SELECT profile_id
+                    FROM managed_workflows
+                )
+            """
+        )
+    else:
+        connection.execute(
+            """
+            UPDATE generation_profiles
+            SET owner_id = ?
+            WHERE
+                owner_id IS NULL
+                AND name NOT IN (
+                    'Hero Images',
+                    'UGC Images'
+                )
+            """,
+            (
+                LOCAL_OWNER_ID,
+            ),
+        )
+
+        connection.execute(
+            """
+            UPDATE generation_profiles
+            SET owner_id = NULL
+            WHERE name IN (
                 'Hero Images',
                 'UGC Images'
             )
-        """,
-        (
-            LOCAL_OWNER_ID,
-        ),
-    )
-
-    connection.execute(
-        """
-        UPDATE generation_profiles
-        SET owner_id = NULL
-        WHERE name IN (
-            'Hero Images',
-            'UGC Images'
+            """
         )
-        """
-    )
 
     connection.execute(
         """
