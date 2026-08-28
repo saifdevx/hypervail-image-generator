@@ -149,42 +149,91 @@ def sanitize_profile(profile: dict | None):
     if profile is None:
         return None
 
-    result = dict(profile)
-    name = result.get("name")
+    result = dict(
+        profile
+    )
 
-    if not is_builtin_workflow_name(
-        name
-    ):
-        result["is_builtin"] = False
-        result["instruction_visibility"] = "visible"
-        result["can_edit_profile"] = True
-        result["can_edit_instruction"] = True
-        result["can_archive"] = True
-        result["can_delete"] = True
+    managed_type = (
+        result.get(
+            "managed_workflow_type"
+        )
+        or
+        ""
+    )
+
+    if managed_type:
+        result["is_managed"] = True
+        result["workflow_type"] = (
+            managed_type
+        )
+        result["managed_status"] = (
+            result.get(
+                "managed_status"
+            )
+        )
+        result["is_system_workflow"] = bool(
+            result.get(
+                "managed_is_system"
+            )
+        )
+
+        result["can_edit_profile"] = False
+        result["can_edit_instruction"] = False
+        result["can_archive"] = False
+        result["can_delete"] = False
+
+        if managed_type == "private":
+            result["is_builtin"] = True
+            result["instruction_visibility"] = "private"
+            result["can_customize"] = False
+            result["system_instruction"] = None
+            result["instruction_notice"] = (
+                "This is a Hyperex-managed private workflow. "
+                "You can use it for generation, but its system instruction "
+                "is not exposed to user accounts."
+            )
+
+            if is_builtin_workflow_name(
+                result.get(
+                    "name"
+                )
+            ):
+                result["description"] = (
+                    result.get(
+                        "description"
+                    )
+                    or
+                    get_builtin_description(
+                        result.get(
+                            "name"
+                        )
+                    )
+                    or
+                    ""
+                )
+
+        else:
+            result["is_builtin"] = False
+            result["instruction_visibility"] = "public"
+            result["can_customize"] = True
+            result["instruction_notice"] = (
+                "This is a Hyperex public template. "
+                "Customize creates your own editable copy without changing "
+                "the shared original."
+            )
+
         return result
 
-    result["description"] = (
-        get_builtin_description(
-            name
-        )
-        or result.get(
-            "description",
-            "",
-        )
-    )
-
-    result["is_builtin"] = True
-    result["instruction_visibility"] = "private"
-    result["can_edit_profile"] = False
-    result["can_edit_instruction"] = False
-    result["can_archive"] = False
-    result["can_delete"] = False
-    result["system_instruction"] = None
-    result["instruction_notice"] = (
-        "This is a built-in private workflow. "
-        "You can use it for generation, but its full system instruction "
-        "is not exposed by the app."
-    )
+    result["is_managed"] = False
+    result["workflow_type"] = "custom"
+    result["is_system_workflow"] = False
+    result["is_builtin"] = False
+    result["instruction_visibility"] = "visible"
+    result["can_edit_profile"] = True
+    result["can_edit_instruction"] = True
+    result["can_archive"] = True
+    result["can_delete"] = True
+    result["can_customize"] = False
 
     return result
 
@@ -196,16 +245,51 @@ def sanitize_profile_version(
     if version is None:
         return None
 
-    result = dict(version)
+    result = dict(
+        version
+    )
 
-    if not is_builtin_profile_id(
-        profile_id
-    ):
+    connection = get_connection()
+
+    try:
+        managed = connection.execute(
+            """
+            SELECT workflow_type
+            FROM managed_workflows
+            WHERE profile_id = ?
+            """,
+            (
+                profile_id,
+            ),
+        ).fetchone()
+
+    except Exception:
+        managed = None
+
+    finally:
+        connection.close()
+
+    if managed is None:
         return result
 
-    result["system_instruction"] = None
-    result["is_builtin"] = True
-    result["instruction_visibility"] = "private"
+    workflow_type = (
+        managed[
+            "workflow_type"
+        ]
+    )
+
+    result["is_managed"] = True
+    result["workflow_type"] = (
+        workflow_type
+    )
+
+    if workflow_type == "private":
+        result["system_instruction"] = None
+        result["is_builtin"] = True
+        result["instruction_visibility"] = "private"
+    else:
+        result["is_builtin"] = False
+        result["instruction_visibility"] = "public"
 
     return result
 
@@ -294,35 +378,66 @@ def sync_builtin_workflows():
 
             profile_id = profile["id"]
 
-            connection.execute(
-                """
-                UPDATE generation_profiles
-                SET
-                    owner_id = NULL,
-                    slug = ?,
-                    description = ?,
-                    is_active = 1
-                WHERE id = ?
-                """,
-                (
-                    spec["slug"],
-                    spec["description"],
-                    profile_id,
-                ),
-            )
+            managed = None
 
-            # Remove old built-in instruction contents from profile_versions.
-            connection.execute(
-                """
-                UPDATE profile_versions
-                SET system_instruction = ?
-                WHERE profile_id = ?
-                """,
-                (
-                    PRIVATE_PLACEHOLDER,
-                    profile_id,
-                ),
-            )
+            try:
+                managed = connection.execute(
+                    """
+                    SELECT profile_id
+                    FROM managed_workflows
+                    WHERE profile_id = ?
+                    """,
+                    (
+                        profile_id,
+                    ),
+                ).fetchone()
+            except Exception:
+                managed = None
+
+            if managed is None:
+                connection.execute(
+                    """
+                    UPDATE generation_profiles
+                    SET
+                        owner_id = NULL,
+                        slug = ?,
+                        description = ?,
+                        is_active = 1
+                    WHERE id = ?
+                    """,
+                    (
+                        spec["slug"],
+                        spec["description"],
+                        profile_id,
+                    ),
+                )
+
+                # Before the managed workflow migration, remove old built-in
+                # instruction contents from normal profile version rows.
+                connection.execute(
+                    """
+                    UPDATE profile_versions
+                    SET system_instruction = ?
+                    WHERE profile_id = ?
+                    """,
+                    (
+                        PRIVATE_PLACEHOLDER,
+                        profile_id,
+                    ),
+                )
+            else:
+                # Once managed by Admin, never overwrite Admin metadata or
+                # version selection on startup.
+                connection.execute(
+                    """
+                    UPDATE generation_profiles
+                    SET owner_id = NULL
+                    WHERE id = ?
+                    """,
+                    (
+                        profile_id,
+                    ),
+                )
 
             if not profile[
                 "active_version_id"

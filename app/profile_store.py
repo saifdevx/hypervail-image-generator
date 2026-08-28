@@ -90,10 +90,7 @@ def _profile_access_clause():
             gp.owner_id = ?
             OR (
                 gp.owner_id IS NULL
-                AND gp.name IN (
-                    'Hero Images',
-                    'UGC Images'
-                )
+                AND mw.status = 'published'
             )
         )
     """
@@ -129,13 +126,26 @@ def _profile_select():
                 AS latest_version_number,
 
             active.id
-                AS version_id
+                AS version_id,
+
+            mw.workflow_type
+                AS managed_workflow_type,
+            mw.status
+                AS managed_status,
+            mw.sort_order
+                AS managed_sort_order,
+            mw.is_system
+                AS managed_is_system
 
         FROM generation_profiles gp
 
         LEFT JOIN profile_versions active
             ON active.id =
                 gp.active_version_id
+
+        LEFT JOIN managed_workflows mw
+            ON mw.profile_id =
+                gp.id
     """
 
 
@@ -193,14 +203,14 @@ def list_profiles(
             """
             ORDER BY
                 CASE
-                    WHEN gp.name =
-                        'Hero Images'
+                    WHEN gp.owner_id IS NULL
                         THEN 0
-                    WHEN gp.name =
-                        'UGC Images'
-                        THEN 1
-                    ELSE 2
+                    ELSE 1
                 END,
+                COALESCE(
+                    mw.sort_order,
+                    1000
+                ) ASC,
                 gp.name ASC
             """,
             tuple(
@@ -283,12 +293,25 @@ def get_profile_version(
                     AS version_id,
                 pv.version_number,
                 pv.system_instruction,
-                pv.created_at
+                pv.created_at,
+
+                mw.workflow_type
+                    AS managed_workflow_type,
+                mw.status
+                    AS managed_status,
+                mw.sort_order
+                    AS managed_sort_order,
+                mw.is_system
+                    AS managed_is_system
 
             FROM generation_profiles gp
 
             JOIN profile_versions pv
                 ON pv.profile_id =
+                    gp.id
+
+            LEFT JOIN managed_workflows mw
+                ON mw.profile_id =
                     gp.id
 
             WHERE
@@ -299,10 +322,7 @@ def get_profile_version(
                     gp.owner_id = ?
                     OR (
                         gp.owner_id IS NULL
-                        AND gp.name IN (
-                            'Hero Images',
-                            'UGC Images'
-                        )
+                        AND mw.status = 'published'
                     )
                 )
             """,
@@ -338,8 +358,13 @@ def list_profile_versions(
     try:
         allowed = connection.execute(
             """
-            SELECT id
+            SELECT gp.id
             FROM generation_profiles gp
+
+            LEFT JOIN managed_workflows mw
+                ON mw.profile_id =
+                    gp.id
+
             WHERE
                 gp.id = ?
                 AND
@@ -347,10 +372,7 @@ def list_profile_versions(
                     gp.owner_id = ?
                     OR (
                         gp.owner_id IS NULL
-                        AND gp.name IN (
-                            'Hero Images',
-                            'UGC Images'
-                        )
+                        AND mw.status = 'published'
                     )
                 )
             """,

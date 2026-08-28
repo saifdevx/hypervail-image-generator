@@ -1,4 +1,5 @@
 import json
+import threading
 
 from app.database import get_connection
 from app.request_context import (
@@ -6,41 +7,57 @@ from app.request_context import (
 )
 
 
-def ensure_usage_schema():
-    connection = get_connection()
+_SCHEMA_READY = False
+_SCHEMA_LOCK = threading.RLock()
 
-    try:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS usage_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT NOT NULL,
-                event_type TEXT NOT NULL,
-                job_id INTEGER,
-                provider TEXT,
-                model TEXT,
-                quantity INTEGER NOT NULL DEFAULT 1,
-                metadata_json TEXT NOT NULL DEFAULT '{}',
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+def ensure_usage_schema(force: bool = False):
+    global _SCHEMA_READY
+
+    if _SCHEMA_READY and not force:
+        return
+
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY and not force:
+            return
+
+        connection = get_connection()
+
+        try:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS usage_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    job_id INTEGER,
+                    provider TEXT,
+                    model TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    metadata_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
             )
-            """
-        )
 
-        connection.execute(
-            """
-            CREATE INDEX IF NOT EXISTS
-            idx_usage_events_user
-            ON usage_events(
-                user_id,
-                created_at
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_usage_events_user
+                ON usage_events(
+                    user_id,
+                    created_at
+                )
+                """
             )
-            """
-        )
 
-        connection.commit()
+            connection.commit()
 
-    finally:
-        connection.close()
+        finally:
+            connection.close()
+
+        _SCHEMA_READY = True
+
 
 
 def record_usage(

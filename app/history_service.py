@@ -1,3 +1,5 @@
+import threading
+
 from app.database import get_connection
 from app.image_service import (
     get_image_batch_status,
@@ -9,6 +11,10 @@ from app.normalizer_service import (
 from app.request_context import (
     get_current_owner_id,
 )
+
+
+_SCHEMA_READY = False
+_SCHEMA_LOCK = threading.RLock()
 
 
 # ============================================================
@@ -27,58 +33,70 @@ def _column_names(
     }
 
 
-def ensure_history_schema():
-    connection = get_connection()
+def ensure_history_schema(force: bool = False):
+    global _SCHEMA_READY
 
-    try:
-        job_columns = _column_names(
-            connection,
-            "generation_jobs",
-        )
+    if _SCHEMA_READY and not force:
+        return
 
-        if "is_favorite" not in job_columns:
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY and not force:
+            return
+
+        connection = get_connection()
+
+        try:
+            job_columns = _column_names(
+                connection,
+                "generation_jobs",
+            )
+
+            if "is_favorite" not in job_columns:
+                connection.execute(
+                    """
+                    ALTER TABLE generation_jobs
+                    ADD COLUMN is_favorite INTEGER
+                    NOT NULL DEFAULT 0
+                    """
+                )
+
+            image_columns = _column_names(
+                connection,
+                "generated_images",
+            )
+
+            if "is_favorite" not in image_columns:
+                connection.execute(
+                    """
+                    ALTER TABLE generated_images
+                    ADD COLUMN is_favorite INTEGER
+                    NOT NULL DEFAULT 0
+                    """
+                )
+
             connection.execute(
                 """
-                ALTER TABLE generation_jobs
-                ADD COLUMN is_favorite INTEGER
-                NOT NULL DEFAULT 0
+                CREATE INDEX IF NOT EXISTS
+                idx_generation_jobs_favorite
+                ON generation_jobs(is_favorite)
                 """
             )
 
-        image_columns = _column_names(
-            connection,
-            "generated_images",
-        )
-
-        if "is_favorite" not in image_columns:
             connection.execute(
                 """
-                ALTER TABLE generated_images
-                ADD COLUMN is_favorite INTEGER
-                NOT NULL DEFAULT 0
+                CREATE INDEX IF NOT EXISTS
+                idx_generated_images_favorite
+                ON generated_images(is_favorite)
                 """
             )
 
-        connection.execute(
-            """
-            CREATE INDEX IF NOT EXISTS
-            idx_generation_jobs_favorite
-            ON generation_jobs(is_favorite)
-            """
-        )
+            connection.commit()
 
-        connection.execute(
-            """
-            CREATE INDEX IF NOT EXISTS
-            idx_generated_images_favorite
-            ON generated_images(is_favorite)
-            """
-        )
+        finally:
+            connection.close()
 
-        connection.commit()
+        _SCHEMA_READY = True
 
-    finally:
-        connection.close()
 
 
 # ============================================================
