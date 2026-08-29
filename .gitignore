@@ -8,6 +8,7 @@ profiles/private/*.txt
 
 # ── Local SQLite (legacy/backup) ────────
 data/.credential_key
+**/.credential_key
 data/*.db
 data/*.db-*
 data/uploads/
@@ -28,13 +29,17 @@ backup_before_turso/
 *.sql
 *_dump.sql
 
-# ── Cloudflare (future R2/Queues) ───────
+# ── Cloudflare (R2/Queues/Worker secrets) ──
 .wrangler/
 wrangler.toml
 .dev.vars
+cloudflare-worker/.dev.vars
+cloudflare-worker/wrangler.toml
+cloudflare-worker/*secret*
 
-# ── Python ───────────────────────────────
+# ── Python environments ─────────────────
 .venv/
+.venv_python314_backup/
 venv/
 env/
 __pycache__/
