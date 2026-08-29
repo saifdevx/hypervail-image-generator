@@ -24,6 +24,9 @@ serviceAccountKey.json
 *_backup.db
 data/image_agent_before_*.db
 .turso/
+backup_before_turso/
+*.sql
+*_dump.sql
 
 # ── Cloudflare (future R2/Queues) ───────
 .wrangler/
