@@ -6463,6 +6463,45 @@ imageInput.addEventListener(
 );
 
 
+const COMMON_IMAGE_EXTENSIONS = new Set([
+    "jpg", "jpeg", "png", "webp", "gif", "bmp",
+    "tif", "tiff", "heic", "heif", "avif", "jp2", "j2k",
+    "psd", "tga", "dds", "pcx", "ppm", "pgm", "pbm",
+    "ico", "qoi"
+]);
+
+
+function looksLikeImageFile(
+    file
+) {
+    if (
+        file?.type
+        &&
+        file.type.startsWith(
+            "image/"
+        )
+    ) {
+        return true;
+    }
+
+    const name =
+        String(
+            file?.name
+            ||
+            ""
+        );
+
+    const extension =
+        name.includes(".")
+            ? name.split(".").pop().toLowerCase()
+            : "";
+
+    return COMMON_IMAGE_EXTENSIONS.has(
+        extension
+    );
+}
+
+
 replaceImageInput.addEventListener(
     "change",
     event => {
@@ -6477,8 +6516,8 @@ replaceImageInput.addEventListener(
             null
         ) {
             if (
-                !file.type.startsWith(
-                    "image/"
+                !looksLikeImageFile(
+                    file
                 )
             ) {
                 showToast(
@@ -6505,15 +6544,28 @@ replaceImageInput.addEventListener(
 function addImages(
     files
 ) {
-    const imageFiles =
+    const incomingFiles =
         Array.from(
             files
-        ).filter(
+        );
+
+    const imageFiles =
+        incomingFiles.filter(
             file =>
-                file.type.startsWith(
-                    "image/"
+                looksLikeImageFile(
+                    file
                 )
         );
+
+    if (
+        imageFiles.length
+        !==
+        incomingFiles.length
+    ) {
+        showToast(
+            "Some non-image files were skipped."
+        );
+    }
 
     for (
         const file
@@ -6573,6 +6625,37 @@ function renderReferenceCards() {
                     file
                 );
 
+            const previewFallback =
+                document.createElement(
+                    "div"
+                );
+
+            previewFallback.className =
+                "reference-preview-fallback hidden-element";
+
+            const previewLabel =
+                document.createElement(
+                    "strong"
+                );
+
+            previewLabel.textContent =
+                `IMAGE ${index + 1}`;
+
+            const previewFilename =
+                document.createElement(
+                    "span"
+                );
+
+            previewFilename.textContent =
+                file.name
+                ||
+                "Reference image";
+
+            previewFallback.append(
+                previewLabel,
+                previewFilename
+            );
+
             image.src =
                 url;
 
@@ -6580,10 +6663,26 @@ function renderReferenceCards() {
                 `Reference ${index + 1}`;
 
             image.onload =
-                () =>
+                () => {
                     URL.revokeObjectURL(
                         url
                     );
+                };
+
+            image.onerror =
+                () => {
+                    URL.revokeObjectURL(
+                        url
+                    );
+
+                    image.classList.add(
+                        "hidden-element"
+                    );
+
+                    previewFallback.classList.remove(
+                        "hidden-element"
+                    );
+                };
 
             const badges =
                 document.createElement(
@@ -6688,6 +6787,7 @@ function renderReferenceCards() {
 
             card.append(
                 image,
+                previewFallback,
                 badges,
                 footer
             );

@@ -1,9 +1,8 @@
 import base64
 import os
 import time
-import tempfile
+from io import BytesIO
 from pathlib import Path
-from contextlib import ExitStack
 from contextvars import copy_context
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -21,6 +20,10 @@ from app.job_store import (
 )
 from app.normalizer_service import (
     get_prompt_packages,
+)
+from app.reference_image_service import (
+    ReferenceImageError,
+    prepare_job_references_for_ai,
 )
 from app.settings_store import (
     get_runtime_settings,
@@ -935,7 +938,9 @@ def _build_gemini_image_contents(
         )
 
         image_bytes = (
-            reference.get("data")
+            reference.get("ai_data")
+            if reference.get("ai_data") is not None
+            else reference.get("data")
             if reference.get("data") is not None
             else reference["absolute_path"].read_bytes()
         )
@@ -943,9 +948,11 @@ def _build_gemini_image_contents(
         contents.append(
             types.Part.from_bytes(
                 data=image_bytes,
-                mime_type=reference[
-                    "media_type"
-                ],
+                mime_type=(
+                    reference.get("ai_media_type")
+                    or
+                    reference["media_type"]
+                ),
             )
         )
 
@@ -1062,41 +1069,42 @@ def _generate_openai_image_bytes(
         extra_direction=extra_direction,
     )
 
-    with ExitStack() as stack:
-        files = []
+    # Provider-safe references are already normalized before this point.
+    # Keep them in memory instead of writing temporary files for every output.
+    files = []
 
+    try:
         for reference in job["references"]:
-            absolute_path = reference.get("absolute_path")
+            image_bytes = (
+                reference.get("ai_data")
+                if reference.get("ai_data") is not None
+                else reference.get("data")
+            )
 
-            if absolute_path is not None:
-                files.append(
-                    stack.enter_context(
-                        open(absolute_path, "rb")
+            if image_bytes is None:
+                absolute_path = reference.get(
+                    "absolute_path"
+                )
+                if absolute_path is None:
+                    raise ReferenceImageError(
+                        "A reference image is unavailable."
                     )
-                )
-                continue
+                image_bytes = absolute_path.read_bytes()
 
-            suffix = Path(
-                reference.get("original_filename")
-                or "reference.png"
-            ).suffix or ".png"
-
-            temp = tempfile.NamedTemporaryFile(
-                suffix=suffix,
-                delete=False,
-            )
-            temp.write(reference["data"])
-            temp.flush()
-            temp.close()
-
-            stack.callback(
-                lambda path=temp.name: Path(path).unlink(missing_ok=True)
+            suffix = (
+                reference.get("ai_extension")
+                or ".jpg"
             )
 
+            stream = BytesIO(
+                image_bytes
+            )
+            stream.name = (
+                f"reference_{reference.get('position', len(files) + 1)}"
+                f"{suffix}"
+            )
             files.append(
-                stack.enter_context(
-                    open(temp.name, "rb")
-                )
+                stream
             )
 
         image_input = (
@@ -1125,6 +1133,10 @@ def _generate_openai_image_bytes(
                     job
                 ),
         )
+
+    finally:
+        for stream in files:
+            stream.close()
 
     if (
         not result.data
@@ -1480,6 +1492,17 @@ def generate_prompt_image(
             "error": "This job has no reference images.",
         }
 
+    try:
+        prepare_job_references_for_ai(
+            job
+        )
+    except ReferenceImageError as error:
+        return {
+            "ok": False,
+            "code": "reference_image_invalid",
+            "error": str(error),
+        }
+
     image_id = _create_image_record(
         job_id,
         prompt_id,
@@ -1652,6 +1675,17 @@ def generate_all_prompt_images(
             "ok": False,
             "code": "no_references",
             "error": "This job has no reference images.",
+        }
+
+    try:
+        prepare_job_references_for_ai(
+            job
+        )
+    except ReferenceImageError as error:
+        return {
+            "ok": False,
+            "code": "reference_image_invalid",
+            "error": str(error),
         }
 
     current_status = get_image_batch_status(

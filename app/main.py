@@ -49,6 +49,9 @@ from app.job_store import (
     get_job,
     get_reference_file,
 )
+from app.reference_image_service import (
+    ReferenceImageError,
+)
 from app.gemini_service import (
     get_gemini_status,
     test_gemini_connection,
@@ -3337,20 +3340,19 @@ async def job_create(
                 ),
             )
 
-        detected = (
-            detect_image_type(
-                data
+        try:
+            detected = detect_image_type(
+                data,
+                upload.filename,
             )
-        )
-
-        if detected is None:
+        except ReferenceImageError as error:
             raise HTTPException(
                 status_code=415,
                 detail=(
-                    f"Image {position} is not a "
-                    "valid PNG, JPG or WEBP file."
+                    f"Image {position} could not be used. "
+                    f"{error}"
                 ),
-            )
+            ) from error
 
         validated_uploads.append(
             {
@@ -3360,8 +3362,13 @@ async def job_create(
                         or
                         f"reference_{position}"
                     ),
+                # Store the server-normalized reference, not the original
+                # container/colour mode.  The original filename is kept as
+                # metadata for the user.
                 "data":
-                    data,
+                    detected[
+                        "data"
+                    ],
                 "extension":
                     detected[
                         "extension"

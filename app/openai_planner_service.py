@@ -65,7 +65,9 @@ def build_openai_content(
         )
 
         image_bytes = (
-            reference.get("data")
+            reference.get("ai_data")
+            if reference.get("ai_data") is not None
+            else reference.get("data")
             if reference.get("data") is not None
             else reference["absolute_path"].read_bytes()
         )
@@ -76,9 +78,11 @@ def build_openai_content(
                     "input_image",
                 "image_url":
                     _data_url(
-                        reference[
-                            "media_type"
-                        ],
+                        (
+                            reference.get("ai_media_type")
+                            or
+                            reference["media_type"]
+                        ),
                         image_bytes,
                     ),
                 # Product-detail fidelity matters more than

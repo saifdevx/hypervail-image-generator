@@ -18,6 +18,9 @@ from app.platform.storage_backend import (
     get_storage_backend,
     media_type_for_filename,
 )
+from app.reference_image_service import (
+    normalize_reference_image,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,37 +51,28 @@ _SCHEMA_READY = False
 _SCHEMA_LOCK = threading.RLock()
 
 
-def detect_image_type(data: bytes):
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return {
-            "extension": ".png",
-            "media_type": "image/png",
-        }
-
-    if data.startswith(b"\xff\xd8\xff"):
-        return {
-            "extension": ".jpg",
-            "media_type": "image/jpeg",
-        }
-
-    if (
-        len(data) >= 12
-        and data[0:4] == b"RIFF"
-        and data[8:12] == b"WEBP"
-    ):
-        return {
-            "extension": ".webp",
-            "media_type": "image/webp",
-        }
-
-    return None
+def detect_image_type(
+    data: bytes,
+    original_filename: str | None = None,
+):
+    # Fully decode the real image instead of trusting filename extensions or
+    # browser MIME labels.  Any raster format supported by Pillow (plus
+    # HEIC/HEIF via pillow-heif) is normalized to a clean provider-safe JPEG
+    # or PNG before the job is created.
+    return normalize_reference_image(
+        data,
+        original_filename,
+    )
 
 
 def media_type_for_storage(
     storage_ref: str,
     original_filename: str = "",
 ):
-    name = original_filename or storage_ref
+    # Stored filenames use the detected file type, which is safer than trusting
+    # an original filename that may be mislabeled (for example PNG bytes named
+    # .jpg).
+    name = storage_ref or original_filename
     return media_type_for_filename(name)
 
 
@@ -563,6 +557,7 @@ def create_prepared_job(
             stored_filename = (
                 f"{position:02d}_"
                 f"{uuid.uuid4().hex[:12]}"
+                f"_normalized"
                 f"{upload['extension']}"
             )
 
@@ -789,6 +784,7 @@ def get_job_for_planning(
                 id,
                 position,
                 original_filename,
+                stored_filename,
                 file_path
             FROM reference_images
             WHERE job_id = ?
@@ -818,6 +814,11 @@ def get_job_for_planning(
                 {
                     **dict(reference),
                     "storage_ref": storage_ref,
+                    "provider_safe": (
+                        "_normalized"
+                        in
+                        Path(reference["stored_filename"]).stem
+                    ),
                     "data": STORAGE.read_bytes(storage_ref),
                     "media_type": media_type_for_storage(
                         storage_ref,

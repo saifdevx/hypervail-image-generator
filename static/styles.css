@@ -10642,3 +10642,39 @@ body {
         min-height: 42px;
     }
 }
+
+/* Reference formats such as HEIC may be processable by Hyperex even when the
+   browser itself cannot render a local preview. */
+.reference-preview-fallback {
+    width: 100%;
+    aspect-ratio: 1;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+    padding: 14px;
+
+    background: var(--panel);
+    color: var(--white);
+
+    text-align: center;
+}
+
+.reference-preview-fallback strong {
+    color: var(--orange);
+    font-size: 8px;
+    letter-spacing: 0.06em;
+}
+
+.reference-preview-fallback span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    color: var(--muted);
+    font-size: 8px;
+    white-space: nowrap;
+}

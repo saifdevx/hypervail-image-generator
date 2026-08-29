@@ -19,6 +19,10 @@ from app.openai_planner_service import (
     run_openai_planner,
     test_openai_planner_connection,
 )
+from app.reference_image_service import (
+    ReferenceImageError,
+    prepare_job_references_for_ai,
+)
 from app.settings_store import (
     get_runtime_settings,
 )
@@ -119,7 +123,9 @@ def _build_gemini_contents(
         )
 
         image_bytes = (
-            reference.get("data")
+            reference.get("ai_data")
+            if reference.get("ai_data") is not None
+            else reference.get("data")
             if reference.get("data") is not None
             else reference["absolute_path"].read_bytes()
         )
@@ -127,10 +133,11 @@ def _build_gemini_contents(
         contents.append(
             types.Part.from_bytes(
                 data=image_bytes,
-                mime_type=
-                    reference[
-                        "media_type"
-                    ],
+                mime_type=(
+                    reference.get("ai_media_type")
+                    or
+                    reference["media_type"]
+                ),
             )
         )
 
@@ -425,6 +432,17 @@ def plan_job(
                 (
                     "The job has no reference images."
                 ),
+        }
+
+    try:
+        prepare_job_references_for_ai(
+            job
+        )
+    except ReferenceImageError as error:
+        return {
+            "ok": False,
+            "code": "reference_image_invalid",
+            "error": str(error),
         }
 
     settings = (

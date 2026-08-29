@@ -8,3 +8,5 @@ google-genai
 openai
 libsql
 boto3
+Pillow
+pillow-heif
