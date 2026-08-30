@@ -643,6 +643,56 @@ def init_database():
             """
         )
 
+        # Cloud-read indexes. These columns are queried constantly by History,
+        # job recovery and image-batch polling. They were small enough to scan
+        # locally, but indexed lookups matter once Turso is the source of truth.
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_reference_images_job_position
+            ON reference_images(
+                job_id,
+                position
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_generated_prompts_job_position
+            ON generated_prompts(
+                job_id,
+                position
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_generated_images_job_status_prompt
+            ON generated_images(
+                job_id,
+                status,
+                prompt_id,
+                id
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_generated_images_prompt_status_id
+            ON generated_images(
+                prompt_id,
+                status,
+                id
+            )
+            """
+        )
+
         connection.commit()
 
         print(

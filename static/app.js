@@ -400,8 +400,13 @@ let currentPromptPackages = [];
 let activeFinalPackage = null;
 
 let settingsPayload = null;
+let settingsLoadedAt = 0;
 let providerConnections = null;
 let providerConnectionsLoadedAt = 0;
+
+const SETTINGS_VIEW_CACHE_MS = 15000;
+const MANAGER_PROFILES_CACHE_MS = 15000;
+let managerProfilesLoadedAt = 0;
 
 const CREATE_DRAFT_KEY =
     "hyperexCreateDraftV1";
@@ -411,6 +416,8 @@ const LAST_JOB_KEY =
 
 let imageBatchPollTimer = null;
 let imageBatchRequestRunning = false;
+let imageBatchRefreshPromise = null;
+let imageBatchRefreshJobId = null;
 
 let previewResults = [];
 let previewIndex = 0;
@@ -2143,9 +2150,9 @@ claimLocalDataButton.addEventListener(
 
                 await Promise.all([
                     loadProfiles(),
-                    loadManagerProfiles(),
+                    loadManagerProfiles(true),
                     loadHistory(),
-                    loadSettings(),
+                    loadSettings(true),
                     loadProviderConnections(
                         true
                     ),
@@ -3502,7 +3509,7 @@ async function saveAdminWorkflow(
         await Promise.all([
             loadAdminDashboard(),
             loadProfiles(),
-            loadManagerProfiles(),
+            loadManagerProfiles(true),
         ]);
 
         await openAdminWorkflowEditor(
@@ -3593,7 +3600,7 @@ async function setAdminWorkflowStatus(
         await Promise.all([
             loadAdminDashboard(),
             loadProfiles(),
-            loadManagerProfiles(),
+            loadManagerProfiles(true),
         ]);
 
         await openAdminWorkflowEditor(
@@ -3797,7 +3804,7 @@ deleteAdminWorkflowButton.addEventListener(
             await Promise.all([
                 loadAdminDashboard(),
                 loadProfiles(),
-                loadManagerProfiles(),
+                loadManagerProfiles(true),
             ]);
 
         } catch (error) {
@@ -3902,7 +3909,7 @@ function renderAdminModels(models) {
                 if (!response.ok) throw new Error(await apiError(response));
                 await response.json();
                 showToast(`${tierLabel(model.tier)} model saved.`);
-                await Promise.all([loadAdminDashboard(), loadSettings()]);
+                await Promise.all([loadAdminDashboard(), loadSettings(true)]);
             } catch (error) {
                 showToast(error.message);
             } finally {
@@ -4158,8 +4165,10 @@ navHistory.addEventListener(
             "history"
         );
 
-        await ensureHistoryOptions();
-        await loadHistory();
+        await Promise.all([
+            ensureHistoryOptions(),
+            loadHistory(),
+        ]);
     }
 );
 
@@ -4393,7 +4402,38 @@ async function copyText(
    SETTINGS
 ========================================================= */
 
-async function loadSettings() {
+async function loadSettings(
+    force = false
+) {
+    if (
+        !force
+        &&
+        settingsPayload
+        &&
+        (
+            Date.now()
+            -
+            settingsLoadedAt
+        )
+        <
+        SETTINGS_VIEW_CACHE_MS
+    ) {
+        renderSettings();
+        renderCreateProviderSummary();
+        seedProviderConnectionsFromSettings();
+
+        loadProviderConnections()
+            .catch(
+                error =>
+                    console.warn(
+                        "Provider connection refresh failed:",
+                        error
+                    )
+            );
+
+        return settingsPayload;
+    }
+
     try {
         const response =
             await fetch(
@@ -4414,6 +4454,9 @@ async function loadSettings() {
         settingsPayload =
             await response.json();
 
+        settingsLoadedAt =
+            Date.now();
+
         // Render the page immediately. Provider-key suffix details are a
         // secondary request and must never block model choices / Create.
         renderSettings();
@@ -4428,6 +4471,8 @@ async function loadSettings() {
                         error
                     )
             );
+
+        return settingsPayload;
 
     } catch (error) {
         console.error(
@@ -5454,7 +5499,7 @@ async function saveSettings() {
 
         await response.json();
 
-        await loadSettings();
+        await loadSettings(true);
 
         showToast(
             "Hyperex quality settings saved."
@@ -5846,7 +5891,7 @@ async function saveProviderKey(
             `${provider.toUpperCase()} connected and encrypted.`;
 
         providerConnectionsLoadedAt = 0;
-        await loadSettings();
+        await loadSettings(true);
 
     } catch (error) {
         providerKeyResult.className =
@@ -5904,7 +5949,7 @@ async function removeProviderKey(
             `${provider.toUpperCase()} saved key disconnected.`;
 
         providerConnectionsLoadedAt = 0;
-        await loadSettings();
+        await loadSettings(true);
 
     } catch (error) {
         providerKeyResult.className =
@@ -8052,35 +8097,82 @@ refreshImageBatchButton.addEventListener(
 async function refreshImageBatch(
     jobId
 ) {
+    const normalizedJobId =
+        Number(
+            jobId
+        );
+
+    // Remote Turso/Firebase requests can take longer than the polling
+    // interval. Never let multiple status requests for the same job pile up
+    // in the browser; reuse the request already in flight instead.
+    if (
+        imageBatchRefreshPromise
+        &&
+        Number(
+            imageBatchRefreshJobId
+        )
+        ===
+        normalizedJobId
+    ) {
+        return imageBatchRefreshPromise;
+    }
+
+    imageBatchRefreshJobId =
+        normalizedJobId;
+
+    imageBatchRefreshPromise =
+        (async () => {
+            try {
+                const response =
+                    await fetch(
+                        `/api/jobs/${normalizedJobId}/image-batch`,
+                        {
+                            cache: "no-store",
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await apiError(
+                            response
+                        )
+                    );
+                }
+
+                const payload =
+                    await response.json();
+
+                renderImageBatch(
+                    payload
+                );
+
+                return payload;
+
+            } catch (error) {
+                console.error(
+                    error
+                );
+
+                return null;
+            }
+        })();
+
     try {
-        const response =
-            await fetch(
-                `/api/jobs/${jobId}/image-batch`
-            );
+        return await imageBatchRefreshPromise;
+    } finally {
+        if (
+            Number(
+                imageBatchRefreshJobId
+            )
+            ===
+            normalizedJobId
+        ) {
+            imageBatchRefreshPromise =
+                null;
 
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
+            imageBatchRefreshJobId =
+                null;
         }
-
-        const payload =
-            await response.json();
-
-        renderImageBatch(
-            payload
-        );
-
-        return payload;
-
-    } catch (error) {
-        console.error(
-            error
-        );
-
-        return null;
     }
 }
 
@@ -8600,7 +8692,7 @@ function startImageBatchPolling(
                     stopImageBatchPolling();
                 }
             },
-            1500
+            3000
         );
 }
 
@@ -11887,7 +11979,31 @@ historyEmptyCreateButton.addEventListener(
    PROFILE MANAGER
 ========================================================= */
 
-async function loadManagerProfiles() {
+async function loadManagerProfiles(
+    force = false
+) {
+    if (
+        !force
+        &&
+        managerProfiles.length
+        &&
+        (
+            Date.now()
+            -
+            managerProfilesLoadedAt
+        )
+        <
+        MANAGER_PROFILES_CACHE_MS
+    ) {
+        libraryCount.textContent =
+            String(
+                managerProfiles.length
+            );
+
+        renderManagerProfiles();
+        return managerProfiles;
+    }
+
     try {
         const response =
             await fetch(
@@ -11914,12 +12030,17 @@ async function loadManagerProfiles() {
                 :
                 [];
 
+        managerProfilesLoadedAt =
+            Date.now();
+
         libraryCount.textContent =
             String(
                 managerProfiles.length
             );
 
         renderManagerProfiles();
+
+        return managerProfiles;
 
     } catch (error) {
         profileManagerList.innerHTML = `
@@ -12114,21 +12235,38 @@ async function openProfileEditor(
     profileId
 ) {
     try {
-        const response =
-            await fetch(
-                `/api/profiles/${profileId}`
-            );
+        let profile =
+            managerProfiles.find(
+                item =>
+                    Number(item.id)
+                    ===
+                    Number(profileId)
+            )
+            ||
+            null;
 
-        if (!response.ok) {
-            throw new Error(
-                await apiError(
-                    response
-                )
-            );
+        // /api/profiles?include_archived=true already returns everything the
+        // editor needs (private instructions are sanitized server-side). Use
+        // that payload instead of performing a second Turso/API round trip
+        // every time a user opens Profiles. Fall back to detail fetch only if
+        // the profile was not in the current library payload.
+        if (!profile) {
+            const response =
+                await fetch(
+                    `/api/profiles/${profileId}`
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    await apiError(
+                        response
+                    )
+                );
+            }
+
+            profile =
+                await response.json();
         }
-
-        const profile =
-            await response.json();
 
         editingProfileId =
             Number(
@@ -12358,7 +12496,7 @@ customizeTemplateButton.addEventListener(
                 loadProfiles(
                     profile.id
                 ),
-                loadManagerProfiles(),
+                loadManagerProfiles(true),
             ]);
 
             await openProfileEditor(
@@ -12450,7 +12588,7 @@ saveDetailsButton.addEventListener(
                 editingProfileId
             );
 
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
 
             await openProfileEditor(
                 editingProfileId
@@ -12530,7 +12668,7 @@ saveVersionButton.addEventListener(
                 editingProfileId
             );
 
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
 
             await openProfileEditor(
                 editingProfileId
@@ -12594,7 +12732,7 @@ archiveProfileButton.addEventListener(
                 editingProfileId;
 
             await loadProfiles();
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
             await openProfileEditor(
                 id
             );
@@ -12645,7 +12783,7 @@ restoreProfileButton.addEventListener(
                 id
             );
 
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
 
             await openProfileEditor(
                 id
@@ -12726,7 +12864,7 @@ deleteProfileButton.addEventListener(
             );
 
             await loadProfiles();
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
 
             showToast(
                 "Profile deleted."
@@ -12862,7 +13000,7 @@ newProfileForm.addEventListener(
                 profile.id
             );
 
-            await loadManagerProfiles();
+            await loadManagerProfiles(true);
 
             await openProfileEditor(
                 profile.id

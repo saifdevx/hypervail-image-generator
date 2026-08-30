@@ -1,20 +1,28 @@
 import threading
+from pathlib import Path
 
 from app.database import get_connection
 from app.image_service import (
     get_image_batch_status,
 )
-from app.job_store import get_job
+from app.job_store import get_job, BASE_DIR
 from app.normalizer_service import (
     get_prompt_packages,
 )
 from app.request_context import (
     get_current_owner_id,
 )
+from app.platform.storage_backend import (
+    get_storage_backend,
+)
 
 
 _SCHEMA_READY = False
 _SCHEMA_LOCK = threading.RLock()
+
+STORAGE = get_storage_backend(
+    BASE_DIR
+)
 
 
 # ============================================================
@@ -182,100 +190,194 @@ def _display_status(
     )
 
 
-def _thumbnail_urls(
-    job_id: int,
+def _history_media_url(
+    storage_ref: str | None,
+    fallback_url: str,
+):
+    ref = str(storage_ref or "")
+
+    if ref.startswith("r2://"):
+        try:
+            # Presigning is local; it does not perform an R2 network request.
+            # This lets History thumbnails load directly from private R2
+            # instead of FastAPI -> Turso -> redirect for every image.
+            return STORAGE.signed_get_url(
+                ref
+            )
+        except Exception:
+            return None
+
+    # Once R2 is the active storage backend, legacy local file references are
+    # intentionally not requested as History thumbnails. Hyperex may still
+    # keep their job metadata in Turso, but the files themselves were not
+    # migrated to R2. Returning None lets the UI render NO PREVIEW instead of
+    # generating repeated /api/images/.../file 404 requests on every History
+    # load. Local-storage mode keeps the original fallback behavior.
+    if getattr(STORAGE, "name", "local") == "r2":
+        return None
+
+    return fallback_url
+
+
+def _thumbnail_map(
+    connection,
+    job_ids: list[int],
     limit: int = 4,
 ):
-    connection = get_connection()
+    result = {
+        int(job_id): []
+        for job_id in job_ids
+    }
 
-    try:
-        rows = connection.execute(
-            """
-            SELECT
-                gi.id,
-                gp.position
+    if not job_ids:
+        return result
 
-            FROM generated_images gi
+    placeholders = ",".join(
+        "?"
+        for _ in job_ids
+    )
 
-            LEFT JOIN generated_prompts gp
-                ON gp.id = gi.prompt_id
+    # One query for generated thumbnails across every visible job. The old
+    # implementation opened a new Turso connection/query for every history
+    # card, which became an N+1 network-latency problem after cloud migration.
+    generated_rows = connection.execute(
+        f"""
+        SELECT
+            gi.id,
+            gi.job_id,
+            gi.prompt_id,
+            gi.file_path,
+            COALESCE(
+                gp.position,
+                gi.id
+            ) AS display_position
 
-            WHERE
-                gi.job_id = ?
-                AND gi.status = 'complete'
-                AND gi.id IN (
-                    SELECT MAX(id)
+        FROM generated_images gi
 
-                    FROM generated_images
+        LEFT JOIN generated_prompts gp
+            ON gp.id = gi.prompt_id
 
-                    WHERE
-                        job_id = ?
-                        AND status = 'complete'
+        WHERE
+            gi.job_id IN ({placeholders})
+            AND gi.status = 'complete'
 
-                    GROUP BY prompt_id
-                )
+        ORDER BY
+            gi.job_id DESC,
+            display_position ASC,
+            gi.id DESC
+        """,
+        tuple(job_ids),
+    ).fetchall()
 
-            ORDER BY
-                COALESCE(
-                    gp.position,
-                    gi.id
-                ) ASC
+    seen_prompts = {
+        int(job_id): set()
+        for job_id in job_ids
+    }
 
-            LIMIT ?
-            """,
-            (
-                job_id,
-                job_id,
-                limit,
-            ),
-        ).fetchall()
+    for row in generated_rows:
+        job_id = int(
+            row["job_id"]
+        )
 
-        if rows:
-            return [
-                {
-                    "type":
-                        "generated",
-                    "url":
-                        f"/api/images/{row['id']}/file",
-                }
-                for row in rows
-            ]
+        if len(result[job_id]) >= limit:
+            continue
 
-        rows = connection.execute(
-            """
-            SELECT
-                id,
-                position
-
-            FROM reference_images
-
-            WHERE job_id = ?
-
-            ORDER BY position ASC
-
-            LIMIT ?
-            """,
-            (
-                job_id,
-                limit,
-            ),
-        ).fetchall()
-
-        return [
-            {
-                "type":
-                    "reference",
-                "url":
-                    (
-                        f"/api/jobs/{job_id}"
-                        f"/references/{row['id']}/file"
-                    ),
-            }
-            for row in rows
+        prompt_id = row[
+            "prompt_id"
         ]
 
-    finally:
-        connection.close()
+        prompt_key = (
+            f"prompt:{prompt_id}"
+            if prompt_id is not None
+            else f"image:{row['id']}"
+        )
+
+        if prompt_key in seen_prompts[job_id]:
+            continue
+
+        seen_prompts[job_id].add(
+            prompt_key
+        )
+
+        image_id = int(
+            row["id"]
+        )
+
+        media_url = _history_media_url(
+            row["file_path"],
+            f"/api/images/{image_id}/file",
+        )
+
+        if not media_url:
+            continue
+
+        result[job_id].append({
+            "type": "generated",
+            "url": media_url,
+        })
+
+    missing_job_ids = [
+        job_id
+        for job_id, items in result.items()
+        if not items
+    ]
+
+    if not missing_job_ids:
+        return result
+
+    placeholders = ",".join(
+        "?"
+        for _ in missing_job_ids
+    )
+
+    reference_rows = connection.execute(
+        f"""
+        SELECT
+            id,
+            job_id,
+            position,
+            file_path
+
+        FROM reference_images
+
+        WHERE job_id IN ({placeholders})
+
+        ORDER BY
+            job_id DESC,
+            position ASC
+        """,
+        tuple(missing_job_ids),
+    ).fetchall()
+
+    for row in reference_rows:
+        job_id = int(
+            row["job_id"]
+        )
+
+        if len(result[job_id]) >= limit:
+            continue
+
+        reference_id = int(
+            row["id"]
+        )
+
+        media_url = _history_media_url(
+            row["file_path"],
+            (
+                f"/api/jobs/{job_id}"
+                f"/references/{reference_id}/file"
+            ),
+        )
+
+        if not media_url:
+            continue
+
+        result[job_id].append({
+            "type": "reference",
+            "url": media_url,
+        })
+
+    return result
 
 
 # ============================================================
@@ -632,6 +734,14 @@ def list_history_jobs(
             ),
         ).fetchall()
 
+        thumbnail_map = _thumbnail_map(
+            connection,
+            [
+                int(row["id"])
+                for row in rows
+            ],
+        )
+
         items = []
 
         for row in rows:
@@ -727,10 +837,9 @@ def list_history_jobs(
             )
 
             item["thumbnails"] = (
-                _thumbnail_urls(
-                    int(
-                        item["id"]
-                    )
+                thumbnail_map.get(
+                    int(item["id"]),
+                    [],
                 )
             )
 
@@ -794,22 +903,22 @@ def get_history_options():
         profiles = connection.execute(
             """
             SELECT
-                id,
-                name
+                gp.id,
+                gp.name
 
-            FROM generation_profiles
+            FROM generation_profiles gp
+
+            LEFT JOIN managed_workflows mw
+                ON mw.profile_id = gp.id
 
             WHERE
-                owner_id = ?
+                gp.owner_id = ?
                 OR (
-                    owner_id IS NULL
-                    AND name IN (
-                        'Hero Images',
-                        'UGC Images'
-                    )
+                    gp.owner_id IS NULL
+                    AND mw.status = 'published'
                 )
 
-            ORDER BY name ASC
+            ORDER BY gp.name ASC
             """,
             (
                 owner_id,

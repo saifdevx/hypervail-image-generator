@@ -804,11 +804,18 @@ def get_job_for_planning(
         for reference in references:
             storage_ref = reference["file_path"]
 
-            if not STORAGE.exists(storage_ref):
-                raise FileNotFoundError(
-                    "Reference image is missing: "
-                    f"{reference['original_filename']}"
+            try:
+                # Read once. R2's old path did a HEAD request and then a GET
+                # for every reference, doubling storage round trips before the
+                # planner/image provider could even start.
+                reference_data = STORAGE.read_bytes(
+                    storage_ref
                 )
+            except Exception as error:
+                raise FileNotFoundError(
+                    "Reference image is missing or unavailable: "
+                    f"{reference['original_filename']}"
+                ) from error
 
             result["references"].append(
                 {
@@ -819,7 +826,7 @@ def get_job_for_planning(
                         in
                         Path(reference["stored_filename"]).stem
                     ),
-                    "data": STORAGE.read_bytes(storage_ref),
+                    "data": reference_data,
                     "media_type": media_type_for_storage(
                         storage_ref,
                         reference["original_filename"],

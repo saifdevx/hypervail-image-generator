@@ -1,4 +1,6 @@
+import hashlib
 import os
+import threading
 import time
 from dataclasses import dataclass
 from typing import Protocol
@@ -16,6 +18,81 @@ LOCAL_USER_EMAIL = "local@hyperex.dev"
 
 OOB_COOLDOWN_SECONDS = 60
 _oob_cooldowns: dict[str, float] = {}
+
+# Firebase ID-token validation previously called accounts:lookup for every
+# protected API request. A single page can make several API requests, so remote
+# Firebase validation became a major source of latency after the database/files
+# moved to the cloud. Cache only successfully verified sessions for a short
+# period. The raw ID token is never stored as the cache key.
+_FIREBASE_LOOKUP_CACHE = {}
+_FIREBASE_LOOKUP_CACHE_LOCK = threading.RLock()
+_FIREBASE_LOOKUP_CACHE_TTL_SECONDS = 300.0
+_FIREBASE_LOOKUP_CACHE_MAX_ITEMS = 512
+
+
+def _firebase_lookup_cache_key(access_token: str):
+    return hashlib.sha256(
+        access_token.encode("utf-8")
+    ).hexdigest()
+
+
+def _get_cached_firebase_lookup(access_token: str):
+    if not access_token:
+        return None
+
+    key = _firebase_lookup_cache_key(access_token)
+    now = time.monotonic()
+
+    with _FIREBASE_LOOKUP_CACHE_LOCK:
+        item = _FIREBASE_LOOKUP_CACHE.get(key)
+        if item is None:
+            return None
+
+        cached_at, user_id, email, email_verified = item
+
+        if (now - cached_at) > _FIREBASE_LOOKUP_CACHE_TTL_SECONDS:
+            _FIREBASE_LOOKUP_CACHE.pop(key, None)
+            return None
+
+        return AuthSession(
+            authenticated=True,
+            user_id=user_id,
+            email=email,
+            email_verified=email_verified,
+            access_token=access_token,
+        )
+
+
+def _cache_firebase_lookup(access_token: str, session):
+    # Do not cache unverified accounts. After a user clicks the Firebase
+    # verification email, Hyperex should be able to see that change
+    # immediately instead of waiting for the cache TTL.
+    if (
+        not access_token
+        or not session
+        or not session.authenticated
+        or not session.email_verified
+    ):
+        return
+
+    key = _firebase_lookup_cache_key(access_token)
+
+    with _FIREBASE_LOOKUP_CACHE_LOCK:
+        if len(_FIREBASE_LOOKUP_CACHE) >= _FIREBASE_LOOKUP_CACHE_MAX_ITEMS:
+            # Remove the oldest entry. This cache is intentionally small and
+            # process-local; it is only a latency optimization.
+            oldest_key = min(
+                _FIREBASE_LOOKUP_CACHE,
+                key=lambda item_key: _FIREBASE_LOOKUP_CACHE[item_key][0],
+            )
+            _FIREBASE_LOOKUP_CACHE.pop(oldest_key, None)
+
+        _FIREBASE_LOOKUP_CACHE[key] = (
+            time.monotonic(),
+            session.user_id,
+            session.email,
+            bool(session.email_verified),
+        )
 
 
 @dataclass
@@ -604,6 +681,13 @@ class FirebaseAuthAdapter:
         self,
         access_token: str,
     ):
+        cached = _get_cached_firebase_lookup(
+            access_token
+        )
+
+        if cached is not None:
+            return cached
+
         # Firebase lookups are used to enrich/validate an existing session.
         # A temporary network/connectivity problem must not crash the whole
         # FastAPI request with an uncaught httpx exception. Keep the lookup
@@ -650,7 +734,7 @@ class FirebaseAuthAdapter:
 
         user = users[0]
 
-        return AuthSession(
+        session = AuthSession(
             authenticated=True,
             user_id=str(
                 user.get("localId")
@@ -671,6 +755,13 @@ class FirebaseAuthAdapter:
             access_token=
                 access_token,
         )
+
+        _cache_firebase_lookup(
+            access_token,
+            session,
+        )
+
+        return session
 
     async def _refresh(
         self,
