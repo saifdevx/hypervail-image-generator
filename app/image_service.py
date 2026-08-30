@@ -633,10 +633,28 @@ def _decorate_image_row(
         result.get("status") == "complete"
         and result.get("file_path")
     ):
-        result["file_url"] = (
-            f"/api/images/"
-            f"{result['id']}/file"
+        storage_ref = str(
+            result["file_path"]
         )
+
+        # R2 URLs can be signed locally (no R2 network request is needed).
+        # Returning the signed URL directly avoids an extra request to FastAPI,
+        # another Turso lookup, an R2 HEAD request, and a redirect per image.
+        if storage_ref.startswith("r2://"):
+            try:
+                result["file_url"] = (
+                    STORAGE.signed_get_url(
+                        storage_ref
+                    )
+                )
+            except Exception:
+                result["file_url"] = None
+
+        if not result.get("file_url"):
+            result["file_url"] = (
+                f"/api/images/"
+                f"{result['id']}/file"
+            )
     else:
         result["file_url"] = None
 
@@ -828,7 +846,12 @@ def get_generated_image_file(
 
         storage_ref = row["file_path"]
 
-        if not STORAGE.exists(storage_ref):
+        # Local files need an existence check. For R2, URL signing is local;
+        # avoid a remote head_object round trip on every view/download.
+        if (
+            not str(storage_ref).startswith("r2://")
+            and not STORAGE.exists(storage_ref)
+        ):
             return None
 
         local_path = STORAGE.local_path(storage_ref)

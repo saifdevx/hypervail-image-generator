@@ -795,7 +795,7 @@ async def auth_and_security(
         "default-src 'self'; "
         "script-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob:; "
+        "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; "
         "connect-src 'self'; "
         "object-src 'none'; "
         "frame-ancestors 'none'; "
