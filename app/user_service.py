@@ -99,6 +99,8 @@ def ensure_user_schema(force: bool = False):
                         DEFAULT 'user',
                     status TEXT NOT NULL
                         DEFAULT 'active',
+                    allow_server_ai_keys INTEGER NOT NULL
+                        DEFAULT 0,
                     created_at TEXT NOT NULL
                         DEFAULT CURRENT_TIMESTAMP,
                     last_seen_at TEXT NOT NULL
@@ -106,6 +108,21 @@ def ensure_user_schema(force: bool = False):
                 )
                 """
             )
+
+            columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(app_users)"
+                ).fetchall()
+            }
+
+            if "allow_server_ai_keys" not in columns:
+                connection.execute(
+                    """
+                    ALTER TABLE app_users
+                    ADD COLUMN allow_server_ai_keys INTEGER NOT NULL DEFAULT 0
+                    """
+                )
 
             connection.execute(
                 """
@@ -312,8 +329,28 @@ def list_users(
                 u.display_name,
                 u.role,
                 u.status,
+                COALESCE(
+                    u.allow_server_ai_keys,
+                    0
+                ) AS allow_server_ai_keys,
                 u.created_at,
                 u.last_seen_at,
+
+                EXISTS (
+                    SELECT 1
+                    FROM provider_credentials pc
+                    WHERE
+                        pc.owner_key = u.user_id
+                        AND pc.provider = 'openai'
+                ) AS openai_key_saved,
+
+                EXISTS (
+                    SELECT 1
+                    FROM provider_credentials pc
+                    WHERE
+                        pc.owner_key = u.user_id
+                        AND pc.provider = 'gemini'
+                ) AS gemini_key_saved,
 
                 (
                     SELECT COUNT(*)
@@ -373,6 +410,7 @@ def update_user_access(
     user_id: str,
     role: str | None = None,
     status: str | None = None,
+    allow_server_ai_keys: bool | None = None,
 ):
     ensure_user_schema()
 
@@ -411,6 +449,16 @@ def update_user_access(
         )
         params.append(
             status
+        )
+
+    if allow_server_ai_keys is not None:
+        updates.append(
+            "allow_server_ai_keys = ?"
+        )
+        params.append(
+            1
+            if bool(allow_server_ai_keys)
+            else 0
         )
 
     if not updates:

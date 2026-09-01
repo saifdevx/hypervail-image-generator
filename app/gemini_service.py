@@ -8,9 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from google import genai
 
-from app.credential_store import (
-    get_saved_provider_api_key,
-)
+from app.provider_access import resolve_provider_api_key
 
 
 BASE_DIR = (
@@ -31,57 +29,8 @@ DEFAULT_MODEL = "gemini-3.6-flash"
 
 
 def get_api_key():
-    saved = (
-        get_saved_provider_api_key(
-            "gemini"
-        )
-    )
-
-    if saved:
-        return (
-            saved,
-            "saved_connection",
-        )
-
-    gemini_key = os.getenv(
-        "GEMINI_API_KEY"
-    )
-
-    if gemini_key:
-        cleaned_key = (
-            gemini_key
-            .strip()
-            .strip('"')
-            .strip("'")
-        )
-
-        if cleaned_key:
-            return (
-                cleaned_key,
-                "GEMINI_API_KEY",
-            )
-
-    google_key = os.getenv(
-        "GOOGLE_API_KEY"
-    )
-
-    if google_key:
-        cleaned_key = (
-            google_key
-            .strip()
-            .strip('"')
-            .strip("'")
-        )
-
-        if cleaned_key:
-            return (
-                cleaned_key,
-                "GOOGLE_API_KEY",
-            )
-
-    return (
-        None,
-        None,
+    return resolve_provider_api_key(
+        "gemini"
     )
 
 
@@ -178,9 +127,9 @@ def test_gemini_connection(
             "provider": "gemini",
             "model": model,
             "error": (
-                "Gemini API key is not configured. "
-                "Add GEMINI_API_KEY to your .env file "
-                "and restart FastAPI."
+                "Gemini is not connected for this account. "
+                "Connect a Gemini API key in Settings or ask an Admin "
+                "for server-key access."
             ),
         }
 

@@ -173,8 +173,9 @@ def _run_gemini_planner(
                 ],
             "error":
                 (
-                    "Gemini is selected as the prompt "
-                    "planner but GEMINI_API_KEY is not configured."
+                    "Gemini is selected as the prompt planner but this "
+                    "account does not have Gemini access. Connect a Gemini "
+                    "API key in Settings or ask an Admin for server-key access."
                 ),
         }
 
@@ -346,7 +347,7 @@ def test_selected_planner():
                     "gemini_planner_model"
                 ],
             "error":
-                "GEMINI_API_KEY is not configured.",
+                "Gemini is not connected for this account.",
         }
 
     model = (

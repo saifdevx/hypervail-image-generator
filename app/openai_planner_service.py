@@ -119,8 +119,9 @@ def run_openai_planner(
                 "openai_not_configured",
             "error":
                 (
-                    "OpenAI is selected as the prompt "
-                    "planner but OPENAI_API_KEY is not configured."
+                    "OpenAI is selected as the prompt planner but this "
+                    "account does not have OpenAI access. Connect an OpenAI "
+                    "API key in Settings or ask an Admin for server-key access."
                 ),
         }
 
@@ -211,7 +212,7 @@ def test_openai_planner_connection():
         return {
             "ok": False,
             "error":
-                "OPENAI_API_KEY is not configured.",
+                "OpenAI is not connected for this account.",
         }
 
     model = (

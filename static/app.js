@@ -3940,7 +3940,10 @@ function renderAdminUsers(users) {
         const email = document.createElement("strong");
         const meta = document.createElement("span");
         email.textContent = user.email || user.user_id;
-        meta.textContent = `${formatNumber(user.job_count || 0)} jobs · ${formatNumber(user.image_count || 0)} images`;
+
+        const openaiState = Number(user.openai_key_saved || 0) === 1 ? "OpenAI ✓" : "OpenAI —";
+        const geminiState = Number(user.gemini_key_saved || 0) === 1 ? "Gemini ✓" : "Gemini —";
+        meta.textContent = `${formatNumber(user.job_count || 0)} jobs · ${formatNumber(user.image_count || 0)} images · ${openaiState} · ${geminiState}`;
         copy.append(email, meta);
 
         const role = document.createElement("select");
@@ -3961,6 +3964,38 @@ function renderAdminUsers(users) {
             status.appendChild(option);
         });
 
+        const aiAccess = document.createElement("label");
+        aiAccess.className = "admin-inline-check admin-ai-access";
+        aiAccess.title = "Allow this account to use Hyperex server OpenAI/Gemini keys when it has no saved key of its own.";
+
+        const aiAccessInput = document.createElement("input");
+        aiAccessInput.type = "checkbox";
+        aiAccessInput.checked = Number(user.allow_server_ai_keys || 0) === 1 || user.role === "admin";
+
+        const aiAccessText = document.createElement("span");
+        aiAccessText.textContent = "Admin AI access";
+        aiAccess.append(aiAccessInput, aiAccessText);
+        copy.append(aiAccess);
+
+        const originalGrant = Number(user.allow_server_ai_keys || 0) === 1;
+        let previousRole = role.value;
+
+        const syncAdminAccess = () => {
+            if (role.value === "admin") {
+                aiAccessInput.checked = true;
+                aiAccessInput.disabled = true;
+            } else {
+                aiAccessInput.disabled = false;
+                if (previousRole === "admin") {
+                    aiAccessInput.checked = originalGrant;
+                }
+            }
+            previousRole = role.value;
+        };
+
+        role.addEventListener("change", syncAdminAccess);
+        syncAdminAccess();
+
         const save = document.createElement("button");
         save.type = "button";
         save.textContent = "Save";
@@ -3970,11 +4005,15 @@ function renderAdminUsers(users) {
                 const response = await fetch(`/api/admin/users/${encodeURIComponent(user.user_id)}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ role: role.value, status: status.value }),
+                    body: JSON.stringify({
+                        role: role.value,
+                        status: status.value,
+                        allow_server_ai_keys: role.value === "admin" ? true : aiAccessInput.checked,
+                    }),
                 });
                 if (!response.ok) throw new Error(await apiError(response));
                 await response.json();
-                showToast("User updated.");
+                showToast("User access updated.");
                 await loadAdminDashboard();
             } catch (error) {
                 showToast(error.message);
@@ -5785,7 +5824,7 @@ function renderProviderConnectionLine(
 
     if (item.saved) {
         textElement.textContent =
-            `Saved ·••••${item.key_suffix || ""}`;
+            `Connected ·••••${item.key_suffix || ""}`;
 
         removeButton.disabled =
             false;
@@ -5797,11 +5836,17 @@ function renderProviderConnectionLine(
         textElement.textContent =
             item.source
             ===
-            "saved_connection"
+            "admin_server_access"
                 ?
-                "Connected"
+                "Connected · Admin access"
                 :
-                "Using server fallback key";
+                item.source
+                ===
+                "admin_server_key"
+                    ?
+                    "Connected · Admin server key"
+                    :
+                    "Connected";
 
         removeButton.disabled =
             true;

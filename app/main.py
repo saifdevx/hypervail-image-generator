@@ -83,6 +83,7 @@ from app.settings_store import (
     get_runtime_settings,
     update_runtime_settings,
     get_settings_catalog,
+    invalidate_runtime_settings_cache,
 )
 from app.results_service import (
     build_job_zip,
@@ -177,6 +178,10 @@ from app.managed_workflow_service import (
 from app.platform.queue_backend import (
     get_generation_queue,
     get_queue_provider,
+)
+from app.provider_access import (
+    get_provider_access_status,
+    single_saved_provider,
 )
 
 
@@ -291,6 +296,7 @@ class AdminModelUpdateRequest(BaseModel):
 class AdminUserUpdateRequest(BaseModel):
     role: str | None = None
     status: str | None = None
+    allow_server_ai_keys: bool | None = None
 
 
 class AdminManagedWorkflowCreateRequest(BaseModel):
@@ -505,7 +511,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.0-phase2-checkpoint07-workflows",
+    version="0.14.1-phase1-provider-access",
     lifespan=lifespan,
 )
 
@@ -1842,6 +1848,12 @@ def admin_user_update(
             user_id,
             role=request.role,
             status=request.status,
+            allow_server_ai_keys=
+                request.allow_server_ai_keys,
+        )
+
+        invalidate_runtime_settings_cache(
+            user_id
         )
 
     except ValueError as error:
@@ -1878,6 +1890,38 @@ def builtin_workflow_status():
     }
 
 
+def _auto_align_single_saved_provider(
+    settings: dict,
+):
+    """
+    If an account has exactly one saved BYOK provider, use that provider for
+    both planning and image generation. This keeps single-key accounts simple
+    while users with both keys retain their normal provider choices.
+    """
+    provider = single_saved_provider()
+
+    if not provider:
+        return settings
+
+    if (
+        settings.get("planner_provider") == provider
+        and settings.get("image_provider") == provider
+    ):
+        return settings
+
+    try:
+        return update_runtime_settings(
+            {
+                "planner_provider": provider,
+                "image_provider": provider,
+            }
+        )
+    except ValueError:
+        # A disabled Admin model tier should remain a clear tier-availability
+        # error instead of turning key connection into an unrelated failure.
+        return settings
+
+
 # ============================================================
 # PROVIDER CONNECTIONS / USER-OWNED API KEYS
 # ============================================================
@@ -1886,49 +1930,17 @@ def builtin_workflow_status():
     "/api/provider-connections"
 )
 def provider_connections():
-    saved = (
-        get_saved_connection_status()
-    )
-
-    openai_status = (
-        get_openai_image_status()
-    )
-
-    gemini_status = (
-        get_gemini_status()
-    )
+    access = get_provider_access_status()
 
     return {
-        "openai": {
-            **saved[
-                "openai"
-            ],
-            "configured":
-                bool(
-                    openai_status.get(
-                        "configured"
-                    )
-                ),
-            "source":
-                openai_status.get(
-                    "key_source"
-                ),
-        },
-        "gemini": {
-            **saved[
-                "gemini"
-            ],
-            "configured":
-                bool(
-                    gemini_status.get(
-                        "configured"
-                    )
-                ),
-            "source":
-                gemini_status.get(
-                    "key_source"
-                ),
-        },
+        "openai": access["openai"],
+        "gemini": access["gemini"],
+        "server_ai_access":
+            bool(
+                access.get(
+                    "server_ai_access"
+                )
+            ),
     }
 
 
@@ -2004,6 +2016,16 @@ def provider_connection_save(
             ),
         )
 
+    invalidate_runtime_settings_cache(
+        get_current_owner_id()
+    )
+
+    _auto_align_single_saved_provider(
+        get_runtime_settings(
+            force_refresh=True
+        )
+    )
+
     return {
         "ok": True,
         "connection":
@@ -2045,9 +2067,21 @@ def provider_connection_delete(
             ),
         )
 
-    return remove_provider_api_key(
+    result = remove_provider_api_key(
         provider
     )
+
+    invalidate_runtime_settings_cache(
+        get_current_owner_id()
+    )
+
+    _auto_align_single_saved_provider(
+        get_runtime_settings(
+            force_refresh=True
+        )
+    )
+
+    return result
 
 
 # ============================================================
@@ -2064,78 +2098,33 @@ def _settings_provider_snapshot(
     which repeatedly resolve settings and provider credentials. The detailed
     provider endpoints remain available for explicit connection tests.
     """
-    saved = (
-        get_saved_connection_status()
+    access = get_provider_access_status()
+
+    openai_access = access.get(
+        "openai",
+        {},
+    )
+    gemini_access = access.get(
+        "gemini",
+        {},
     )
 
-    openai_saved = bool(
-        saved.get(
-            "openai",
-            {},
-        ).get(
-            "saved"
+    openai_configured = bool(
+        openai_access.get(
+            "configured"
+        )
+    )
+    gemini_configured = bool(
+        gemini_access.get(
+            "configured"
         )
     )
 
-    gemini_saved = bool(
-        saved.get(
-            "gemini",
-            {},
-        ).get(
-            "saved"
-        )
+    openai_source = openai_access.get(
+        "source"
     )
-
-    openai_env = bool(
-        (
-            os.getenv(
-                "OPENAI_API_KEY"
-            )
-            or
-            ""
-        ).strip()
-    )
-
-    gemini_env = bool(
-        (
-            os.getenv(
-                "GEMINI_API_KEY"
-            )
-            or
-            ""
-        ).strip()
-    )
-
-    openai_configured = (
-        openai_saved
-        or
-        openai_env
-    )
-
-    gemini_configured = (
-        gemini_saved
-        or
-        gemini_env
-    )
-
-    openai_source = (
-        "saved_connection"
-        if openai_saved
-        else (
-            "OPENAI_API_KEY"
-            if openai_env
-            else None
-        )
-    )
-
-    gemini_source = (
-        "saved_connection"
-        if gemini_saved
-        else (
-            "GEMINI_API_KEY"
-            if gemini_env
-            else None
-        )
+    gemini_source = gemini_access.get(
+        "source"
     )
 
     planner_provider = (
@@ -2265,7 +2254,9 @@ def _settings_provider_snapshot(
 )
 def application_settings():
     settings = (
-        get_runtime_settings()
+        _auto_align_single_saved_provider(
+            get_runtime_settings()
+        )
     )
 
     planner, image = (
@@ -3191,7 +3182,9 @@ async def job_create(
     )
 
     runtime_settings = (
-        get_runtime_settings()
+        _auto_align_single_saved_provider(
+            get_runtime_settings()
+        )
     )
 
     if not runtime_settings.get(

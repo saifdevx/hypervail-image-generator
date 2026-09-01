@@ -1,12 +1,9 @@
-import os
 from importlib.metadata import PackageNotFoundError, version
 
 from openai import OpenAI
 
 from app.settings_store import get_runtime_settings
-from app.credential_store import (
-    get_saved_provider_api_key,
-)
+from app.provider_access import resolve_provider_api_key
 
 
 DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-2"
@@ -29,30 +26,10 @@ SUPPORTED_OUTPUT_FORMATS = {
 
 
 def get_openai_api_key():
-    saved = (
-        get_saved_provider_api_key(
-            "openai"
-        )
+    api_key, _ = resolve_provider_api_key(
+        "openai"
     )
-
-    if saved:
-        return saved
-
-    value = os.getenv(
-        "OPENAI_API_KEY"
-    )
-
-    if not value:
-        return None
-
-    cleaned = (
-        value
-        .strip()
-        .strip('"')
-        .strip("'")
-    )
-
-    return cleaned or None
+    return api_key
 
 
 def get_openai_image_model():
@@ -133,29 +110,20 @@ def safe_openai_error_message(
 
 
 def get_openai_image_status():
+    api_key, key_source = (
+        resolve_provider_api_key(
+            "openai"
+        )
+    )
+
     return {
         "provider": "openai",
-        "configured": bool(
-            get_openai_api_key()
-        ),
+        "configured": bool(api_key),
         "model": get_openai_image_model(),
         "quality": get_openai_image_quality(),
         "size": get_openai_image_size(),
         "output_format": get_openai_output_format(),
-        "key_source": (
-            "saved_connection"
-            if get_saved_provider_api_key(
-                "openai"
-            )
-            else (
-                "OPENAI_API_KEY"
-                if os.getenv(
-                    "OPENAI_API_KEY"
-                )
-                else
-                None
-            )
-        ),
+        "key_source": key_source,
         "sdk_version": get_openai_sdk_version(),
     }
 
@@ -171,8 +139,9 @@ def test_openai_connection(
         return {
             "ok": False,
             "error": (
-                "OpenAI API key is not configured. "
-                "Add OPENAI_API_KEY to .env and restart FastAPI."
+                "OpenAI is not connected for this account. "
+                "Connect an OpenAI API key in Settings or ask an Admin "
+                "for server-key access."
             ),
         }
 
