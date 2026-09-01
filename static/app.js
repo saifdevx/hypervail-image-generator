@@ -33,6 +33,9 @@ const authSubmitButton = $("authSubmitButton");
 const authMessage = $("authMessage");
 const authLocalNote = $("authLocalNote");
 const authTabs = $("authTabs");
+const googleSignInBlock = $("googleSignInBlock");
+const googleSignInButton = $("googleSignInButton");
+const googleSignInMessage = $("googleSignInMessage");
 const forgotPasswordButton = $("forgotPasswordButton");
 const forgotPasswordPanel = $("forgotPasswordPanel");
 const forgotPasswordEmailInput = $("forgotPasswordEmailInput");
@@ -376,6 +379,8 @@ let profiles = [];
 let managerProfiles = [];
 
 let authProvider = "local";
+let authPublicConfig = null;
+let googleSignInRenderToken = 0;
 let currentUser = null;
 let authFormMode = "login";
 let applicationStarted = false;
@@ -1384,8 +1389,215 @@ function showVerificationGate() {
         "your email";
 
     setVerificationMessage(
-        "Open the verification email, click the link, then return here."
+        "Verification email sent. If it doesn’t arrive within a minute, check Spam or Junk. "
+        +
+        "If you find it there, mark it as Not spam so future Hyperex emails are easier to find."
     );
+}
+
+
+async function loadAuthPublicConfig() {
+    try {
+        const response = await fetch(
+            "/api/auth/config",
+            {
+                cache: "no-store",
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        authPublicConfig = (
+            await response.json()
+        );
+
+    } catch (error) {
+        authPublicConfig = {
+            provider: "firebase",
+            configured: false,
+            google_sign_in: {
+                enabled: false,
+                client_id: null,
+            },
+        };
+
+        console.warn(
+            "Auth config could not be loaded:",
+            error
+        );
+    }
+}
+
+
+async function handleGoogleCredential(
+    credentialResponse
+) {
+    const credential = (
+        credentialResponse?.credential
+        ||
+        ""
+    ).trim();
+
+    if (!credential) {
+        setAuthMessage(
+            "Google sign-in did not return a credential. Try again.",
+            "error"
+        );
+        return;
+    }
+
+    googleSignInBlock.style.pointerEvents =
+        "none";
+
+    setAuthMessage(
+        "Signing in with Google…"
+    );
+
+    try {
+        const response = await fetch(
+            "/api/auth/google",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    credential:
+                        credential,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                await apiError(
+                    response
+                )
+            );
+        }
+
+        await response.json();
+        await bootApplication();
+
+    } catch (error) {
+        setAuthMessage(
+            error.message,
+            "error"
+        );
+
+    } finally {
+        googleSignInBlock.style.pointerEvents =
+            "";
+    }
+}
+
+
+function renderGoogleSignIn() {
+    const googleConfig = (
+        authPublicConfig?.google_sign_in
+        ||
+        {}
+    );
+
+    if (
+        authProvider !== "firebase"
+        ||
+        !googleConfig.enabled
+        ||
+        !googleConfig.client_id
+    ) {
+        googleSignInBlock.classList.add(
+            "hidden-element"
+        );
+        googleSignInButton.innerHTML = "";
+        return;
+    }
+
+    googleSignInBlock.classList.remove(
+        "hidden-element"
+    );
+
+    googleSignInBlock.style.margin =
+        "14px 0 10px";
+
+    googleSignInButton.style.display =
+        "flex";
+    googleSignInButton.style.justifyContent =
+        "center";
+    googleSignInButton.style.minHeight =
+        "44px";
+
+    googleSignInMessage.style.textAlign =
+        "center";
+
+    const renderToken = (
+        ++googleSignInRenderToken
+    );
+
+    let attempts = 0;
+
+    const tryRender = () => {
+        if (
+            renderToken
+            !==
+            googleSignInRenderToken
+        ) {
+            return;
+        }
+
+        if (
+            window.google?.accounts?.id
+        ) {
+            googleSignInButton.innerHTML =
+                "";
+
+            window.google.accounts.id.initialize({
+                client_id:
+                    googleConfig.client_id,
+                callback:
+                    handleGoogleCredential,
+                auto_select:
+                    false,
+                cancel_on_tap_outside:
+                    true,
+            });
+
+            window.google.accounts.id.renderButton(
+                googleSignInButton,
+                {
+                    type: "standard",
+                    theme: "outline",
+                    size: "large",
+                    text: "continue_with",
+                    shape: "rectangular",
+                    width: 320,
+                }
+            );
+
+            return;
+        }
+
+        attempts += 1;
+
+        if (attempts < 50) {
+            window.setTimeout(
+                tryRender,
+                100
+            );
+        } else {
+            googleSignInMessage.textContent =
+                "Google sign-in could not load. Use email/password or refresh the page.";
+        }
+    };
+
+    tryRender();
 }
 
 
@@ -1427,11 +1639,17 @@ async function getAuthSession() {
 
 
 async function bootApplication() {
+    if (!authPublicConfig) {
+        await loadAuthPublicConfig();
+    }
+
     const session =
         await getAuthSession();
 
     authProvider =
         session.provider
+        ||
+        authPublicConfig?.provider
         ||
         "local";
 
@@ -1447,6 +1665,8 @@ async function bootApplication() {
         setAuthFormMode(
             "login"
         );
+
+        renderGoogleSignIn();
 
         return;
     }
@@ -1587,13 +1807,17 @@ sendPasswordResetButton.addEventListener(
                 await response.json();
 
             setForgotPasswordMessage(
-                result.message
-                ||
                 (
-                    "If an account exists for that email, "
-                    +
-                    "password reset instructions have been sent."
-                ),
+                    result.message
+                    ||
+                    (
+                        "If an account exists for that email, "
+                        +
+                        "password reset instructions have been sent."
+                    )
+                )
+                +
+                " If you don't see it within a minute, check Spam or Junk.",
                 "success"
             );
 
@@ -4022,7 +4246,88 @@ function renderAdminUsers(users) {
             }
         };
 
-        row.append(copy, role, status, save);
+        const actions = document.createElement("div");
+        actions.style.display = "grid";
+        actions.style.gap = "6px";
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.title = (
+            "Remove this stale Hyperex account record, saved provider keys, and Settings. "
+            +
+            "Existing jobs/history stay. If the Firebase account still exists and signs in again, it will reappear."
+        );
+
+        if (
+            user.role === "admin"
+            &&
+            currentUser?.id === user.user_id
+        ) {
+            remove.disabled = true;
+            remove.title =
+                "You cannot remove the Admin account you are currently using.";
+        }
+
+        remove.onclick = async () => {
+            const confirmed = window.confirm(
+                `Remove ${user.email || user.user_id} from the Hyperex Accounts list?\n\n`
+                +
+                "This deletes that Hyperex account record, saved provider API keys, and user Settings. "
+                +
+                "Existing jobs/history remain. If the user still exists in Firebase and signs in again, the account will reappear."
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            remove.disabled = true;
+            save.disabled = true;
+
+            try {
+                const response = await fetch(
+                    `/api/admin/users/${encodeURIComponent(user.user_id)}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await apiError(
+                            response
+                        )
+                    );
+                }
+
+                const result = await response.json();
+
+                showToast(
+                    result.kept_jobs
+                        ?
+                        `Account removed. ${result.kept_jobs} historical jobs were kept.`
+                        :
+                        "Account removed from Hyperex."
+                );
+
+                await loadAdminDashboard();
+
+            } catch (error) {
+                showToast(
+                    error.message
+                );
+                remove.disabled = false;
+                save.disabled = false;
+            }
+        };
+
+        actions.append(
+            save,
+            remove
+        );
+
+        row.append(copy, role, status, actions);
         adminUserList.appendChild(row);
     });
 }

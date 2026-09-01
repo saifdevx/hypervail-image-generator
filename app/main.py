@@ -122,6 +122,7 @@ from app.auth_service import (
     get_auth_public_config,
     sign_up,
     sign_in,
+    sign_in_with_google,
     send_verification_email,
     send_password_reset_email,
     change_password,
@@ -145,6 +146,7 @@ from app.user_service import (
     get_user,
     user_is_admin,
     update_user_access,
+    remove_user_account_record,
 )
 from app.model_registry import (
     ensure_model_registry_schema,
@@ -267,6 +269,13 @@ class AuthCredentialsRequest(BaseModel):
     password: str = Field(
         min_length=6,
         max_length=200,
+    )
+
+
+class GoogleCredentialRequest(BaseModel):
+    credential: str = Field(
+        min_length=20,
+        max_length=10000,
     )
 
 
@@ -511,7 +520,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.1-phase1-provider-access",
+    version="0.14.2-phase1-auth-cleanup",
     lifespan=lifespan,
 )
 
@@ -799,10 +808,11 @@ async def auth_and_security(
         "Content-Security-Policy"
     ] = (
         "default-src 'self'; "
-        "script-src 'self'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com; "
-        "connect-src 'self'; "
+        "script-src 'self' https://accounts.google.com; "
+        "style-src 'self' 'unsafe-inline' https://accounts.google.com; "
+        "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.googleusercontent.com; "
+        "connect-src 'self' https://accounts.google.com; "
+        "frame-src https://accounts.google.com; "
         "object-src 'none'; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
@@ -1044,6 +1054,92 @@ async def auth_signup(
             session,
             request,
         )
+
+    return response
+
+
+@app.post(
+    "/api/auth/google"
+)
+async def auth_google_login(
+    request: Request,
+    payload: GoogleCredentialRequest,
+):
+    request_uri = (
+        (
+            request.headers.get(
+                "origin"
+            )
+            or
+            str(
+                request.base_url
+            ).rstrip(
+                "/"
+            )
+        )
+        .strip()
+    )
+
+    result = await sign_in_with_google(
+        payload.credential,
+        request_uri,
+    )
+
+    if not result.get(
+        "ok"
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                result.get(
+                    "error"
+                )
+                or
+                "Google sign-in failed."
+            ),
+        )
+
+    session = result[
+        "session"
+    ]
+
+    app_user = ensure_user(
+        session.user_id
+        or
+        "",
+        session.email,
+    )
+
+    response = JSONResponse(
+        content={
+            "ok": True,
+            "user": {
+                "id":
+                    session.user_id,
+                "email":
+                    session.email,
+                "role":
+                    (
+                        app_user.get(
+                            "role"
+                        )
+                        if app_user
+                        else
+                        "user"
+                    ),
+                "email_verified":
+                    bool(
+                        session.email_verified
+                    ),
+            },
+        }
+    )
+
+    apply_session_cookies(
+        response,
+        session,
+        request,
+    )
 
     return response
 
@@ -1869,6 +1965,75 @@ def admin_user_update(
             status_code=404,
             detail="User not found.",
         )
+
+    return result
+
+
+@app.delete(
+    "/api/admin/users/{user_id}"
+)
+def admin_user_remove(
+    user_id: str,
+):
+    require_admin()
+
+    current_admin_id = (
+        get_current_owner_id()
+    )
+    bootstrap_admin_id = (
+        os.getenv(
+            "HYPEREX_ADMIN_UID"
+        )
+        or
+        ""
+    ).strip()
+
+    if (
+        user_id
+        ==
+        current_admin_id
+        or
+        (
+            bootstrap_admin_id
+            and
+            user_id
+            ==
+            bootstrap_admin_id
+        )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The active primary Admin account cannot be removed."
+            ),
+        )
+
+    try:
+        result = (
+            remove_user_account_record(
+                user_id
+            )
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(
+                error
+            ),
+        )
+
+    if not result.get(
+        "removed"
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail=
+                "Hyperex account record not found.",
+        )
+
+    invalidate_runtime_settings_cache(
+        user_id
+    )
 
     return result
 

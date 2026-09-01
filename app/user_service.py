@@ -508,6 +508,137 @@ def update_user_access(
         connection.close()
 
 
+def remove_user_account_record(
+    user_id: str,
+):
+    """
+    Remove a stale Hyperex account registry record without deleting generation
+    history. This is intended for accounts already removed from Firebase.
+
+    Saved provider credentials and per-user Settings are deleted because they
+    should not remain after the account record is intentionally removed. Jobs,
+    generated images, R2 objects, usage history, and custom profiles are kept
+    so old operational/history records remain reproducible.
+    """
+    ensure_user_schema()
+
+    clean_id = (
+        str(
+            user_id
+            or
+            ""
+        )
+        .strip()
+    )
+
+    if not clean_id:
+        raise ValueError(
+            "User ID is required."
+        )
+
+    connection = get_connection()
+
+    try:
+        existing = connection.execute(
+            """
+            SELECT user_id, email
+            FROM app_users
+            WHERE user_id = ?
+            """,
+            (
+                clean_id,
+            ),
+        ).fetchone()
+
+        if existing is None:
+            return {
+                "removed": False,
+                "user_id": clean_id,
+                "kept_jobs": 0,
+            }
+
+        jobs_row = connection.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM generation_jobs
+            WHERE owner_id = ?
+            """,
+            (
+                clean_id,
+            ),
+        ).fetchone()
+
+        kept_jobs = int(
+            (
+                jobs_row["count"]
+                if jobs_row
+                else 0
+            )
+            or
+            0
+        )
+
+        credentials_cursor = connection.execute(
+            """
+            DELETE FROM provider_credentials
+            WHERE owner_key = ?
+            """,
+            (
+                clean_id,
+            ),
+        )
+
+        settings_cursor = connection.execute(
+            """
+            DELETE FROM app_settings
+            WHERE owner_id = ?
+            """,
+            (
+                clean_id,
+            ),
+        )
+
+        user_cursor = connection.execute(
+            """
+            DELETE FROM app_users
+            WHERE user_id = ?
+            """,
+            (
+                clean_id,
+            ),
+        )
+
+        connection.commit()
+
+        _invalidate_user_cache(
+            clean_id
+        )
+
+        return {
+            "removed":
+                user_cursor.rowcount > 0,
+            "user_id":
+                clean_id,
+            "email":
+                existing["email"],
+            "removed_provider_keys":
+                max(
+                    0,
+                    credentials_cursor.rowcount,
+                ),
+            "removed_settings":
+                max(
+                    0,
+                    settings_cursor.rowcount,
+                ),
+            "kept_jobs":
+                kept_jobs,
+        }
+
+    finally:
+        connection.close()
+
+
 def user_is_admin(
     user_id: str,
 ):

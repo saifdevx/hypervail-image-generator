@@ -4,6 +4,7 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import Request
@@ -183,6 +184,11 @@ class FirebaseAuthAdapter:
     SIGN_IN_URL = (
         "https://identitytoolkit.googleapis.com/"
         "v1/accounts:signInWithPassword"
+    )
+
+    SIGN_IN_WITH_IDP_URL = (
+        "https://identitytoolkit.googleapis.com/"
+        "v1/accounts:signInWithIdp"
     )
 
     LOOKUP_URL = (
@@ -526,6 +532,110 @@ class FirebaseAuthAdapter:
             "session":
                 session,
         }
+
+    async def sign_in_with_google(
+        self,
+        google_id_token: str,
+        request_uri: str,
+    ):
+        credential = (
+            google_id_token
+            or
+            ""
+        ).strip()
+
+        if not credential:
+            return {
+                "ok": False,
+                "error":
+                    "Google did not return a sign-in credential.",
+            }
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=20.0
+            ) as client:
+                response = await client.post(
+                    self._url(
+                        self.SIGN_IN_WITH_IDP_URL
+                    ),
+                    json={
+                        "postBody":
+                            urlencode({
+                                "id_token":
+                                    credential,
+                                "providerId":
+                                    "google.com",
+                            }),
+                        "requestUri":
+                            request_uri,
+                        "returnIdpCredential":
+                            True,
+                        "returnSecureToken":
+                            True,
+                    },
+                )
+        except httpx.RequestError:
+            return {
+                "ok": False,
+                "error":
+                    "Google sign-in could not reach Firebase. Try again.",
+            }
+
+        if response.status_code >= 400:
+            return {
+                "ok": False,
+                "error":
+                    self._safe_error(
+                        response
+                    ),
+            }
+
+        payload = response.json()
+
+        if payload.get(
+            "needConfirmation"
+        ):
+            return {
+                "ok": False,
+                "error": (
+                    "This email already uses another Hyperex sign-in method. "
+                    "Sign in with your existing method first."
+                ),
+            }
+
+        session = (
+            self._session_from_payload(
+                payload
+            )
+        )
+
+        if (
+            session.authenticated
+            and
+            session.access_token
+        ):
+            lookup = await self._lookup(
+                session.access_token
+            )
+
+            if lookup.authenticated:
+                session.email = (
+                    lookup.email
+                    or
+                    session.email
+                )
+                session.email_verified = (
+                    lookup.email_verified
+                )
+
+        return {
+            "ok":
+                session.authenticated,
+            "session":
+                session,
+        }
+
 
     async def send_verification(
         self,
@@ -894,6 +1004,16 @@ def get_firebase_web_api_key():
     ).strip()
 
 
+def get_google_oauth_client_id():
+    return (
+        os.getenv(
+            "GOOGLE_OAUTH_CLIENT_ID"
+        )
+        or
+        ""
+    ).strip()
+
+
 def get_auth_adapter():
     provider = (
         get_auth_provider()
@@ -1035,6 +1155,47 @@ async def sign_in(
     return await adapter.sign_in(
         email,
         password,
+    )
+
+
+async def sign_in_with_google(
+    google_id_token: str,
+    request_uri: str,
+):
+    if (
+        get_auth_provider()
+        !=
+        "firebase"
+    ):
+        return {
+            "ok": False,
+            "error":
+                "Google sign-in is only available with Firebase Authentication.",
+        }
+
+    if not get_google_oauth_client_id():
+        return {
+            "ok": False,
+            "error":
+                "Google sign-in is not configured for Hyperex yet.",
+        }
+
+    try:
+        adapter = (
+            get_auth_adapter()
+        )
+    except RuntimeError as error:
+        return {
+            "ok": False,
+            "error":
+                str(
+                    error
+                ),
+        }
+
+    return await adapter.sign_in_with_google(
+        google_id_token,
+        request_uri,
     )
 
 
@@ -1349,9 +1510,30 @@ def clear_session_cookies(
 
 
 def get_auth_public_config():
+    provider = (
+        get_auth_provider()
+    )
+    google_client_id = (
+        get_google_oauth_client_id()
+    )
+
     return {
         "provider":
-            get_auth_provider(),
+            provider,
         "configured":
             auth_is_configured(),
+        "google_sign_in": {
+            "enabled":
+                bool(
+                    provider == "firebase"
+                    and
+                    google_client_id
+                ),
+            "client_id":
+                (
+                    google_client_id
+                    if google_client_id
+                    else None
+                ),
+        },
     }

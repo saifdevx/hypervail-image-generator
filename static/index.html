@@ -44,6 +44,12 @@
         href="/static/styles.css"
     >
     <script
+        src="https://accounts.google.com/gsi/client"
+        async
+        defer
+    ></script>
+
+    <script
         src="/static/app.js"
         defer
     ></script>
@@ -100,6 +106,22 @@
             >
                 Create account
             </button>
+        </div>
+
+        <div
+            class="hidden-element"
+            id="googleSignInBlock"
+        >
+            <div
+                id="googleSignInButton"
+            ></div>
+
+            <div
+                class="auth-message"
+                id="googleSignInMessage"
+            >
+                Or continue with email and password.
+            </div>
         </div>
 
         <form
@@ -2153,8 +2175,8 @@
                         </div>
 
                         <p>
-                            See user activity, promote trusted administrators,
-                            or suspend an account when necessary.
+                            See user activity, manage Admin AI access, suspend accounts,
+                            or remove stale Hyperex records after deleting users in Firebase.
                         </p>
                     </header>
 
