@@ -181,6 +181,15 @@ from app.platform.queue_backend import (
     get_generation_queue,
     get_queue_provider,
 )
+from app.queue_task_store import (
+    ensure_queue_task_schema,
+    new_queue_task_id,
+    create_queue_task,
+    claim_queue_task,
+    mark_queue_task_completed,
+    mark_queue_task_failed,
+    get_latest_job_queue_task,
+)
 from app.provider_access import (
     get_provider_access_status,
     single_saved_provider,
@@ -352,6 +361,7 @@ class AdminManagedWorkflowRollbackRequest(BaseModel):
 
 
 class InternalQueueTask(BaseModel):
+    task_id: str | None = None
     task: str
     job_id: int
     user_id: str
@@ -502,6 +512,7 @@ async def lifespan(
     ensure_model_registry_schema()
     ensure_usage_schema()
     ensure_managed_workflow_schema()
+    ensure_queue_task_schema()
     seed_default_profiles()
     sync_builtin_workflows()
     seed_builtin_managed_workflows()
@@ -520,7 +531,7 @@ app = FastAPI(
     description=(
         "Hyperex AI product image studio"
     ),
-    version="0.14.2-phase1-auth-cleanup",
+    version="0.15.0-cloudflare-queue",
     lifespan=lifespan,
 )
 
@@ -3816,20 +3827,46 @@ def job_prompt_packages(
 
 def _queue_task_response(task: dict, local_callable):
     queue = get_generation_queue()
-    dispatched = queue.dispatch(
-        task,
-        local_callable=local_callable,
+
+    # Preserve the exact local behaviour for development. Queue-task records
+    # are only needed for the asynchronous Cloudflare path.
+    if not queue.asynchronous:
+        dispatched = queue.dispatch(
+            task,
+            local_callable=local_callable,
+        )
+        return dispatched["result"]
+
+    queued_task = dict(task)
+    queued_task["task_id"] = new_queue_task_id()
+
+    create_queue_task(
+        queued_task
     )
 
-    if dispatched.get("queued"):
-        return {
-            "ok": True,
-            "status": "queued",
-            "queue_provider": queue.name,
-            "task": task,
-        }
+    try:
+        dispatched = queue.dispatch(
+            queued_task,
+            local_callable=None,
+        )
+    except Exception as error:
+        mark_queue_task_failed(
+            queued_task["task_id"],
+            str(error),
+        )
 
-    return dispatched["result"]
+        raise HTTPException(
+            status_code=503,
+            detail=str(error),
+        ) from error
+
+    return {
+        "ok": True,
+        "status": "queued",
+        "queue_provider": queue.name,
+        "task_id": queued_task["task_id"],
+        "task": queued_task,
+    }
 
 
 def _run_internal_queue_task(task: InternalQueueTask):
@@ -3921,6 +3958,136 @@ def _run_internal_queue_task(task: InternalQueueTask):
         reset_current_user(tokens)
 
 
+def _queue_batch_overlay(
+    job_id: int,
+    batch: dict,
+):
+    """Expose Cloudflare queue state through the existing image-batch API."""
+
+    queue_task = get_latest_job_queue_task(
+        job_id
+    )
+
+    if queue_task is None:
+        return batch
+
+    result = dict(batch)
+    items = [
+        dict(item)
+        for item in result.get("items", [])
+    ]
+
+    result["items"] = items
+    result["queue_task"] = {
+        "task_id": queue_task.get("task_id"),
+        "task": queue_task.get("task_type"),
+        "status": queue_task.get("status"),
+        "attempts": int(queue_task.get("attempts") or 0),
+        "error": queue_task.get("error_message"),
+    }
+
+    queue_status = str(
+        queue_task.get("status")
+        or
+        ""
+    )
+
+    if queue_status not in {
+        "queued",
+        "running",
+        "failed",
+    }:
+        return result
+
+    task_type = str(
+        queue_task.get("task_type")
+        or
+        ""
+    )
+
+    prompt_id = queue_task.get(
+        "prompt_id"
+    )
+
+    def is_target(item):
+        if task_type == "generate_all":
+            return True
+
+        if prompt_id is None:
+            return False
+
+        return int(item.get("prompt_id") or 0) == int(prompt_id)
+
+    replacement_status = {
+        "queued": "queued",
+        "running": "generating",
+        "failed": "failed",
+    }[queue_status]
+
+    changed = False
+
+    for item in items:
+        if (
+            is_target(item)
+            and
+            item.get("status") == "pending"
+        ):
+            item["status"] = replacement_status
+            changed = True
+
+            if queue_status == "failed":
+                item["image"] = {
+                    "error_message": (
+                        queue_task.get("error_message")
+                        or
+                        "Queued generation failed."
+                    )
+                }
+
+    if not changed:
+        return result
+
+    counts = {
+        "pending": 0,
+        "queued": 0,
+        "generating": 0,
+        "complete": 0,
+        "failed": 0,
+    }
+
+    for item in items:
+        status = str(
+            item.get("status")
+            or
+            "pending"
+        )
+
+        if status not in counts:
+            status = "pending"
+
+        counts[status] += 1
+
+    result["pending_count"] = counts["pending"]
+    result["queued_count"] = counts["queued"]
+    result["generating_count"] = counts["generating"]
+    result["complete_count"] = counts["complete"]
+    result["failed_count"] = counts["failed"]
+
+    if queue_status == "queued":
+        result["status"] = "queued"
+    elif queue_status == "running":
+        result["status"] = "generating"
+    elif queue_status == "failed":
+        result["status"] = (
+            "partial_failed"
+            if counts["complete"]
+            else
+            "failed"
+        )
+
+    return result
+
+
 @app.post(
     "/api/internal/queue/consume",
     include_in_schema=False,
@@ -3953,16 +4120,105 @@ def internal_queue_consume(
             detail="Invalid queue worker secret.",
         )
 
-    result = _run_internal_queue_task(task)
+    task_id = str(
+        task.task_id
+        or
+        ""
+    ).strip()
 
-    if result.get("code"):
+    if not task_id:
         raise HTTPException(
-            status_code=502,
-            detail=result.get("error", "Queued generation failed."),
+            status_code=422,
+            detail="Queued task_id is required.",
         )
+
+    claim = claim_queue_task(
+        task_id,
+        task.job_id,
+        task.user_id,
+    )
+
+    claim_status = claim.get(
+        "status"
+    )
+
+    if claim_status == "completed":
+        return {
+            "ok": True,
+            "duplicate": True,
+            "task_id": task_id,
+        }
+
+    if claim_status == "running":
+        raise HTTPException(
+            status_code=409,
+            detail="Queued task is already running.",
+        )
+
+    if claim_status in {
+        "not_found",
+        "mismatch",
+    }:
+        raise HTTPException(
+            status_code=404,
+            detail="Queued task was not found.",
+        )
+
+    if claim_status != "claimed":
+        raise HTTPException(
+            status_code=409,
+            detail="Queued task cannot be claimed yet.",
+        )
+
+    try:
+        result = _run_internal_queue_task(
+            task
+        )
+
+    except HTTPException as error:
+        mark_queue_task_failed(
+            task_id,
+            str(error.detail),
+        )
+        raise
+
+    except Exception as error:
+        mark_queue_task_failed(
+            task_id,
+            str(error),
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Queued generation encountered an unexpected server error.",
+        ) from error
+
+    # Provider/package failures are terminal application results, not Queue
+    # transport failures. Record them so the existing polling UI can stop,
+    # then acknowledge the Cloudflare message with HTTP 200.
+    if result.get("code"):
+        mark_queue_task_failed(
+            task_id,
+            result.get(
+                "error",
+                "Queued generation failed.",
+            ),
+        )
+
+        return {
+            "ok": False,
+            "terminal": True,
+            "task_id": task_id,
+            "result": result,
+        }
+
+    mark_queue_task_completed(
+        task_id
+    )
 
     return {
         "ok": True,
+        "task_id": task_id,
         "result": result,
     }
 
@@ -4176,7 +4432,10 @@ def job_image_batch_status(
             detail="Job not found.",
         )
 
-    return result
+    return _queue_batch_overlay(
+        job_id,
+        result,
+    )
 
 
 @app.get(

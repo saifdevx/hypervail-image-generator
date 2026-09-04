@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hyperex-queue-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-04",
+  "workers_dev": true,
+
+  "vars": {
+    "HYPEREX_RENDER_URL": "https://hyperex.onrender.com"
+  },
+
+  "queues": {
+    "producers": [
+      {
+        "binding": "GENERATION_QUEUE",
+        "queue": "hyperex-generation"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "hyperex-generation",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 4,
+        "max_concurrency": 2
+      }
+    ]
+  }
+}

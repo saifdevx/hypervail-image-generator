@@ -19,6 +19,7 @@ class LocalGenerationQueue:
     def dispatch(self, task: dict, local_callable: Callable | None = None):
         if local_callable is None:
             raise RuntimeError("Local queue dispatch requires a callable.")
+
         return {
             "queued": False,
             "result": local_callable(),
@@ -26,69 +27,122 @@ class LocalGenerationQueue:
 
 
 class CloudflareQueueBackend:
+    """
+    Render cannot publish directly to a Cloudflare Queue binding.
+
+    Cloudflare Queues are published through a small producer Worker. Render
+    sends the task to that authenticated Worker endpoint; the Worker writes the
+    task to the Queue, and the Queue consumer later calls Hyperex's protected
+    internal consume endpoint.
+    """
+
     name = "cloudflare"
     asynchronous = True
 
     def __init__(self):
-        self.account_id = (os.getenv("CLOUDFLARE_ACCOUNT_ID") or "").strip()
-        self.queue_id = (os.getenv("CLOUDFLARE_QUEUE_ID") or "").strip()
-        self.api_token = (os.getenv("CLOUDFLARE_QUEUE_API_TOKEN") or "").strip()
+        self.producer_url = (
+            os.getenv("CLOUDFLARE_QUEUE_PRODUCER_URL")
+            or
+            ""
+        ).strip().rstrip("/")
 
-        if not all([self.account_id, self.queue_id, self.api_token]):
+        self.shared_secret = (
+            os.getenv("HYPEREX_QUEUE_SHARED_SECRET")
+            or
+            ""
+        ).strip()
+
+        if not self.producer_url or not self.shared_secret:
             raise RuntimeError(
-                "QUEUE_PROVIDER=cloudflare requires CLOUDFLARE_ACCOUNT_ID, "
-                "CLOUDFLARE_QUEUE_ID and CLOUDFLARE_QUEUE_API_TOKEN."
+                "QUEUE_PROVIDER=cloudflare requires "
+                "CLOUDFLARE_QUEUE_PRODUCER_URL and "
+                "HYPEREX_QUEUE_SHARED_SECRET."
             )
 
     def dispatch(self, task: dict, local_callable: Callable | None = None):
-        url = (
-            f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}"
-            f"/queues/{self.queue_id}/messages"
-        )
-
-        response = httpx.post(
-            url,
-            headers={
-                "Authorization": f"Bearer {self.api_token}",
-                "Content-Type": "application/json",
-            },
-            json={"body": task},
-            timeout=20.0,
-        )
-
-        if response.status_code >= 400:
+        try:
+            response = httpx.post(
+                self.producer_url,
+                headers={
+                    "X-Hyperex-Queue-Secret": self.shared_secret,
+                    "Content-Type": "application/json",
+                },
+                json=task,
+                timeout=httpx.Timeout(
+                    15.0,
+                    connect=5.0,
+                ),
+            )
+        except httpx.RequestError as error:
             raise RuntimeError(
-                f"Cloudflare Queue publish failed ({response.status_code}): "
-                f"{response.text[:500]}"
+                "Could not reach the Hyperex Cloudflare Queue producer."
+            ) from error
+
+        if response.status_code < 200 or response.status_code >= 300:
+            raise RuntimeError(
+                "Cloudflare Queue producer rejected the task "
+                f"({response.status_code}): {response.text[:500]}"
             )
 
-        payload = response.json()
-        if not payload.get("success"):
-            raise RuntimeError("Cloudflare Queue rejected the generation task.")
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise RuntimeError(
+                "Cloudflare Queue producer returned an invalid response."
+            ) from error
+
+        if not payload.get("queued"):
+            raise RuntimeError(
+                "Cloudflare Queue producer did not confirm the task was queued."
+            )
 
         return {
             "queued": True,
             "task": task,
+            "producer": self.producer_url,
         }
 
 
 def get_queue_provider():
-    provider = (os.getenv("QUEUE_PROVIDER", "local") or "local").strip().lower()
-    return provider if provider in {"local", "cloudflare"} else "local"
+    provider = (
+        os.getenv(
+            "QUEUE_PROVIDER",
+            "local",
+        )
+        or
+        "local"
+    ).strip().lower()
+
+    return (
+        provider
+        if provider in {
+            "local",
+            "cloudflare",
+        }
+        else
+        "local"
+    )
 
 
 def queue_is_configured():
     if get_queue_provider() == "local":
         return True
-    return all((os.getenv(key) or "").strip() for key in [
-        "CLOUDFLARE_ACCOUNT_ID",
-        "CLOUDFLARE_QUEUE_ID",
-        "CLOUDFLARE_QUEUE_API_TOKEN",
-        "HYPEREX_QUEUE_SHARED_SECRET",
-    ])
+
+    return all(
+        (
+            os.getenv(key)
+            or
+            ""
+        ).strip()
+        for key in [
+            "CLOUDFLARE_QUEUE_PRODUCER_URL",
+            "HYPEREX_QUEUE_SHARED_SECRET",
+        ]
+    )
 
 
 def get_generation_queue():
     if get_queue_provider() == "cloudflare":
         return CloudflareQueueBackend()
+
     return LocalGenerationQueue()
